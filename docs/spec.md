@@ -2,7 +2,7 @@
 
 As of 2026-10-30.
 
-## Overview &amp; goals
+## Overview & goals
 
 A macOS grammar and syntax checker that underlines errors in text fields across native apps and Chrome, powered by any LLM the user chooses, local or online.
 
@@ -48,15 +48,11 @@ v1 targets macOS and Chrome only, with inline underlines where possible and a fl
 
 A thin Swift helper and a Chrome extension are both clients of one local Node/TS core, which owns all checking logic and model config.
 
-\`\`\`
-
-Swift helper (macOS app) ──┐                         ┌──&gt; Local models (Ollama, LM Studio, llama.cpp)
-
-                           ├── WebSocket ──&gt; Core ───┤      OpenAI-compatible API
-
-Chrome extension ──────────┘   127.0.0.1             └──&gt; Cloud models (OpenAI, Mistral, OpenRouter, Anthropic later)
-
-\`\`\`
+```
+Swift helper (macOS app) ──┐                         ┌──> Local models (Ollama, LM Studio, llama.cpp)
+                           ├── WebSocket ──> Core ───┤      OpenAI-compatible API
+Chrome extension ──────────┘   127.0.0.1             └──> Cloud models (OpenAI, Mistral, OpenRouter, Anthropic later)
+```
 
 - **Swift helper (eyes and hands).** Menu bar app holding the Accessibility permission. Captures text, draws, writes back. Makes no decisions. Launches the core as a child process.
 
@@ -88,53 +84,35 @@ Only changed sentences are sent to the model, and every result is checked agains
 
 Latency is not a v1 goal, but correctness of placement is: an underline in the wrong place is worse than no underline.
 
-## Model layer &amp; output contract
+## Model layer & output contract
 
 One OpenAI-compatible adapter covers every v1 provider; the model returns snippets, never character offsets.
 
 **Providers.** A single adapter speaking the OpenAI Chat Completions format, configured by `baseUrl`, `apiKey` and `model`. That covers Ollama, LM Studio, llama.cpp server, OpenAI, Mistral and OpenRouter. A native Anthropic adapter is optional, behind the same `Provider` interface:
 
-\`\`\`ts
-
+```ts
 interface Provider {
-
-  check(req: CheckRequest): Promise&lt;Issue[]&gt;;
-
-  listModels?(): Promise&lt;string[]&gt;;
-
-  healthcheck(): Promise&lt;boolean&gt;;
-
+  check(req: CheckRequest): Promise<Issue[]>;
+  listModels?(): Promise<string[]>;
+  healthcheck(): Promise<boolean>;
 }
-
-\`\`\`
+```
 
 **Output contract.** The model must return JSON only, validated with a schema (Zod). Invalid JSON is retried once, then the batch is skipped.
 
-\`\`\`json
-
+```json
 {
-
   "issues": [
-
     {
-
       "original": "teh",
-
       "suggestion": "the",
-
       "reason": "Spelling",
-
       "context": "fixed teh bug in",
-
       "type": "spelling"
-
     }
-
   ]
-
 }
-
-\`\`\`
+```
 
 - `context` = a few words around `original`, used to find the right occurrence when it appears more than once.
 
@@ -220,23 +198,18 @@ The app never logs text, never reads secure fields, and keeps API keys in the ma
 
 **Local transport.** The core's WebSocket binds to `127.0.0.1` only and requires a per-install token, so other local processes or web pages can't use it.
 
-## Open source &amp; packaging
+## Open source & packaging
 
 One monorepo on GitHub, shipped as a single .app that embeds the core binary.
 
 **Repo layout.**
 
-\`\`\`
-
+```
 /apps/mac           Swift helper (menu bar app, AX, overlay, card)
-
 /apps/core          Node/TS core (providers, pipeline, dictionary, WS server)
-
 /apps/chrome        Chrome extension (TS, Manifest V3)
-
 /packages/protocol  Shared message types (Zod), Swift types generated from them
-
-\`\`\`
+```
 
 **Packaging.** The core is compiled to a single binary (Bun `--compile` or Node SEA) and bundled inside the .app. The Swift app launches it as a child process and restarts it if it crashes.
 
@@ -246,7 +219,7 @@ One monorepo on GitHub, shipped as a single .app that embeds the core binary.
 
 **Repo hygiene.** No keys or personal dictionary in the repo; a sample config only. MIT licence suggested.
 
-## Milestones &amp; open questions
+## Milestones & open questions
 
 Build the brain first, prove it in Chrome, then take on the hard native part.
 
@@ -264,11 +237,11 @@ Build the brain first, prove it in Chrome, then take on the hard native part.
 
 **Open questions**
 
-- \[ \] Card UI in native apps: SwiftUI (simpler) or a WebView reusing the extension's React card?
+- [ ] Card UI in native apps: SwiftUI (simpler) or a WebView reusing the extension's React card?
 
-- \[ \] Bun `--compile` vs Node SEA for the core binary? (Kickoff decision: Bun, to confirm at milestone 6.)
+- [ ] Bun `--compile` vs Node SEA for the core binary? (Kickoff decision: Bun, to confirm at milestone 6.)
 
-- \[ \] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
+- [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
 
-- \[ \] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor?
+- [ ] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor?
 
