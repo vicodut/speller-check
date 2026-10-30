@@ -1,0 +1,113 @@
+import type { z } from "zod";
+import { type AppError, appError } from "../../shared/errors";
+import type { Logger } from "../../shared/logger";
+import { err, ok, type Result } from "../../shared/result";
+import { ChatCompletionResponse, ModelListResponse } from "./openai-compatible.schema";
+import type { ChatMessage, Provider } from "./provider";
+
+export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
+
+export type OpenAiCompatibleConfig = {
+  readonly baseUrl: string;
+  readonly model: string;
+  readonly apiKey?: string | undefined;
+  readonly timeoutMs?: number;
+};
+
+const DEFAULT_TIMEOUT_MS = 60_000;
+
+export class OpenAiCompatibleProvider implements Provider {
+  readonly model: string;
+  /** Turned off for this instance's lifetime if the endpoint rejects `response_format`. */
+  private jsonMode = true;
+
+  constructor(
+    private readonly config: OpenAiCompatibleConfig,
+    private readonly logger: Logger,
+    private readonly fetchFn: FetchFn = fetch,
+  ) {
+    this.model = config.model;
+  }
+
+  async complete(messages: readonly ChatMessage[]): Promise<Result<string, AppError>> {
+    const startedAt = performance.now();
+    const len = messages.reduce((sum, m) => sum + m.content.length, 0);
+    this.logger.info({ event: "provider.request", len });
+    let response = await this.post(messages);
+    if (!response.ok && this.jsonMode && isRejectedJsonMode(response.error)) {
+      this.jsonMode = false;
+      this.logger.info({ event: "provider.json_mode_disabled" });
+      response = await this.post(messages);
+    }
+    if (!response.ok) return response;
+    const parsed = this.parse(ChatCompletionResponse, response.value);
+    if (!parsed.ok) return parsed;
+    const content = parsed.value.choices[0]?.message.content ?? "";
+    this.logger.info({
+      event: "provider.response",
+      ms: performance.now() - startedAt,
+      len: content.length,
+    });
+    return ok(content);
+  }
+
+  async listModels(): Promise<Result<string[], AppError>> {
+    const response = await this.request("/models", { method: "GET" });
+    if (!response.ok) return response;
+    const parsed = this.parse(ModelListResponse, response.value);
+    return parsed.ok ? ok(parsed.value.data.map((m) => m.id)) : parsed;
+  }
+
+  async healthcheck(): Promise<boolean> {
+    return (await this.listModels()).ok;
+  }
+
+  private post(messages: readonly ChatMessage[]): Promise<Result<unknown, AppError>> {
+    const body = {
+      model: this.model,
+      messages,
+      temperature: 0,
+      ...(this.jsonMode ? { response_format: { type: "json_object" } } : {}),
+    };
+    return this.request("/chat/completions", { method: "POST", body: JSON.stringify(body) });
+  }
+
+  private async request(path: string, init: RequestInit): Promise<Result<unknown, AppError>> {
+    try {
+      const res = await this.fetchFn(`${this.config.baseUrl}${path}`, {
+        ...init,
+        headers: this.headers(),
+        signal: AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      });
+      if (!res.ok) return this.fail(appError("provider_http", res.status));
+      return ok(await res.json());
+    } catch (cause) {
+      const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
+      const code = timedOut
+        ? "provider_timeout"
+        : cause instanceof SyntaxError
+          ? "provider_bad_response"
+          : "provider_network";
+      return this.fail(appError(code));
+    }
+  }
+
+  private parse<T>(schema: z.ZodType<T>, body: unknown): Result<T, AppError> {
+    const parsed = schema.safeParse(body);
+    return parsed.success ? ok(parsed.data) : this.fail(appError("provider_bad_response"));
+  }
+
+  private headers(): Record<string, string> {
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    if (this.config.apiKey) headers.authorization = `Bearer ${this.config.apiKey}`;
+    return headers;
+  }
+
+  private fail(error: AppError): Result<never, AppError> {
+    this.logger.error({ event: "provider.error", code: error.code });
+    return err(error);
+  }
+}
+
+const isRejectedJsonMode = (error: AppError): boolean =>
+  error.code === "provider_http" && (error.status === 400 || error.status === 422);
