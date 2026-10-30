@@ -1,0 +1,46 @@
+{
+  "cases": [
+    {
+      "id": "en-verb-form",
+      "text": "I has went to the store yesterday.",
+      "expect": [{ "original": "has went", "accept": ["went", "have gone", "had gone"] }]
+    },
+    {
+      "id": "en-their-theyre",
+      "text": "Their going to the park tomorrow.",
+      "expect": [{ "original": "Their", "accept": ["They're", "They are"] }]
+    },
+    {
+      "id": "en-agreement",
+      "text": "She don't like apples, but she love oranges.",
+      "expect": [
+        { "original": "don't", "accept": ["doesn't", "does not"] },
+        { "original": "love", "accept": ["loves"] }
+      ]
+    },
+    {
+      "id": "en-typo",
+      "text": "I fixed teh bug in the parser.",
+      "expect": [{ "original": "teh", "accept": ["the"] }]
+    },
+    {
+      "id": "en-plural-verb",
+      "text": "The results was clear to everyone.",
+      "expect": [{ "original": "was", "accept": ["were"] }]
+    },
+    {
+      "id": "en-apostrophes",
+      "text": "Its a beautiful day, isnt it?",
+      "expect": [
+        { "original": "Its", "accept": ["It's", "It is"] },
+        { "original": "isnt", "accept": ["isn't"] }
+      ]
+    },
+    { "id": "en-clean", "text": "The meeting was moved to Thursday afternoon.", "expect": [] },
+    {
+      "id": "en-style-only",
+      "text": "In my opinion, the very best approach is probably to wait.",
+      "expect": []
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "entries": [
+    { "term": "NestJS", "note": "framework" },
+    { "term": "Zod", "note": "library" },
+    { "term": "kubectl", "note": "CLI tool" }
+  ]
+}

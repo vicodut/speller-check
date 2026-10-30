@@ -1,0 +1,45 @@
+{
+  "cases": [
+    {
+      "id": "fr-accord-sujet-verbe",
+      "text": "Les enfants est partis à l'école.",
+      "expect": [{ "original": "est", "accept": ["sont"] }]
+    },
+    {
+      "id": "fr-participe-cod-avant",
+      "text": "Les pommes que j'ai mangé étaient délicieuses.",
+      "expect": [{ "original": "mangé", "accept": ["mangées"] }]
+    },
+    {
+      "id": "fr-participe-etre",
+      "text": "Elles sont arrivé en retard ce matin.",
+      "expect": [{ "original": "arrivé", "accept": ["arrivées"] }]
+    },
+    {
+      "id": "fr-participe-infinitif",
+      "text": "J'ai acheter du pain pour ce soir.",
+      "expect": [{ "original": "acheter", "accept": ["acheté"] }]
+    },
+    {
+      "id": "fr-subjonctif",
+      "text": "Il faut que tu viens demain matin.",
+      "expect": [{ "original": "viens", "accept": ["viennes"] }]
+    },
+    {
+      "id": "fr-accord-adjectif",
+      "text": "Ils ont acheté une grande maison blanc.",
+      "expect": [{ "original": "blanc", "accept": ["blanche"] }]
+    },
+    {
+      "id": "fr-orthographe",
+      "text": "Il fait beau aujourd'hui, mais demain il pleuvras.",
+      "expect": [{ "original": "pleuvras", "accept": ["pleuvra"] }]
+    },
+    {
+      "id": "fr-participe-correct",
+      "text": "Elle s'est lavé les mains avant le repas.",
+      "expect": []
+    },
+    { "id": "fr-clean", "text": "Nous avons visité le musée la semaine dernière.", "expect": [] }
+  ]
+}

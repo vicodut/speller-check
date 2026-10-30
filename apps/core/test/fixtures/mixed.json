@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "id": "mixed-en-error",
+      "text": "I has went home early. Ensuite, nous avons mangé ensemble.",
+      "expect": [{ "original": "has went", "accept": ["went", "have gone", "had gone"] }]
+    },
+    {
+      "id": "mixed-fr-error",
+      "text": "The meeting is at noon. Les invités est arrivés en avance.",
+      "expect": [{ "original": "est", "accept": ["sont"] }]
+    },
+    {
+      "id": "mixed-no-translation",
+      "text": "She love Paris in the spring. Elle adore les croissants.",
+      "expect": [{ "original": "love", "accept": ["loves"] }]
+    }
+  ]
+}

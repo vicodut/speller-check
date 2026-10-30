@@ -1,0 +1,28 @@
+{
+  "cases": [
+    {
+      "id": "dict-en-clean",
+      "text": "We rewrote the API in NestJS last month.",
+      "expect": [],
+      "mustNotFlag": ["NestJS"]
+    },
+    {
+      "id": "dict-fr-clean",
+      "text": "On a migré le backend vers NestJS et Zod.",
+      "expect": [],
+      "mustNotFlag": ["NestJS", "Zod"]
+    },
+    {
+      "id": "dict-en-grammar-near-term",
+      "text": "The NestJS module were loaded twice.",
+      "expect": [{ "original": "were", "accept": ["was"] }],
+      "mustNotFlag": ["NestJS"]
+    },
+    {
+      "id": "dict-lowercase-term",
+      "text": "The kubectl command failed on the clustr.",
+      "expect": [{ "original": "clustr", "accept": ["cluster"] }],
+      "mustNotFlag": ["kubectl"]
+    }
+  ]
+}
