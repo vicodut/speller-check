@@ -9,3 +9,14 @@
 - 2026-10-30: Expected failures return Result; exceptions only for programmer errors.
 - 2026-10-30: Zod schemas in packages/protocol are the single source of truth; Swift types are generated.
 - 2026-10-30: Tooling = Bun workspaces, bun test, Biome, SwiftFormat/SwiftLint, XcodeGen.
+- 2026-10-30: Provider is a thin transport (`complete(messages) → Result<string>`); prompt, parse and locate live in the check feature. Spec's `check(req): Promise<Issue[]>` replaced.
+- 2026-10-30: Issue offsets are UTF-16 code units, `end` exclusive.
+- 2026-10-30: One batched request per check with each distinct uncached sentence once, plus neighbouring sentences as context-only; results cached per sentence (sentence-relative offsets, clean = []) by sha256(sentence) + model. Dictionary filter runs after the cache.
+- 2026-10-30: Locator: original must be unique among matches inside a matching context, else unique in the checked sentences, else dropped. Whole-word bounds, loose whitespace, ' ≡ ’; `original` is rewritten to the source slice.
+- 2026-10-30: Overlapping issues: the first (by start) wins.
+- 2026-10-30: Dictionary filter drops an issue when `original` is a term, or contains a term the suggestion changes or removes. Fixes that keep the term survive.
+- 2026-10-30: Dictionary file `{ entries: [{ term, note?, caseInsensitive? }] }`; missing file = empty, invalid file = error. Default path `~/Library/Application Support/GrammarChecker/dictionary.json`.
+- 2026-10-30: JSON mode via `response_format: json_object`, dropped for the provider's lifetime after a 400/422. temperature 0, 60 s timeout constant (no env var).
+- 2026-10-30: Parser strips `<think>` blocks and code fences, accepts a bare array, and drops individual schema-invalid issues instead of failing the batch. The JSON retry resends the prompt plus a reminder, without echoing the bad reply.
+- 2026-10-30: Logger only accepts a fixed set of event names and error codes; logs go to stderr so CLI stdout stays pure JSON.
+- 2026-10-30: CLI exit codes: 0 ok, 1 check failed, 2 usage/settings error.
