@@ -1,0 +1,21 @@
+{
+  "name": "grammar-checker",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/core",
+    "packages/protocol"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "biome check .",
+    "test": "bun test",
+    "check": "bun run typecheck && bun run lint && bun run test",
+    "test:models": "bun run --cwd apps/core test:models"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4",
+    "@types/bun": "1.4.4",
+    "typescript": "7.0.2"
+  }
+}

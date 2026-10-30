@@ -1,0 +1,13 @@
+{
+  "name": "@gc/core",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "cli": "bun src/cli.ts",
+    "test:models": "bun test/models/run-fixtures.ts"
+  },
+  "dependencies": {
+    "@gc/protocol": "workspace:*",
+    "zod": "4.6.7"
+  }
+}
