@@ -6,7 +6,9 @@ export type ErrorCode =
   | "provider_bad_response"
   | "model_invalid_json"
   | "dictionary_read_failed"
-  | "dictionary_invalid";
+  | "dictionary_invalid"
+  | "issue_not_found"
+  | "issue_ambiguous";
 
 /** Expected failure. Carries a code and optional HTTP status, never user text. */
 export type AppError = { readonly code: ErrorCode; readonly status?: number };
