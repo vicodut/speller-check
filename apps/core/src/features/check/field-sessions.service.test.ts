@@ -145,8 +145,9 @@ describe("FieldSessions", () => {
     await flush();
     expect(published[0]).toMatchObject({ version: 2 });
     expect(spans(published[0], "teh cat")).toEqual(["teh"]);
-    // The fresh v2 result is dropped too: a v2 result was already published.
-    expect(published).toHaveLength(1);
+    // The fresh v2 result replaces the reconciled one: it comes from a newer snapshot.
+    expect(published).toHaveLength(2);
+    expect(published[1]).toMatchObject({ version: 2, issues: [] });
   });
 
   test("close cancels the timer and drops in-flight results", async () => {

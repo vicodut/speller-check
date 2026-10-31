@@ -24,8 +24,11 @@ type Snapshot = { readonly version: number; readonly text: string };
 type Field = {
   readonly id: string;
   latest: Snapshot;
-  /** Highest version published for this field, -1 before the first publish. */
-  published: number;
+  /**
+   * Snapshot version of the last published result, -1 before the first publish. A result is
+   * published only if its snapshot is newer, so a fresh result replaces a reconciled one.
+   */
+  publishedFrom: number;
   timer?: unknown;
 };
 
@@ -56,7 +59,7 @@ export class FieldSessions {
     const known = this.fields.get(request.fieldId);
     if (known && request.version <= known.latest.version) return;
     const latest = { version: request.version, text: request.text };
-    const field: Field = known ?? { id: request.fieldId, latest, published: -1 };
+    const field: Field = known ?? { id: request.fieldId, latest, publishedFrom: -1 };
     field.latest = latest;
     this.fields.set(field.id, field);
     this.cancelTimer(field);
@@ -92,11 +95,11 @@ export class FieldSessions {
   }
 
   private publishIssues(field: Field, snapshot: Snapshot, issues: Issue[]): void {
-    const target = field.latest;
-    if (target.version <= field.published) {
+    if (snapshot.version <= field.publishedFrom) {
       this.logger.info({ event: "session.stale_dropped" });
       return;
     }
+    const target = field.latest;
     const kept =
       target.version === snapshot.version
         ? issues
@@ -104,15 +107,16 @@ export class FieldSessions {
     if (kept.length < issues.length) {
       this.logger.info({ event: "reconcile.dropped", len: issues.length - kept.length });
     }
-    field.published = target.version;
+    field.publishedFrom = snapshot.version;
     this.publish({ type: "issues", fieldId: field.id, version: target.version, issues: kept });
   }
 
   private publishError(field: Field, snapshot: Snapshot, error: AppError): void {
-    if (snapshot.version <= field.published) {
+    if (snapshot.version <= field.publishedFrom) {
       this.logger.info({ event: "session.stale_dropped" });
       return;
     }
+    field.publishedFrom = snapshot.version;
     this.publish({ type: "error", code: error.code, fieldId: field.id });
   }
 }
