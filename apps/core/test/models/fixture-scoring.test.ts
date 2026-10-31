@@ -34,6 +34,16 @@ describe("scoreCase", () => {
     expect(score.violations).toEqual(["NestJS"]);
   });
 
+  test("accepts a suggestion that differs only by apostrophe style", () => {
+    const its: FixtureCase = {
+      id: "a",
+      text: "Its fine.",
+      expect: [{ original: "Its", accept: ["It's"] }],
+    };
+    const issue = { ...at(0, 3, "It’s"), original: "Its" };
+    expect(scoreCase(its, [issue]).hits[0]?.accepted).toBe(true);
+  });
+
   test("does not treat a fix that keeps the term as a violation", () => {
     expect(scoreCase(fixture, [at(4, 22, "NestJS module was")]).violations).toEqual([]);
   });

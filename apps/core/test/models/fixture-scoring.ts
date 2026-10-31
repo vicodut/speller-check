@@ -58,5 +58,9 @@ export const scoreCase = (fixture: FixtureCase, issues: readonly Issue[]): CaseS
 };
 
 /** An accepted suggestion may cover more or less text than `original`; compare by containment. */
-const isAccepted = (issue: Issue, accept: readonly string[]): boolean =>
-  accept.some((a) => issue.suggestion === a || issue.suggestion.includes(a));
+const isAccepted = (issue: Issue, accept: readonly string[]): boolean => {
+  const suggestion = straightenApostrophes(issue.suggestion);
+  return accept.some((a) => suggestion.includes(straightenApostrophes(a)));
+};
+
+const straightenApostrophes = (text: string): string => text.replace(/[’ʼ]/g, "'");
