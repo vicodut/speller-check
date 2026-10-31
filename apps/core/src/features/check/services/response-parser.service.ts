@@ -18,7 +18,7 @@ const extractJson = (raw: string): string => {
 
 /**
  * Parses the model reply. The envelope must be valid ({ issues: [...] }, or a bare array);
- * individual issues that fail the schema (e.g. an unknown type) are dropped, not fatal.
+ * individual issues that fail the schema (e.g. an unknown type) or that change nothing are dropped, not fatal.
  */
 export const parseModelResponse = (raw: string): Result<ModelIssue[], AppError> => {
   let json: unknown;
@@ -33,7 +33,10 @@ export const parseModelResponse = (raw: string): Result<ModelIssue[], AppError> 
   return ok(
     items.flatMap((item) => {
       const issue = ModelIssue.safeParse(item);
-      return issue.success ? [issue.data] : [];
+      return issue.success && !isNoOp(issue.data) ? [issue.data] : [];
     }),
   );
 };
+
+/** An issue whose suggestion is the original text proposes no change. */
+const isNoOp = (issue: ModelIssue): boolean => issue.suggestion.trim() === issue.original.trim();

@@ -38,6 +38,14 @@ describe("parseModelResponse", () => {
     });
   });
 
+  test("drops no-op issues whose suggestion equals the original", () => {
+    const noop = { ...issue, original: "visité", suggestion: " visité " };
+    expect(parseModelResponse(JSON.stringify({ issues: [noop, issue] }))).toEqual({
+      ok: true,
+      value: [issue],
+    });
+  });
+
   test.each([
     ["non-JSON", "Sorry, I can't help."],
     ["truncated JSON", '{"issues":[{"original":"a"'],
