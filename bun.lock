@@ -16,6 +16,7 @@
         "@gc/protocol": "workspace:*",
         "react": "19.3.1",
         "react-dom": "19.3.1",
+        "zod": "4.6.7",
       },
       "devDependencies": {
         "@types/chrome": "0.3.7",

@@ -1,2 +1,6 @@
-// Options page: token, port and site blocklist (milestone 2, agent C).
-export {};
+// Options page: token, port, site blocklist and connection status.
+import { createRoot } from "react-dom/client";
+import { OptionsForm } from "./options-form";
+
+const root = document.getElementById("root");
+if (root) createRoot(root).render(<OptionsForm />);
