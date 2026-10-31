@@ -11,7 +11,12 @@ export type Core = {
 /** Composition root: the only place that wires concrete classes together. */
 export const createCore = (settings: Settings, logger: Logger): Core => {
   const provider = new OpenAiCompatibleProvider(
-    { baseUrl: settings.baseUrl, model: settings.model, apiKey: settings.apiKey },
+    {
+      baseUrl: settings.baseUrl,
+      model: settings.model,
+      apiKey: settings.apiKey,
+      reasoningEffort: settings.reasoningEffort,
+    },
     logger,
   );
   const dictionary = new JsonDictionaryRepository(settings.dictionaryPath);

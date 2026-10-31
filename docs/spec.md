@@ -99,7 +99,7 @@ interface Provider {
 }
 ```
 
-The adapter requests `response_format: {type: "json_object"}`; if the endpoint rejects it (HTTP 400/422) it retries without it and stops sending it. Requests use `temperature: 0` and a 60 s timeout.
+The adapter requests `response_format: {type: "json_object"}`; if the endpoint rejects it (HTTP 400/422) it retries without it and stops sending it. Requests use `temperature: 0` and a 60 s timeout. An optional `reasoningEffort` setting (`none | low | medium | high`) is sent as `reasoning_effort` when set; `none` disables thinking on reasoning models such as qwen3, which otherwise exceed the timeout on CPU.
 
 **Output contract.** The model must return JSON only, validated with a schema (Zod). Invalid JSON is retried once, then the batch is skipped. Reasoning blocks (`<think>`) and code fences are stripped before parsing; a bare array is accepted. Individual issues that fail the schema (e.g. an unknown `type`), or whose suggestion equals the original, are dropped without failing the batch.
 

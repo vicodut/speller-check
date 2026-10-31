@@ -29,5 +29,5 @@ test/fixtures/         EN, FR and mixed samples
 - Tests that call a real model are opt-in (`bun run test:models`, needs env vars) and never part of `bun test`.
 
 ## Env
-`GC_BASE_URL`, `GC_MODEL`, `GC_API_KEY` (optional for local models), `GC_DICTIONARY_PATH`.
+`GC_BASE_URL`, `GC_MODEL`, `GC_API_KEY` (optional for local models), `GC_DICTIONARY_PATH`, `GC_REASONING_EFFORT` (optional).
 In production the Swift app reads the key from the Keychain and passes these to the core at launch.

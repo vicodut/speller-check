@@ -1,2 +1,2 @@
 export { defaultDictionaryPath, type Env, loadSettings } from "./settings.loader";
-export type { Settings } from "./settings.schema";
+export type { ReasoningEffort, Settings } from "./settings.schema";

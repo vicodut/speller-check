@@ -12,6 +12,8 @@ export type OpenAiCompatibleConfig = {
   readonly model: string;
   readonly apiKey?: string | undefined;
   readonly timeoutMs?: number;
+  /** Omitted from requests when undefined; not every endpoint accepts it. */
+  readonly reasoningEffort?: "none" | "low" | "medium" | "high" | undefined;
 };
 
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -68,6 +70,7 @@ export class OpenAiCompatibleProvider implements Provider {
       messages,
       temperature: 0,
       ...(this.jsonMode ? { response_format: { type: "json_object" } } : {}),
+      ...(this.config.reasoningEffort ? { reasoning_effort: this.config.reasoningEffort } : {}),
     };
     return this.request("/chat/completions", { method: "POST", body: JSON.stringify(body) });
   }

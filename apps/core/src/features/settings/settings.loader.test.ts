@@ -25,6 +25,13 @@ describe("loadSettings", () => {
     expect(result.ok && result.value.dictionaryPath).toBe("/tmp/dict.json");
   });
 
+  test("reads an optional reasoning effort", () => {
+    const result = loadSettings({ ...base, GC_REASONING_EFFORT: "none" }, "/Users/me");
+    expect(result.ok && result.value.reasoningEffort).toBe("none");
+    const unset = loadSettings(base, "/Users/me");
+    expect(unset.ok && unset.value.reasoningEffort).toBeUndefined();
+  });
+
   test("treats a blank API key as absent", () => {
     const result = loadSettings({ ...base, GC_API_KEY: "  " }, "/Users/me");
     expect(result.ok && result.value.apiKey).toBeUndefined();
@@ -34,6 +41,7 @@ describe("loadSettings", () => {
     ["missing model", { GC_BASE_URL: base.GC_BASE_URL }],
     ["missing base URL", { GC_MODEL: base.GC_MODEL }],
     ["invalid base URL", { ...base, GC_BASE_URL: "not a url" }],
+    ["unknown reasoning effort", { ...base, GC_REASONING_EFFORT: "max" }],
   ])("fails with settings_invalid on %s", (_name, env) => {
     expect(loadSettings(env, "/Users/me")).toEqual({
       ok: false,

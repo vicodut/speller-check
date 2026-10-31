@@ -18,6 +18,7 @@ export const loadSettings = (env: Env, homeDir: string): Result<Settings, AppErr
     model: blankToUndefined(env.GC_MODEL),
     apiKey: blankToUndefined(env.GC_API_KEY),
     dictionaryPath: blankToUndefined(env.GC_DICTIONARY_PATH) ?? defaultDictionaryPath(homeDir),
+    reasoningEffort: blankToUndefined(env.GC_REASONING_EFFORT),
   });
   return parsed.success ? ok(parsed.data) : err(appError("settings_invalid"));
 };

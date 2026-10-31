@@ -21,3 +21,4 @@
 - 2026-10-30: Logger only accepts a fixed set of event names and error codes; logs go to stderr so CLI stdout stays pure JSON.
 - 2026-10-30: CLI exit codes: 0 ok, 1 check failed, 2 usage/settings error.
 - 2026-10-31: Parser drops no-op issues (suggestion equals original after trimming). Seen often with gemma3:4b.
+- 2026-10-31: Optional GC_REASONING_EFFORT (none|low|medium|high), sent as `reasoning_effort` only when set. qwen3:8b on CPU: thinking on = >60 s timeout; reasoning_effort none = ~9 s.

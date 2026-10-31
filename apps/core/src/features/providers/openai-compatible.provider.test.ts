@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { Logger } from "../../shared/logger";
-import { type FetchFn, OpenAiCompatibleProvider } from "./openai-compatible.provider";
+import {
+  type FetchFn,
+  type OpenAiCompatibleConfig,
+  OpenAiCompatibleProvider,
+} from "./openai-compatible.provider";
 
 type Call = { url: string; init: RequestInit; body: Record<string, unknown> | undefined };
 
@@ -9,7 +13,7 @@ const json = (body: unknown, status = 200) =>
 
 const completion = (content: string) => json({ choices: [{ message: { content } }] });
 
-const setup = (responses: Array<Response | Error>, apiKey?: string) => {
+const setup = (responses: Array<Response | Error>, extra: Partial<OpenAiCompatibleConfig> = {}) => {
   const calls: Call[] = [];
   const logs: string[] = [];
   const fetchFn: FetchFn = async (url, init) => {
@@ -20,7 +24,7 @@ const setup = (responses: Array<Response | Error>, apiKey?: string) => {
     if (next instanceof Error) throw next;
     return next;
   };
-  const config = { baseUrl: "http://127.0.0.1:11434/v1", model: "m", apiKey };
+  const config = { baseUrl: "http://127.0.0.1:11434/v1", model: "m", ...extra };
   const provider = new OpenAiCompatibleProvider(config, new Logger((l) => logs.push(l)), fetchFn);
   return { provider, calls, logs };
 };
@@ -40,13 +44,23 @@ describe("OpenAiCompatibleProvider.complete", () => {
   });
 
   test("sends the bearer token only when an API key is set", async () => {
-    const withKey = setup([completion("{}")], "sk-test");
+    const withKey = setup([completion("{}")], { apiKey: "sk-test" });
     await withKey.provider.complete(messages);
     expect(new Headers(withKey.calls[0]?.init.headers).get("authorization")).toBe("Bearer sk-test");
 
     const withoutKey = setup([completion("{}")]);
     await withoutKey.provider.complete(messages);
     expect(new Headers(withoutKey.calls[0]?.init.headers).has("authorization")).toBe(false);
+  });
+
+  test("sends reasoning_effort only when configured", async () => {
+    const withEffort = setup([completion("{}")], { reasoningEffort: "none" });
+    await withEffort.provider.complete(messages);
+    expect(withEffort.calls[0]?.body).toMatchObject({ reasoning_effort: "none" });
+
+    const withoutEffort = setup([completion("{}")]);
+    await withoutEffort.provider.complete(messages);
+    expect(withoutEffort.calls[0]?.body).not.toHaveProperty("reasoning_effort");
   });
 
   test("retries without response_format after a 400 and remembers it", async () => {
