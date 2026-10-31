@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { loadSettings } from "./settings.loader";
+import { loadSettings, loadTransportSettings } from "./settings.loader";
 
 const base = { GC_BASE_URL: "http://127.0.0.1:11434/v1/", GC_MODEL: "qwen3:8b" };
 
@@ -12,8 +12,19 @@ describe("loadSettings", () => {
         baseUrl: "http://127.0.0.1:11434/v1",
         model: "qwen3:8b",
         dictionaryPath: "/Users/me/Library/Application Support/GrammarChecker/dictionary.json",
+        port: 7341,
+        tokenPath: "/Users/me/Library/Application Support/GrammarChecker/token",
       },
     });
+  });
+
+  test("reads an explicit port and token path", () => {
+    const result = loadSettings(
+      { ...base, GC_PORT: "9000", GC_TOKEN_PATH: "/tmp/token" },
+      "/Users/me",
+    );
+    expect(result.ok && result.value.port).toBe(9000);
+    expect(result.ok && result.value.tokenPath).toBe("/tmp/token");
   });
 
   test("keeps the API key and an explicit dictionary path", () => {
@@ -42,10 +53,40 @@ describe("loadSettings", () => {
     ["missing base URL", { GC_MODEL: base.GC_MODEL }],
     ["invalid base URL", { ...base, GC_BASE_URL: "not a url" }],
     ["unknown reasoning effort", { ...base, GC_REASONING_EFFORT: "max" }],
+    ["non-numeric port", { ...base, GC_PORT: "abc" }],
   ])("fails with settings_invalid on %s", (_name, env) => {
     expect(loadSettings(env, "/Users/me")).toEqual({
       ok: false,
       error: { code: "settings_invalid" },
     });
   });
+});
+
+describe("loadTransportSettings", () => {
+  test("needs no model settings and defaults port and token path", () => {
+    expect(loadTransportSettings({}, "/Users/me")).toEqual({
+      ok: true,
+      value: {
+        port: 7341,
+        tokenPath: "/Users/me/Library/Application Support/GrammarChecker/token",
+      },
+    });
+  });
+
+  test("accepts the port bounds", () => {
+    expect(loadTransportSettings({ GC_PORT: "1" }, "/h")).toMatchObject({ value: { port: 1 } });
+    expect(loadTransportSettings({ GC_PORT: "65535" }, "/h")).toMatchObject({
+      value: { port: 65535 },
+    });
+  });
+
+  test.each(["0", "65536", "-1", "1.5", "0x10", "80a"])(
+    "fails with settings_invalid on port %p",
+    (port) => {
+      expect(loadTransportSettings({ GC_PORT: port }, "/h")).toEqual({
+        ok: false,
+        error: { code: "settings_invalid" },
+      });
+    },
+  );
 });
