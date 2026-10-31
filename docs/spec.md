@@ -60,7 +60,7 @@ Chrome extension ──────────┘   127.0.0.1             └�
 
 - **Chrome extension.** Same role as the Swift helper, for web pages. Connects to the same core, so model switching lives in one place.
 
-- **Protocol.** JSON messages: `text.changed {fieldId, version, text}` from clients; `issues {fieldId, version, issues[]}` and `settings.changed` from the core.
+- **Protocol.** JSON messages tagged by `type`. Clients send `hello {token}` first, then `text.changed {fieldId, version, text}`, `field.closed {fieldId}` and `dictionary.add {term}`. The core sends `ready`, `issues {fieldId, version, issues[]}`, `error {code, fieldId?}` and `settings.changed {model, local}`. The server listens on `127.0.0.1:7341` (`GC_PORT`); the install token is printed by `core token`.
 
 ## Checking pipeline
 

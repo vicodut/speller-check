@@ -22,3 +22,7 @@
 - 2026-10-30: CLI exit codes: 0 ok, 1 check failed, 2 usage/settings error.
 - 2026-10-31: Parser drops no-op issues (suggestion equals original after trimming). Seen often with gemma3:4b.
 - 2026-10-31: Optional GC_REASONING_EFFORT (none|low|medium|high), sent as `reasoning_effort` only when set. qwen3:8b on CPU: thinking on = >60 s timeout; reasoning_effort none = ~9 s.
+- 2026-10-31: WebSocket protocol: clients send `hello {token}` first, then `text.changed`, `field.closed`, `dictionary.add`; the core replies `ready`, `issues`, `error {code, fieldId?}`, `settings.changed`. All messages are a Zod discriminated union on `type` in packages/protocol.
+- 2026-10-31: Install token: random, stored in `~/Library/Application Support/GrammarChecker/token` (mode 600), printed by `core token`; pasted into the Chrome options page until the Swift app hands it over (milestone 6). Default port 7341, overridable with `GC_PORT`.
+- 2026-10-31: Field sessions (debounce, latest version/text per field) are the second place with in-memory state, next to the cache.
+- 2026-10-31: Chrome extension: React card, `bun build` bundling (no extra bundler), write-back via `execCommand("insertText")` with a re-read and Copy fallback. Plain `textarea`/`input` first; `contenteditable` in a second pass.

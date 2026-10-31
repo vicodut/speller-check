@@ -4,6 +4,7 @@
   "type": "module",
   "workspaces": [
     "apps/core",
+    "apps/chrome",
     "packages/protocol"
   ],
   "scripts": {
@@ -11,7 +12,8 @@
     "lint": "biome check .",
     "test": "bun test",
     "check": "bun run typecheck && bun run lint && bun run test",
-    "test:models": "bun run --cwd apps/core test:models"
+    "test:models": "bun run --cwd apps/core test:models",
+    "build:chrome": "bun run --cwd apps/chrome build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

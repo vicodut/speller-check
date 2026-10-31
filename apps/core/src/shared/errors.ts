@@ -8,7 +8,11 @@ export type ErrorCode =
   | "dictionary_read_failed"
   | "dictionary_invalid"
   | "issue_not_found"
-  | "issue_ambiguous";
+  | "issue_ambiguous"
+  | "dictionary_write_failed"
+  | "token_read_failed"
+  | "auth_failed"
+  | "message_invalid";
 
 /** Expected failure. Carries a code and optional HTTP status, never user text. */
 export type AppError = { readonly code: ErrorCode; readonly status?: number };

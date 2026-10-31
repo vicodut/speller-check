@@ -23,7 +23,7 @@ test/fixtures/         EN, FR and mixed samples
 - Expected failures (network, invalid model JSON, issue that can't be located) return `Result<T, E>` from `shared/result.ts`. Throw only for programmer errors.
 - Validate every external input with Zod at the boundary: model output, config, dictionary file, WebSocket messages. Inside, trust the types.
 - Providers are the only code that touches the network. Repositories are the only code that touches the filesystem. Services hold the logic.
-- Prefer pure functions. The cache service is the only place with in-memory state.
+- Prefer pure functions. The cache and field-session services are the only places with in-memory state.
 - The logger accepts structured fields only (`event`, `ms`, `len`, `code`), never free text, so user text can't leak into logs.
 - Tests sit next to the code: `issue-locator.service.test.ts`.
 - Tests that call a real model are opt-in (`bun run test:models`, needs env vars) and never part of `bun test`.

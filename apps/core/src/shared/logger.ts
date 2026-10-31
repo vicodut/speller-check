@@ -15,6 +15,15 @@ export type LogEvent =
   | "locate.dropped"
   | "dictionary.loaded"
   | "dictionary.filtered"
+  | "dictionary.added"
+  | "session.stale_dropped"
+  | "reconcile.dropped"
+  | "server.started"
+  | "server.failed"
+  | "connection.opened"
+  | "connection.closed"
+  | "connection.rejected"
+  | "message.invalid"
   | "cli.failed";
 
 /** The only fields a log line can carry: names, durations, lengths/counts and error codes. */
