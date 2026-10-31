@@ -1,32 +1,35 @@
-import { homedir } from "node:os";
-import { loadSettings } from "./features/settings";
-import { createCore } from "./main";
+import { runCheck } from "./cli/check.command";
+import { EXIT_USAGE, type ExitCode } from "./cli/exit-code";
+import { runServe } from "./cli/serve.command";
+import { runToken } from "./cli/token.command";
 import { Logger } from "./shared/logger";
 
-const USAGE =
-  "Usage: core check < text\nRequires GC_BASE_URL and GC_MODEL (GC_API_KEY, GC_DICTIONARY_PATH optional).\n";
+const USAGE = `Usage:
+  core check < text   print issues for stdin as JSON
+  core serve          run the WebSocket server on 127.0.0.1 until SIGINT/SIGTERM
+  core token          print the install token (created on first use)
 
-/** `core check`: reads text on stdin, prints located issues as JSON on stdout. Logs go to stderr. */
-const run = async (args: readonly string[]): Promise<number> => {
-  const logger = new Logger();
-  if (args[0] !== "check") {
+check and serve require GC_BASE_URL and GC_MODEL
+  (GC_API_KEY, GC_DICTIONARY_PATH, GC_REASONING_EFFORT optional).
+serve and token read GC_PORT (default 7341) and GC_TOKEN_PATH (optional).
+Logs go to stderr.
+`;
+
+const commands: Record<string, (logger: Logger) => Promise<ExitCode>> = {
+  check: runCheck,
+  serve: runServe,
+  token: runToken,
+};
+
+const run = async (args: readonly string[]): Promise<ExitCode> => {
+  const command = args[0] === undefined ? undefined : commands[args[0]];
+  if (!command) {
     process.stderr.write(USAGE);
-    return 2;
+    return EXIT_USAGE;
   }
-  const settings = loadSettings(process.env, homedir());
-  if (!settings.ok) {
-    logger.error({ event: "cli.failed", code: settings.error.code });
-    process.stderr.write(USAGE);
-    return 2;
-  }
-  const text = await Bun.stdin.text();
-  const result = await createCore(settings.value, logger).checkService.check({ text });
-  if (!result.ok) {
-    logger.error({ event: "cli.failed", code: result.error.code });
-    return 1;
-  }
-  process.stdout.write(`${JSON.stringify(result.value.issues, null, 2)}\n`);
-  return 0;
+  const code = await command(new Logger());
+  if (code === EXIT_USAGE) process.stderr.write(USAGE);
+  return code;
 };
 
 process.exitCode = await run(Bun.argv.slice(2));

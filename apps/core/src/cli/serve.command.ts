@@ -1,0 +1,32 @@
+import { homedir } from "node:os";
+import { loadSettings } from "../features/settings";
+import { InstallTokenRepository } from "../features/transport";
+import { createCore, createServer } from "../main";
+import type { Logger } from "../shared/logger";
+import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
+
+const untilSignal = (): Promise<void> =>
+  new Promise((resolve) => {
+    process.once("SIGINT", () => resolve());
+    process.once("SIGTERM", () => resolve());
+  });
+
+/** `core serve`: runs the WebSocket server on 127.0.0.1 until SIGINT or SIGTERM. */
+export const runServe = async (logger: Logger): Promise<ExitCode> => {
+  const settings = loadSettings(process.env, homedir());
+  if (!settings.ok) {
+    logger.error({ event: "cli.failed", code: settings.error.code });
+    return EXIT_USAGE;
+  }
+  const token = await new InstallTokenRepository(settings.value.tokenPath).loadOrCreate();
+  if (!token.ok) {
+    logger.error({ event: "cli.failed", code: token.error.code });
+    return EXIT_FAILURE;
+  }
+  const core = createCore(settings.value, logger);
+  const server = createServer(core, { port: settings.value.port, token: token.value }, logger);
+  if (!server.start().ok) return EXIT_FAILURE;
+  await untilSignal();
+  server.stop();
+  return 0;
+};
