@@ -16,6 +16,7 @@ export type LogEvent =
   | "dictionary.loaded"
   | "dictionary.filtered"
   | "dictionary.added"
+  | "dictionary.add_failed"
   | "session.stale_dropped"
   | "reconcile.dropped"
   | "server.started"
