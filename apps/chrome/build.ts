@@ -19,6 +19,8 @@ const build = async (): Promise<void> => {
     target: "browser",
     format: "esm",
     minify: false,
+    // React ships its development build unless NODE_ENV is production.
+    define: { "process.env.NODE_ENV": '"production"' },
   });
   if (!result.success) {
     for (const log of result.logs) console.error(log);

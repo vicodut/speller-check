@@ -1,8 +1,8 @@
-import { CheckCache, CheckService } from "./features/check";
+import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import { OpenAiCompatibleProvider } from "./features/providers";
 import type { Settings } from "./features/settings";
-import { type ServerDeps, WebSocketServer } from "./features/transport";
+import { WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
@@ -26,27 +26,6 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
   return { checkService, dictionary };
 };
 
-// Temporary adapter: replaced by FieldSessions (features/check) at integration.
-// No debounce, no stale-version dropping: every update is checked and published.
-const createInlineSession =
-  (core: Core): ServerDeps["createSession"] =>
-  (publish) => {
-    let disposed = false;
-    return {
-      update: ({ fieldId, text, version }) => {
-        void core.checkService.check({ text, version }).then((result) => {
-          if (disposed) return;
-          if (result.ok) publish({ type: "issues", fieldId, version, issues: result.value.issues });
-          else publish({ type: "error", code: result.error.code, fieldId });
-        });
-      },
-      close: () => undefined,
-      dispose: () => {
-        disposed = true;
-      },
-    };
-  };
-
 export const createServer = (
   core: Core,
   options: { readonly port: number; readonly token: string },
@@ -55,7 +34,7 @@ export const createServer = (
   new WebSocketServer(
     options,
     {
-      createSession: createInlineSession(core),
+      createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),
     },
     logger,

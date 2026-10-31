@@ -3,9 +3,8 @@ import { loadSettings } from "../shared/extension-settings";
 import type { BackgroundMessage } from "../shared/port-messages";
 import { isSiteBlocked } from "../shared/site-blocklist";
 import { FieldWatcher } from "./features/field-watcher";
+import { createIssueView } from "./features/underlines";
 import { CorePort } from "./shared/core-port";
-// Integration: replace with `import { createIssueView } from "./features/underlines";`
-import { createNoopIssueView as createIssueView } from "./shared/noop-issue-view";
 
 /** This frame's host and its ancestors' hosts, so an embedded frame on a blocked site stays off. */
 const frameHostnames = (): string[] => {
