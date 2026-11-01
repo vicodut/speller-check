@@ -1,9 +1,9 @@
 import type { Issue } from "@gc/protocol";
+import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { IssueView, IssueViewCallbacks, WatchedField } from "../../shared/issue-view";
 import { applyFix, matchesText } from "../write-back";
 import { CardController } from "./card-controller.service";
 import { attachFieldListeners } from "./field-listeners.service";
-import { createFrameScheduler } from "./frame-scheduler.util";
 import { colourForType } from "./issue-colour.util";
 import {
   emptyHidden,
