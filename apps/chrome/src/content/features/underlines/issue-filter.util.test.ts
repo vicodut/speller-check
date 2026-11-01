@@ -21,34 +21,51 @@ const make = (start: number, original: string, suggestion = "x"): Issue => ({
 const teh = make(5, "teh", "the");
 const recieve = make(12, "recieve", "receive");
 
+const text = "I am teh one to recieve it.";
+
 describe("issueKey", () => {
-  test("differs by start, original and suggestion", () => {
-    const keys = [teh, make(6, "teh", "the"), make(5, "teh", "tea"), make(5, "teH", "the")];
-    expect(new Set(keys.map(issueKey)).size).toBe(4);
+  test("differs by original, suggestion and surrounding text", () => {
+    const same = "Say teh word.";
+    const keys = [
+      issueKey(teh, text),
+      issueKey(make(5, "teh", "tea"), text),
+      issueKey(make(4, "teh", "the"), same),
+    ];
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  test("survives edits away from the issue, not next to it", () => {
+    const base = "First words here. The rest is fine. I am teh one.";
+    const at = (t: string) => make(t.indexOf("teh"), "teh", "the");
+    const far = base.replace("First", "Opening");
+    const near = base.replace("I am", "You are");
+    expect(issueKey(at(far), far)).toBe(issueKey(at(base), base));
+    expect(issueKey(at(near), near)).not.toBe(issueKey(at(base), base));
   });
 
   test("ignores reason and type", () => {
     const withReason: Issue = { ...teh, reason: "other", type: "grammar" };
-    expect(issueKey(withReason)).toBe(issueKey(teh));
+    expect(issueKey(withReason, text)).toBe(issueKey(teh, text));
   });
 });
 
 describe("visibleIssues", () => {
   test("keeps everything when nothing is hidden", () => {
-    expect(visibleIssues([teh, recieve], emptyHidden())).toEqual([teh, recieve]);
+    expect(visibleIssues([teh, recieve], emptyHidden(), text)).toEqual([teh, recieve]);
   });
 
   test("drops a dismissed occurrence only", () => {
+    const long = `${text} Then teh end.`;
+    const other = make(long.lastIndexOf("teh"), "teh", "the");
     const hidden = emptyHidden();
-    hidden.keys.add(issueKey(teh));
-    const other = make(30, "teh", "the");
-    expect(visibleIssues([teh, recieve, other], hidden)).toEqual([recieve, other]);
+    hidden.keys.add(issueKey(teh, long));
+    expect(visibleIssues([teh, recieve, other], hidden, long)).toEqual([recieve, other]);
   });
 
   test("drops every issue with an original added to the dictionary", () => {
     const hidden = emptyHidden();
     hidden.originals.add("teh");
-    expect(visibleIssues([teh, recieve, make(30, "teh")], hidden)).toEqual([recieve]);
+    expect(visibleIssues([teh, recieve, make(30, "teh")], hidden, text)).toEqual([recieve]);
   });
 });
 

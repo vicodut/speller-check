@@ -1,1 +1,1 @@
-export { StatusBadge } from "./status-badge.service";
+export { StatusBadge, type StatusBadgeCallbacks } from "./status-badge.service";

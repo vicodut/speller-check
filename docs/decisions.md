@@ -36,3 +36,5 @@
 - 2026-11-01: contenteditable support: the field is the outermost editable element; its text comes from a DOM text model (text nodes in order, `<br>` = "
 ", one "
 " between blocks, a trailing `<br>` in a non-empty block adds nothing, script/style skipped). Underlines use `Range.getClientRects()`; write-back selects the Range and runs `insertText`, then re-checks once after 50 ms (rich editors apply edits late) before falling back to Copy. Offsets inside synthetic newlines are never drawn or edited.
+- 2026-11-01: The field badge shows a spinner while checking, then a count (green ✓ for none, red number up to "9+"; click lists the issues and opens the card), orange "!" for a failed check, grey "!" when the core is unreachable or the token is rejected. The background broadcasts `core.status` to content ports (on attach and on change). The list is built with `textContent` only.
+- 2026-11-01: Dismissals are keyed on original + suggestion + 12 characters of text on each side (not the offset), so they survive edits elsewhere in the field but not edits right next to the issue.

@@ -1,12 +1,12 @@
 import type { Issue } from "@gc/protocol";
 import { fieldText, isTextControl } from "../../shared/field-text";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
+import { colourForType } from "../../shared/issue-colour.util";
 import type { IssueView, IssueViewCallbacks, WatchedField } from "../../shared/issue-view";
 import { applyFix, issuesAfterFix, matchesText } from "../write-back";
 import { CardController } from "./card-controller.service";
 import { createEditableMeasurer } from "./editable-measure.service";
 import { attachFieldListeners } from "./field-listeners.service";
-import { colourForType } from "./issue-colour.util";
 import {
   emptyHidden,
   type HiddenIssues,
@@ -43,6 +43,14 @@ export class IssueViewService implements IssueView {
     this.redraw();
   }
 
+  open(field: WatchedField, issue: Issue): void {
+    if (!this.session || this.session.field !== field || !this.ui) return;
+    const target = sameOccurrence(this.visible(this.session), issue);
+    if (!target) return;
+    this.ui.card.open(target);
+    this.redraw();
+  }
+
   clear(field: WatchedField): void {
     if (this.session?.field !== field) return;
     this.session.detach();
@@ -64,7 +72,7 @@ export class IssueViewService implements IssueView {
     const overlay = createOverlayHost();
     const card = new CardController(overlay, {
       accept: (issue) => this.accept(issue),
-      dismiss: (issue) => this.hide((h) => h.keys.add(issueKey(issue))),
+      dismiss: (issue) => this.hide((h, text) => h.keys.add(issueKey(issue, text))),
       addToDictionary: (issue) => {
         this.callbacks.addToDictionary(issue.original);
         this.hide((h) => h.originals.add(issue.original));
@@ -91,14 +99,13 @@ export class IssueViewService implements IssueView {
 
   /** Issues to draw. Stale ones (text changed since the check) wait for the next result. */
   private visible({ field, issues }: Session): Issue[] {
-    return visibleIssues(issues, this.hiddenFor(field)).filter((i) =>
-      matchesText(fieldText(field), i),
-    );
+    const text = fieldText(field);
+    return visibleIssues(issues, this.hiddenFor(field), text).filter((i) => matchesText(text, i));
   }
 
-  private hide(change: (hidden: HiddenIssues) => void): void {
+  private hide(change: (hidden: HiddenIssues, text: string) => void): void {
     if (!this.session) return;
-    change(this.hiddenFor(this.session.field));
+    change(this.hiddenFor(this.session.field), fieldText(this.session.field));
     this.redraw();
   }
 
@@ -143,6 +150,7 @@ export class IssueViewService implements IssueView {
   private redraw(): void {
     if (!this.session || !this.ui) return;
     const issues = this.visible(this.session);
+    this.callbacks.visibleChanged(this.session.field, issues);
     const measurer = this.measurer(this.session.field, this.ui.overlay.scratch);
     const segments = issues.flatMap((issue) =>
       measurer

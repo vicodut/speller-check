@@ -22,16 +22,24 @@ export type ContentMessage = z.infer<typeof ContentMessage>;
 export const CoreReadyMessage = z.object({ type: z.literal("core.ready") });
 export type CoreReadyMessage = z.infer<typeof CoreReadyMessage>;
 
+export const ConnectionStatus = z.enum(["connecting", "ready", "auth_failed", "unreachable"]);
+export type ConnectionStatus = z.infer<typeof ConnectionStatus>;
+
+/** Sent to a port when it attaches and to every port when the core connection status changes. */
+export const CoreStatusMessage = z.object({
+  type: z.literal("core.status"),
+  status: ConnectionStatus,
+});
+export type CoreStatusMessage = z.infer<typeof CoreStatusMessage>;
+
 /** Background -> content script, over the port. Field ids are frame-local again. */
 export const BackgroundMessage = z.discriminatedUnion("type", [
   IssuesCoreMessage,
   ErrorMessage,
   CoreReadyMessage,
+  CoreStatusMessage,
 ]);
 export type BackgroundMessage = z.infer<typeof BackgroundMessage>;
-
-export const ConnectionStatus = z.enum(["connecting", "ready", "auth_failed", "unreachable"]);
-export type ConnectionStatus = z.infer<typeof ConnectionStatus>;
 
 /** One-off `chrome.runtime.sendMessage` from the options page. */
 export const StatusRequest = z.object({ type: z.literal("status") });

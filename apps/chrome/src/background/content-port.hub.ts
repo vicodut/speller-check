@@ -1,5 +1,9 @@
 import type { ClientMessage, CoreMessage } from "@gc/protocol";
-import { type BackgroundMessage, ContentMessage } from "../shared/port-messages";
+import {
+  type BackgroundMessage,
+  type ConnectionStatus,
+  ContentMessage,
+} from "../shared/port-messages";
 import { FieldOwnershipRouter } from "./field-ownership.router";
 
 /** The part of `chrome.runtime.Port` the hub uses, so tests can pass a fake. */
@@ -20,6 +24,7 @@ export class ContentPortHub {
   private readonly ports = new Map<string, ContentPort>();
   private readonly router = new FieldOwnershipRouter();
   private nextPortId = 1;
+  private status: ConnectionStatus = "connecting";
 
   constructor(private readonly sendToCore: SendToCore) {}
 
@@ -28,6 +33,13 @@ export class ContentPortHub {
     this.ports.set(portId, port);
     port.onMessage.addListener((raw) => this.fromContent(portId, raw));
     port.onDisconnect.addListener(() => this.detach(portId));
+    port.postMessage({ type: "core.status", status: this.status });
+  }
+
+  /** The core connection status changed: tell every frame (they show it on the badge). */
+  setStatus(status: ConnectionStatus): void {
+    this.status = status;
+    this.broadcast({ type: "core.status", status });
   }
 
   /** Routes a validated core message to the port that owns its field. */

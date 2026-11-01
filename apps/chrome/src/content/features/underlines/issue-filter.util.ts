@@ -10,13 +10,30 @@ export type HiddenIssues = {
 
 export const emptyHidden = (): HiddenIssues => ({ keys: new Set(), originals: new Set() });
 
-/** Identifies one occurrence: its start, original and suggestion. */
-export const issueKey = (issue: Pick<Issue, "start" | "original" | "suggestion">): string =>
-  JSON.stringify([issue.start, issue.original, issue.suggestion]);
+/** Characters of surrounding text that identify an occurrence. */
+const NEIGHBOURHOOD = 12;
 
-/** The issues the user hasn't dismissed or added to the dictionary. */
-export const visibleIssues = (issues: readonly Issue[], hidden: HiddenIssues): Issue[] =>
-  issues.filter((i) => !hidden.keys.has(issueKey(i)) && !hidden.originals.has(i.original));
+type Keyed = Pick<Issue, "start" | "end" | "original" | "suggestion">;
+
+/**
+ * Identifies one occurrence by its original, suggestion and the text right around it, so a
+ * dismissal survives edits elsewhere in the field (its offsets shift) but not edits next to it.
+ */
+export const issueKey = (issue: Keyed, text: string): string =>
+  JSON.stringify([
+    issue.original,
+    issue.suggestion,
+    text.slice(Math.max(0, issue.start - NEIGHBOURHOOD), issue.start),
+    text.slice(issue.end, issue.end + NEIGHBOURHOOD),
+  ]);
+
+/** The issues the user hasn't dismissed or added to the dictionary. `text` is the field's. */
+export const visibleIssues = (
+  issues: readonly Issue[],
+  hidden: HiddenIssues,
+  text: string,
+): Issue[] =>
+  issues.filter((i) => !hidden.keys.has(issueKey(i, text)) && !hidden.originals.has(i.original));
 
 /** The first issue whose range contains the caret offset (the end counts as inside). */
 export const issueAtOffset = (issues: readonly Issue[], offset: number): Issue | undefined =>

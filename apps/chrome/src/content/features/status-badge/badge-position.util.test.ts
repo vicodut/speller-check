@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { BADGE_SIZE, badgePosition, type FieldBox } from "./badge-position.util";
+import { BADGE_SIZE, badgePosition, type FieldBox, panelPlacement } from "./badge-position.util";
 
 const box = (extra: Partial<FieldBox> = {}): FieldBox => ({
   left: 100,
@@ -35,5 +35,23 @@ describe("badgePosition", () => {
 
   test("never starts before the field in a tiny field", () => {
     expect(badgePosition(box({ width: 10, borderRight: 0 })).left).toBe(100);
+  });
+});
+
+describe("panelPlacement", () => {
+  const viewport = { width: 1000, height: 800 };
+
+  test("opens above the badge, right-aligned, when there's room", () => {
+    expect(panelPlacement({ left: 900, top: 600 }, viewport, 200)).toEqual({
+      right: 1000 - 900 - BADGE_SIZE,
+      bottom: 800 - 600 + 6,
+    });
+  });
+
+  test("opens below when the badge is near the top", () => {
+    expect(panelPlacement({ left: 900, top: 50 }, viewport, 200)).toEqual({
+      right: 1000 - 900 - BADGE_SIZE,
+      top: 50 + BADGE_SIZE + 6,
+    });
   });
 });

@@ -35,6 +35,9 @@ const setup = () => {
   const b = new FakePort();
   hub.attach(a);
   hub.attach(b);
+  // Each port gets the current status on attach; tested on its own below.
+  a.received.length = 0;
+  b.received.length = 0;
   return { hub, toCore, a, b };
 };
 
@@ -105,5 +108,19 @@ describe("ContentPortHub", () => {
     expect(toCore).toEqual([{ type: "dictionary.add", term: "NestJS" }]);
     expect(a.received).toEqual([{ type: "core.ready" }]);
     expect(b.received).toEqual([{ type: "core.ready" }]);
+  });
+
+  test("sends the current status on attach and broadcasts changes", () => {
+    const hub = new ContentPortHub(() => true);
+    const early = new FakePort();
+    hub.attach(early);
+    hub.setStatus("unreachable");
+    const late = new FakePort();
+    hub.attach(late);
+    expect(early.received).toEqual([
+      { type: "core.status", status: "connecting" },
+      { type: "core.status", status: "unreachable" },
+    ]);
+    expect(late.received).toEqual([{ type: "core.status", status: "unreachable" }]);
   });
 });

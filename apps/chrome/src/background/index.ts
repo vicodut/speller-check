@@ -9,7 +9,7 @@ let hub: ContentPortHub | undefined;
 
 const connection = new CoreConnection({
   onMessage: (message) => hub?.fromCore(message),
-  onStatus: () => {},
+  onStatus: (status) => hub?.setStatus(status),
 });
 hub = new ContentPortHub((message) => connection.send(message));
 

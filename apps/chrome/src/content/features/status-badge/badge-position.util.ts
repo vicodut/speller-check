@@ -27,3 +27,21 @@ export const badgePosition = (box: FieldBox): { left: number; top: number } => (
   left: placeAxis(box.left, box.width, box.borderRight + box.scrollbarX),
   top: placeAxis(box.top, box.height, box.borderBottom + box.scrollbarY),
 });
+
+const PANEL_GAP = 6;
+
+/**
+ * Where the issue list opens: right-aligned with the badge, above it when there's room for
+ * `panelHeight`, else below. Values are CSS `right` plus `top` or `bottom`, in viewport px.
+ */
+export const panelPlacement = (
+  badge: { left: number; top: number },
+  viewport: { width: number; height: number },
+  panelHeight: number,
+): { right: number; top?: number; bottom?: number } => {
+  const right = Math.max(0, viewport.width - (badge.left + BADGE_SIZE));
+  if (badge.top - PANEL_GAP >= panelHeight) {
+    return { right, bottom: viewport.height - badge.top + PANEL_GAP };
+  }
+  return { right, top: badge.top + BADGE_SIZE + PANEL_GAP };
+};

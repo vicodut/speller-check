@@ -1,6 +1,6 @@
 // Content script: watches text fields and shows the core's issues. Never logs field text.
 import { loadSettings } from "../shared/extension-settings";
-import type { BackgroundMessage } from "../shared/port-messages";
+import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
 import { isSiteBlocked } from "../shared/site-blocklist";
 import { FieldWatcher } from "./features/field-watcher";
 import { StatusBadge } from "./features/status-badge";
@@ -25,13 +25,17 @@ const start = async (): Promise<void> => {
   if (frameHostnames().some((host) => isSiteBlocked(host, blockedSites))) return;
 
   const port = new CorePort((message) => onBackground(message));
+  let status: ConnectionStatus | undefined;
   const view = createIssueView({
     addToDictionary: (term) => port.send({ type: "dictionary.add", term }),
+    visibleChanged: (field, issues) => badge.issues(field, issues),
   });
-  const badge = new StatusBadge();
+  const badge = new StatusBadge({ select: (field, issue) => view.open(field, issue) });
   const watcher = new FieldWatcher(document, {
     changed: (field, fieldId, version, text) => {
-      badge.showLoading(field);
+      // While the core is unusable the background drops the text; say so instead of spinning.
+      if (status === "auth_failed" || status === "unreachable") badge.offline(status, field);
+      else badge.checking(field);
       port.send({ type: "text.changed", fieldId, version, text });
     },
     closed: (field, fieldId) => {
@@ -42,6 +46,11 @@ const start = async (): Promise<void> => {
   });
 
   const onBackground = (message: BackgroundMessage): void => {
+    if (message.type === "core.status") {
+      status = message.status;
+      if (status === "auth_failed" || status === "unreachable") badge.offline(status);
+      return;
+    }
     if (message.type === "core.ready") {
       watcher.resendFocused();
       return;
@@ -50,14 +59,14 @@ const start = async (): Promise<void> => {
       // Only the current version is drawn; anything older is stale and dropped.
       const field = watcher.currentField(message.fieldId, message.version);
       if (!field) return;
-      badge.hide(field);
       view.show(field, message.issues);
+      badge.done(field);
       return;
     }
     const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
     if (!field) return;
-    badge.hide(field);
     view.clear(field);
+    badge.failed(field, message.code);
   };
 
   // The port opens lazily on the first focused field, so idle pages don't wake the worker.
