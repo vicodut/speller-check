@@ -2,6 +2,7 @@ import type { Issue, ModelIssue } from "@gc/protocol";
 import { type AppError, appError } from "../../../shared/errors";
 import { err, ok, type Result } from "../../../shared/result";
 import type { Sentence } from "./sentence-segmenter.service";
+import { trimEchoedContext } from "./suggestion-trimmer.service";
 
 type Span = { readonly start: number; readonly end: number };
 type Match = Span & { readonly sentence: Sentence };
@@ -44,7 +45,8 @@ const within = (inner: Span, outer: Span): boolean =>
 /**
  * Finds the one place in `sentences` the model meant by `original` + `context`.
  * Context narrows the candidates when it matches; otherwise `original` must be unique.
- * Offsets are absolute (UTF-16), and `original` is replaced by the exact source slice.
+ * Offsets are absolute (UTF-16), `original` is replaced by the exact source slice, and words the
+ * suggestion echoes from around it are trimmed (see suggestion-trimmer).
  */
 export const locateIssue = (
   issue: ModelIssue,
@@ -62,6 +64,8 @@ export const locateIssue = (
   if (!match) return err(appError("issue_not_found"));
   if (rest.length > 0) return err(appError("issue_ambiguous"));
   const local = match.start - match.sentence.start;
-  const original = match.sentence.text.slice(local, local + (match.end - match.start));
-  return ok({ ...issue, original, start: match.start, end: match.end });
+  const localEnd = local + (match.end - match.start);
+  const original = match.sentence.text.slice(local, localEnd);
+  const suggestion = trimEchoedContext(match.sentence.text, local, localEnd, issue.suggestion);
+  return ok({ ...issue, original, suggestion, start: match.start, end: match.end });
 };

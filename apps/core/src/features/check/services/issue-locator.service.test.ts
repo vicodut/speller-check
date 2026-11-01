@@ -85,6 +85,15 @@ describe("locateIssue", () => {
     expect(result.ok && [result.value.start, result.value.end]).toEqual([14, 17]);
   });
 
+  test("trims words the suggestion echoes from around the original", () => {
+    const text = "I has went to the store.";
+    const result = locateIssue(
+      issue("has went", "I has went to", "I went"),
+      segmentSentences(text),
+    );
+    expect(result.ok && result.value.suggestion).toBe("went");
+  });
+
   test("returns UTF-16 offsets after emoji", () => {
     expect(offsets("👍 I has it.", "has", "I has it")).toEqual([5, 8]);
   });

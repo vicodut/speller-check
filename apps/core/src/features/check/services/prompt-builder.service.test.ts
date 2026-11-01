@@ -20,6 +20,9 @@ describe("buildPrompt", () => {
       /Québec/,
       /DICTIONARY are always correct/,
       /language of the sentence/,
+      /Keep the writer's meaning/,
+      /several errors/,
+      /one error, report them together/i,
     ]) {
       expect(system?.content).toMatch(rule);
     }

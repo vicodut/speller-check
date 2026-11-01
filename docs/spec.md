@@ -76,7 +76,7 @@ Only changed sentences are sent to the model, and every result is checked agains
 
 5. **Check.** Changed sentences are sent in one batched request with surrounding context and the dictionary. Each distinct sentence is sent once; neighbouring unchanged sentences are included as context the model must not report on. Results are cached per sentence (clean sentences cache as an empty list), keyed by sentence hash + model.
 
-6. **Map.** Each returned issue is located in the snapshot text using `original` + `context` (see Model layer). Issues that can't be located unambiguously are dropped. Issues are searched only inside the checked sentences; whitespace runs and straight/curly apostrophes match loosely, and the issue's `original` is replaced by the exact source slice. Overlapping issues keep the first one.
+6. **Map.** Each returned issue is located in the snapshot text using `original` + `context` (see Model layer). Issues that can't be located unambiguously are dropped. Words the suggestion repeats from right before or after `original` are trimmed, so Accept never duplicates them. Issues are searched only inside the checked sentences; whitespace runs and straight/curly apostrophes match loosely, and the issue's `original` is replaced by the exact source slice. Overlapping issues keep the first one.
 
 7. **Reconcile.** If the field's version moved on while the model ran, issues are re-mapped onto the new text. An issue whose `original` no longer exists at that spot is dropped. Stale results are never drawn.
 
@@ -123,7 +123,7 @@ The adapter requests `response_format: {type: "json_object"}`; if the endpoint r
 
 - `reason` is written in the language of the sentence.
 
-**Prompt rules.** Flag only clear errors, never style. Never translate. French follows standard international French, not Québec usage. Words in the dictionary are always correct. Mixed English/French text is checked per sentence in its own language.
+**Prompt rules.** Flag only clear errors, never style. Keep the writer's meaning: fix the verb to fit the subject, never the subject, pronouns, names, numbers or tense. Report every error in a sentence, and a multi-word error as one issue. Never translate. French follows standard international French, not Québec usage. Words in the dictionary are always correct. Mixed English/French text is checked per sentence in its own language.
 
 **Model switching.** Changing provider or model in settings applies to the next request without a restart and clears the sentence cache.
 
