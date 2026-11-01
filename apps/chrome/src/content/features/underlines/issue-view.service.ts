@@ -2,7 +2,7 @@ import type { Issue } from "@gc/protocol";
 import { fieldText, isTextControl } from "../../shared/field-text";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { IssueView, IssueViewCallbacks, WatchedField } from "../../shared/issue-view";
-import { applyFix, matchesText } from "../write-back";
+import { applyFix, issuesAfterFix, matchesText } from "../write-back";
 import { CardController } from "./card-controller.service";
 import { createEditableMeasurer } from "./editable-measure.service";
 import { attachFieldListeners } from "./field-listeners.service";
@@ -101,10 +101,16 @@ export class IssueViewService implements IssueView {
   }
 
   private async accept(issue: Issue): Promise<boolean> {
-    const field = this.session?.field;
-    if (!field || !(await applyFix(field, issue))) return false;
-    // The edit triggers a new check; drop the now-stale underlines until it arrives.
-    this.clear(field);
+    const session = this.session;
+    if (!session) return false;
+    // Computed before the edit: `visible` checks each issue against the current text.
+    const remaining = issuesAfterFix(this.visible(session), issue);
+    if (!(await applyFix(session.field, issue))) return false;
+    // The edit triggers a new check, whose result replaces these; until then keep the others.
+    if (this.session === session) {
+      session.issues = remaining;
+      this.redraw();
+    }
     return true;
   }
 
