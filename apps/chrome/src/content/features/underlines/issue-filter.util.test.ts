@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Issue } from "@gc/protocol";
-import { emptyHidden, issueAtOffset, issueKey, visibleIssues } from "./issue-filter.util";
+import {
+  emptyHidden,
+  issueAtOffset,
+  issueKey,
+  sameOccurrence,
+  visibleIssues,
+} from "./issue-filter.util";
 
 const make = (start: number, original: string, suggestion = "x"): Issue => ({
   start,
@@ -59,5 +65,19 @@ describe("issueAtOffset", () => {
   test("returns undefined between issues", () => {
     expect(issueAtOffset(issues, 4)).toBeUndefined();
     expect(issueAtOffset(issues, 10)).toBeUndefined();
+  });
+});
+
+describe("sameOccurrence", () => {
+  const base = { start: 4, end: 7, original: "teh" };
+
+  test("finds the matching issue in a fresh result", () => {
+    const fresh = [{ ...base, start: 0, end: 3 }, { ...base }];
+    expect(sameOccurrence(fresh, base)).toBe(fresh[1]);
+  });
+
+  test("returns undefined when the occurrence moved or changed", () => {
+    expect(sameOccurrence([{ ...base, start: 5, end: 8 }], base)).toBeUndefined();
+    expect(sameOccurrence([{ ...base, original: "tah" }], base)).toBeUndefined();
   });
 });

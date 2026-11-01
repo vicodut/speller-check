@@ -12,6 +12,7 @@ import {
   type HiddenIssues,
   issueAtOffset,
   issueKey,
+  sameOccurrence,
   visibleIssues,
 } from "./issue-filter.util";
 import { createMirrorMeasurer, type FieldMeasurer } from "./mirror-measure.service";
@@ -34,6 +35,7 @@ export class IssueViewService implements IssueView {
     this.ensureUi();
     if (this.session?.field === field) {
       this.session.issues = issues;
+      this.keepCardOpen(issues);
     } else {
       if (this.session) this.clear(this.session.field);
       this.session = { field, issues, detach: this.attach(field) };
@@ -123,6 +125,13 @@ export class IssueViewService implements IssueView {
     }
     this.ui.card.open(issue);
     this.redraw();
+  }
+
+  /** A fresh result keeps the card open when it still holds the same occurrence. */
+  private keepCardOpen(issues: readonly Issue[]): void {
+    const open = this.ui?.card.current();
+    const fresh = open ? sameOccurrence(issues, open) : undefined;
+    if (fresh) this.ui?.card.retarget(fresh);
   }
 
   private measurer(field: WatchedField, scratch: HTMLElement): FieldMeasurer {

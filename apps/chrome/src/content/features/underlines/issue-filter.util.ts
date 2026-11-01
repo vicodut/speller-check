@@ -21,3 +21,14 @@ export const visibleIssues = (issues: readonly Issue[], hidden: HiddenIssues): I
 /** The first issue whose range contains the caret offset (the end counts as inside). */
 export const issueAtOffset = (issues: readonly Issue[], offset: number): Issue | undefined =>
   issues.find((i) => i.start <= offset && offset <= i.end);
+
+type Occurrence = Pick<Issue, "start" | "end" | "original">;
+
+/** The issue in `issues` covering the same text as `target` (a fresh result's copy of it). */
+export const sameOccurrence = <T extends Occurrence>(
+  issues: readonly T[],
+  target: Occurrence,
+): T | undefined =>
+  issues.find(
+    (i) => i.start === target.start && i.end === target.end && i.original === target.original,
+  );

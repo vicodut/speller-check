@@ -42,6 +42,11 @@ export class CardController {
     this.detachDismissal ??= attachCardDismissal(this.overlay.host, () => this.close());
   }
 
+  /** Points the open card at a fresh copy of its issue, keeping its state (e.g. the Copy fallback). */
+  retarget(issue: Issue): void {
+    if (this.state) this.state = { ...this.state, issue };
+  }
+
   /** Moves the card under `anchor`; closes it when the underline is no longer visible. */
   place(anchor: Rect | undefined): void {
     if (!this.state) return;
@@ -73,7 +78,7 @@ export class CardController {
   private async accept(issue: Issue): Promise<void> {
     const applied = await this.actions.accept(issue);
     // The card may have moved on to another issue (or closed) while the edit settled.
-    if (this.state?.issue !== issue) return;
+    if (!this.state || this.state.issue.start !== issue.start) return;
     if (applied) {
       this.close();
       return;
