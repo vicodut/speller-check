@@ -1,6 +1,10 @@
 import type { Issue } from "@gc/protocol";
 
-export type WatchedField = HTMLTextAreaElement | HTMLInputElement;
+/** A textarea or text input. */
+export type TextControl = HTMLTextAreaElement | HTMLInputElement;
+
+/** A text control, or the root element of a contenteditable region (see `field-text.ts`). */
+export type WatchedField = TextControl | HTMLElement;
 
 export type IssueViewCallbacks = {
   /** The user chose "Add to dictionary" for a term. */

@@ -1,3 +1,4 @@
+import { fieldCaret, isTextControl } from "../../shared/field-text";
 import type { WatchedField } from "../../shared/issue-view";
 
 export type FieldHandlers = {
@@ -21,28 +22,27 @@ const NAVIGATION_KEYS = new Set([
   "PageDown",
 ]);
 
-const collapsedCaret = (field: WatchedField): number | null => {
-  const { selectionStart, selectionEnd } = field;
-  return selectionStart !== null && selectionStart === selectionEnd ? selectionStart : null;
-};
-
 /** Listens to the field and the window; returns a function that removes every listener. */
 export const attachFieldListeners = (field: WatchedField, on: FieldHandlers): (() => void) => {
   const passive = { passive: true } as const;
   const windowScroll = { passive: true, capture: true } as const;
   const reposition = () => on.reposition();
   const onCaret = () => {
-    const offset = collapsedCaret(field);
+    const offset = fieldCaret(field);
     if (offset !== null) on.caret(offset);
   };
   const onKeyUp = (event: KeyboardEvent) => {
     if (NAVIGATION_KEYS.has(event.key)) onCaret();
   };
   const onBlur = () => on.blur();
-  // Widen to HTMLElement: addEventListener overloads don't resolve on the field union.
   const el: HTMLElement = field;
   const observer = new ResizeObserver(reposition);
   observer.observe(field);
+  // Rich editors re-render their DOM outside input events (formatting, pasted content).
+  const mutations = new MutationObserver(reposition);
+  if (!isTextControl(field)) {
+    mutations.observe(field, { childList: true, characterData: true, subtree: true });
+  }
   el.addEventListener("scroll", reposition, passive);
   el.addEventListener("input", reposition, passive);
   el.addEventListener("click", onCaret);
@@ -52,6 +52,7 @@ export const attachFieldListeners = (field: WatchedField, on: FieldHandlers): ((
   window.addEventListener("resize", reposition, passive);
   return () => {
     observer.disconnect();
+    mutations.disconnect();
     el.removeEventListener("scroll", reposition);
     el.removeEventListener("input", reposition);
     el.removeEventListener("click", onCaret);

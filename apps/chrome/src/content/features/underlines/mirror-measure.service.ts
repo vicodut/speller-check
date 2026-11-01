@@ -1,4 +1,4 @@
-import type { WatchedField } from "../../shared/issue-view";
+import type { TextControl, WatchedField } from "../../shared/issue-view";
 import { buildMirrorStyle, type FieldKind } from "./mirror-style.util";
 import { clipRects, type Rect } from "./rect.util";
 import { splitAtRange } from "./text-split.util";
@@ -31,7 +31,7 @@ export const visibleBox = (field: WatchedField): Rect => {
   };
 };
 
-const createMirrorDiv = (field: WatchedField, parent: Node): HTMLDivElement => {
+const createMirrorDiv = (field: TextControl, parent: Node): HTMLDivElement => {
   const computed = getComputedStyle(field);
   const kind: FieldKind = field instanceof HTMLTextAreaElement ? "textarea" : "input";
   const borderX = px(computed, "border-left-width") + px(computed, "border-right-width");
@@ -48,8 +48,8 @@ const createMirrorDiv = (field: WatchedField, parent: Node): HTMLDivElement => {
   return div;
 };
 
-/** Creates a measurer for the field's current style and size; `remove` it after use. */
-export const createFieldMeasurer = (field: WatchedField, parent: Node): FieldMeasurer => {
+/** Measures a textarea/input for its current style and size; `remove` it after use. */
+export const createMirrorMeasurer = (field: TextControl, parent: Node): FieldMeasurer => {
   const mirror = createMirrorDiv(field, parent);
   const box = visibleBox(field);
   return {

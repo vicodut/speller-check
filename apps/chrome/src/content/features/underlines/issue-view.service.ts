@@ -1,8 +1,10 @@
 import type { Issue } from "@gc/protocol";
+import { fieldText, isTextControl } from "../../shared/field-text";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { IssueView, IssueViewCallbacks, WatchedField } from "../../shared/issue-view";
 import { applyFix, matchesText } from "../write-back";
 import { CardController } from "./card-controller.service";
+import { createEditableMeasurer } from "./editable-measure.service";
 import { attachFieldListeners } from "./field-listeners.service";
 import { colourForType } from "./issue-colour.util";
 import {
@@ -12,7 +14,7 @@ import {
   issueKey,
   visibleIssues,
 } from "./issue-filter.util";
-import { createFieldMeasurer } from "./mirror-measure.service";
+import { createMirrorMeasurer, type FieldMeasurer } from "./mirror-measure.service";
 import { createOverlayHost, type OverlayHost } from "./overlay-host.service";
 import { drawUnderlines } from "./underline-layer.service";
 
@@ -87,7 +89,9 @@ export class IssueViewService implements IssueView {
 
   /** Issues to draw. Stale ones (text changed since the check) wait for the next result. */
   private visible({ field, issues }: Session): Issue[] {
-    return visibleIssues(issues, this.hiddenFor(field)).filter((i) => matchesText(field.value, i));
+    return visibleIssues(issues, this.hiddenFor(field)).filter((i) =>
+      matchesText(fieldText(field), i),
+    );
   }
 
   private hide(change: (hidden: HiddenIssues) => void): void {
@@ -96,10 +100,11 @@ export class IssueViewService implements IssueView {
     this.redraw();
   }
 
-  private accept(issue: Issue): boolean {
-    if (!this.session || !applyFix(this.session.field, issue)) return false;
+  private async accept(issue: Issue): Promise<boolean> {
+    const field = this.session?.field;
+    if (!field || !(await applyFix(field, issue))) return false;
     // The edit triggers a new check; drop the now-stale underlines until it arrives.
-    this.clear(this.session.field);
+    this.clear(field);
     return true;
   }
 
@@ -114,10 +119,16 @@ export class IssueViewService implements IssueView {
     this.redraw();
   }
 
+  private measurer(field: WatchedField, scratch: HTMLElement): FieldMeasurer {
+    return isTextControl(field)
+      ? createMirrorMeasurer(field, scratch)
+      : createEditableMeasurer(field);
+  }
+
   private redraw(): void {
     if (!this.session || !this.ui) return;
     const issues = this.visible(this.session);
-    const measurer = createFieldMeasurer(this.session.field, this.ui.overlay.scratch);
+    const measurer = this.measurer(this.session.field, this.ui.overlay.scratch);
     const segments = issues.flatMap((issue) =>
       measurer
         .rangeRects(issue.start, issue.end)

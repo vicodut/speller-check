@@ -1,3 +1,4 @@
+import { editableRoot, fieldText } from "../../shared/field-text";
 import type { WatchedField } from "../../shared/issue-view";
 import { isWatchableField } from "./field-eligibility.policy";
 import { FieldRegistry } from "./field-registry.store";
@@ -10,6 +11,8 @@ export type FieldWatcherCallbacks = {
 };
 
 const asWatchable = (target: EventTarget | null | undefined): WatchedField | undefined => {
+  const editable = editableRoot(target);
+  if (editable) return editable;
   if (!(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement)) {
     return undefined;
   }
@@ -24,10 +27,13 @@ const asWatchable = (target: EventTarget | null | undefined): WatchedField | und
   return watchable ? target : undefined;
 };
 
-/** The real target, also inside open shadow roots. */
-const eventTarget = (event: Event): EventTarget | null => event.composedPath()[0] ?? event.target;
+/** The real target, also inside open shadow roots; a contenteditable child maps to its root. */
+const eventTarget = (event: Event): EventTarget | null => {
+  const target = event.composedPath()[0] ?? event.target;
+  return editableRoot(target) ?? target;
+};
 
-/** Watches focus and input on text fields in this frame's document. */
+/** Watches focus and input on text fields and contenteditable regions in this frame's document. */
 export class FieldWatcher {
   private readonly registry = new FieldRegistry<WatchedField>();
   private focused: WatchedField | undefined;
@@ -91,7 +97,7 @@ export class FieldWatcher {
     if (this.focused && this.focused !== field) this.release(this.focused);
     this.focused = field;
     const { fieldId, version } = this.registry.bump(field);
-    this.callbacks.changed(field, fieldId, version, field.value);
+    this.callbacks.changed(field, fieldId, version, fieldText(field));
   }
 
   private release(field: WatchedField): void {

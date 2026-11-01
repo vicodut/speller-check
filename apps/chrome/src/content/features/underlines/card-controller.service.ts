@@ -6,7 +6,7 @@ import type { Rect } from "./rect.util";
 
 export type CardActions = {
   /** Writes the fix back; false switches the card to the Copy fallback. */
-  accept(issue: Issue): boolean;
+  accept(issue: Issue): Promise<boolean>;
   dismiss(issue: Issue): void;
   addToDictionary(issue: Issue): void;
 };
@@ -70,8 +70,11 @@ export class CardController {
     this.renderer.dispose();
   }
 
-  private accept(issue: Issue): void {
-    if (this.actions.accept(issue)) {
+  private async accept(issue: Issue): Promise<void> {
+    const applied = await this.actions.accept(issue);
+    // The card may have moved on to another issue (or closed) while the edit settled.
+    if (this.state?.issue !== issue) return;
+    if (applied) {
       this.close();
       return;
     }
@@ -91,7 +94,7 @@ export class CardController {
       issue,
       fallback,
       showAddToDictionary: canAddToDictionary(issue),
-      onAccept: () => this.accept(issue),
+      onAccept: () => void this.accept(issue),
       onDismiss: () => this.closeThen(this.actions.dismiss, issue),
       onAddToDictionary: () => this.closeThen(this.actions.addToDictionary, issue),
       onCopy: () => copyText(issue.suggestion),
