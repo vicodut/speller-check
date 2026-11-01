@@ -101,7 +101,7 @@ export class StatusBadge {
     this.detach();
     this.state = null;
     this.badge.hidden = true;
-    this.panel.hidden = true;
+    this.closePanel();
   }
 
   dispose(): void {
@@ -117,23 +117,46 @@ export class StatusBadge {
     this.badge.textContent = text;
     this.badge.title = title;
     this.badge.hidden = false;
-    if (variant !== "issues") this.panel.hidden = true;
+    if (variant !== "issues") this.closePanel();
     else if (!this.panel.hidden) this.renderPanel();
     this.place();
   }
 
   private togglePanel(): void {
+    if (!this.panel.hidden) {
+      this.closePanel();
+      return;
+    }
     if (this.state?.kind !== "count" || this.state.issues.length === 0) return;
-    this.panel.hidden = !this.panel.hidden;
-    if (!this.panel.hidden) this.renderPanel();
+    this.panel.hidden = false;
+    this.renderPanel();
     this.place();
+    // Capture phase, so page handlers that stop propagation can't keep the list open.
+    document.addEventListener("mousedown", this.onOutsideClick, true);
+    document.addEventListener("keydown", this.onEscape, true);
   }
+
+  private closePanel(): void {
+    if (this.panel.hidden) return;
+    this.panel.hidden = true;
+    document.removeEventListener("mousedown", this.onOutsideClick, true);
+    document.removeEventListener("keydown", this.onEscape, true);
+  }
+
+  /** Clicks inside the closed shadow root are retargeted to the host, so they keep it open. */
+  private readonly onOutsideClick = (event: MouseEvent) => {
+    if (!event.composedPath().includes(this.host)) this.closePanel();
+  };
+
+  private readonly onEscape = (event: KeyboardEvent) => {
+    if (event.key === "Escape") this.closePanel();
+  };
 
   private renderPanel(): void {
     const field = this.field;
     if (!field) return;
     renderIssueList(this.panel, this.latest, (issue) => {
-      this.panel.hidden = true;
+      this.closePanel();
       this.callbacks.select(field, issue);
     });
   }
