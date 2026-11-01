@@ -1,8 +1,17 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/protocol" },
-    { "path": "apps/core" },
-    { "path": "apps/chrome" }
+    {
+      "path": "packages/protocol"
+    },
+    {
+      "path": "apps/core"
+    },
+    {
+      "path": "apps/chrome"
+    },
+    {
+      "path": "scripts"
+    }
   ]
 }

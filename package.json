@@ -8,6 +8,7 @@
     "packages/protocol"
   ],
   "scripts": {
+    "dev": "bun scripts/dev.ts",
     "typecheck": "tsc -b",
     "lint": "biome check .",
     "test": "bun test",
