@@ -1,4 +1,4 @@
-import { ClientMessage, type CoreMessage } from "@gc/protocol";
+import { ClientMessage, type CoreMessage, type RephraseRequestMessage } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
@@ -78,7 +78,17 @@ export class ConnectionHandler {
         return;
       case "dictionary.add":
         return this.addTerm(message.term);
+      case "rephrase.request":
+        return this.rephrase(message);
     }
+  }
+
+  /** Answers with the result, or an error tagged `request: "rephrase"` (never a failed check). */
+  private async rephrase(message: RephraseRequestMessage): Promise<void> {
+    const { fieldId, version } = message;
+    const result = await this.deps.rephrase({ text: message.text, caret: message.caret });
+    if (result.ok) this.send({ type: "rephrase.result", fieldId, version, ...result.value });
+    else this.send({ type: "error", code: result.error.code, fieldId, request: "rephrase" });
   }
 
   private async addTerm(term: string): Promise<void> {

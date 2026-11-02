@@ -1,10 +1,13 @@
-// One checking session for this frame: field watcher, underlines/card, badge and core port.
+// One checking session for this frame: field watcher, underlines/card, badge, rephrase and core port.
 import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
 import { FieldWatcher } from "./features/field-watcher";
+import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./features/rephrase";
 import type { StopSession } from "./features/site-gate";
 import { StatusBadge } from "./features/status-badge";
 import { createIssueView } from "./features/underlines";
 import { CorePort } from "./shared/core-port";
+import { fieldCaret, fieldText } from "./shared/field-text";
+import type { WatchedField } from "./shared/issue-view";
 
 /** Starts watching fields; the returned function removes all UI and closes the port. */
 export const startSession = (doc: Document): StopSession => {
@@ -14,15 +17,31 @@ export const startSession = (doc: Document): StopSession => {
     addToDictionary: (term) => port.send({ type: "dictionary.add", term }),
     visibleChanged: (field, issues) => badge.issues(field, issues),
   });
-  const badge = new StatusBadge({ select: (field, issue) => view.open(field, issue) });
+  // Rephrase lives in the badge panel only; it never feeds the issue count.
+  const rephrase = new RephraseController<WatchedField>({
+    send: (message) => port.send(message),
+    readText: fieldText,
+    readCaret: fieldCaret,
+    changed: (field) => badge.refreshPanel(field),
+  });
+  const badge = new StatusBadge({
+    select: (field, issue) => view.open(field, issue),
+    section: {
+      css: REPHRASE_CSS,
+      render: (container, field) =>
+        renderRephraseSection(container, rephrase.state(field), () => rephrase.request(field)),
+    },
+  });
   const watcher = new FieldWatcher(doc, {
     changed: (field, fieldId, version, text) => {
+      rephrase.track(field, fieldId, version);
       // While the core is unusable the background drops the text; say so instead of spinning.
       if (status === "auth_failed" || status === "unreachable") badge.offline(status, field);
       else badge.checking(field);
       port.send({ type: "text.changed", fieldId, version, text });
     },
     closed: (field, fieldId) => {
+      rephrase.forget(field);
       badge.hide(field);
       view.clear(field);
       port.send({ type: "field.closed", fieldId });
@@ -49,8 +68,12 @@ export const startSession = (doc: Document): StopSession => {
     }
     const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
     if (!field) return;
-    view.clear(field);
-    badge.failed(field, message.code);
+    if (message.type === "rephrase.result") rephrase.receive(field, message);
+    else if (message.request === "rephrase") rephrase.fail(field);
+    else {
+      view.clear(field);
+      badge.failed(field, message.code);
+    }
   };
 
   // The port opens lazily on the first focused field, so idle pages don't wake the worker.

@@ -1,4 +1,4 @@
-import type { ClientMessage, CoreMessage } from "@gc/protocol";
+import type { ClientMessage, CoreMessage, RephraseRequestMessage } from "@gc/protocol";
 import {
   type BackgroundMessage,
   type ConnectionStatus,
@@ -63,9 +63,23 @@ export class ContentPortHub {
       this.sendToCore(message);
     } else if (message.type === "text.changed") {
       this.sendToCore({ ...message, fieldId: this.router.open(portId, message.fieldId) });
+    } else if (message.type === "rephrase.request") {
+      this.rephrase(portId, message);
     } else {
       this.sendToCore({ ...message, fieldId: this.router.close(portId, message.fieldId) });
     }
+  }
+
+  /** A rephrase the core can't take right now fails at once, so the panel stops loading. */
+  private rephrase(portId: string, message: RephraseRequestMessage): void {
+    const fieldId = this.router.open(portId, message.fieldId);
+    if (this.sendToCore({ ...message, fieldId })) return;
+    this.ports.get(portId)?.postMessage({
+      type: "error",
+      code: "core_unavailable",
+      fieldId: message.fieldId,
+      request: "rephrase",
+    });
   }
 
   private detach(portId: string): void {

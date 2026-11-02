@@ -27,6 +27,10 @@ export type LogEvent =
   | "connection.closed"
   | "connection.rejected"
   | "message.invalid"
+  | "rephrase.requested"
+  | "rephrase.done"
+  | "rephrase.failed"
+  | "rephrase.version_dropped"
   | "cli.failed";
 
 /** The only fields a log line can carry: names, durations, lengths/counts and error codes. */

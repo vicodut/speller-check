@@ -13,3 +13,4 @@ export {
   type Timers,
 } from "./field-sessions.service";
 export { CheckCache } from "./services/check-cache.service";
+export { type Sentence, segmentSentences } from "./services/sentence-segmenter.service";

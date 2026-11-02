@@ -38,7 +38,7 @@ v1 targets macOS and Chrome only, with inline underlines where possible and a fl
 
 | Password / secure fields | Excluded, never read | Never |
 
-| Checks | Grammar, spelling, syntax | Style, tone, rewrites |
+| Checks | Grammar, spelling, syntax; on-demand rephrasing in four tones (Chrome) | Automatic style/tone checks, custom tones |
 
 | Languages | English, standard French, mixed | Others |
 
@@ -60,7 +60,7 @@ Chrome extension ──────────┘   127.0.0.1             └�
 
 - **Chrome extension.** Same role as the Swift helper, for web pages. Connects to the same core, so model switching lives in one place.
 
-- **Protocol.** JSON messages tagged by `type`. Clients send `hello {token}` first, then `text.changed {fieldId, version, text}`, `field.closed {fieldId}` and `dictionary.add {term}`. The core sends `ready`, `issues {fieldId, version, issues[]}`, `error {code, fieldId?}` and `settings.changed {model, local}`. The server listens on `127.0.0.1:7341` (`GC_PORT`); the install token is printed by `core token`.
+- **Protocol.** JSON messages tagged by `type`. Clients send `hello {token}` first, then `text.changed {fieldId, version, text}`, `field.closed {fieldId}`, `dictionary.add {term}` and `rephrase.request {fieldId, version, text, caret}`. The core sends `ready`, `issues {fieldId, version, issues[]}`, `rephrase.result {fieldId, version, passage, sentences[], language, versions[]}`, `error {code, fieldId?, request?}` (`request: "rephrase"` marks a failed rephrase, never a failed check) and `settings.changed {model, local}`. The server listens on `127.0.0.1:7341` (`GC_PORT`); the install token is printed by `core token`.
 
 ## Checking pipeline
 
@@ -140,6 +140,16 @@ The dictionary does two jobs: it suppresses flags on known terms, and it tells t
 - **Adding.** "Add to dictionary" in the suggestion card, or manually in settings.
 
 - **Storage.** A local JSON file in the app's Application Support folder, easy to back up or sync.
+
+## Rephrasing
+
+On demand only: the writer clicks **Rephrase** in the badge panel and gets four versions of the paragraph at the caret: **Professional**, **Casual**, **Concise** and **Friendlier** (French passages: Professionnel, Décontracté, Concis, Plus chaleureux). It is a separate core feature (`rephrase`) with its own prompt and model call; the check pipeline and its output contract are unchanged, and a rephrase never counts in the badge's issue count.
+
+- **Passage.** The core splits the text with the check's sentence segmenter and takes the paragraph holding the caret (a paragraph ends at a blank line; a single line break does not end it). A caret at either end of a sentence counts as inside it. A longer paragraph is capped around the caret's sentence to 8 sentences and 1,500 characters, growing alternately after and before it; a single sentence over 1,500 characters is still rephrased on its own. A caret in no sentence is refused with `rephrase_no_sentence` and no model call; the extension disables the button in that case.
+- **Model call.** One call returns all four tones. The model gets numbered sentences and answers `{"language":"en"|"fr","versions":[{"tone","segments":[{"sentences":[1,2],"text"} | {"sentences":[3],"keep":true}]}]}`: sentence numbers, never offsets. Prompt rules: keep the meaning, the language (never translate), names, numbers and facts; Concise shortens, Professional is formal and polite, Casual is relaxed, Friendlier is warmer; consecutive sentences may be merged, never reordered or split; a sentence that already fits is returned as kept. The dictionary is not used. Invalid JSON is retried once. Same endpoint and model as the check, with its own 120 s timeout.
+- **Validation.** Per version: a known tone (first one wins on repeats), segments that cover every sentence exactly once, in order, with no gaps, repeats, reordering or empty rewrites. A rewrite identical to its original sentences becomes kept. Invalid versions are dropped (`rephrase.version_dropped`, count); none valid gives `rephrase_no_valid_version`. Every offset in `rephrase.result` comes from the core's own split: `passage {start, end}`, `sentences[{text, start, end}]`, and segments as 0-based runs `{from, to, keep: true}` or `{from, to, text}`. The language is the model's answer ("fr…" is French, anything else English).
+- **Panel.** The Rephrase button sits below the issue list (the panel now also opens on a clean ✓ badge). While waiting it shows "Rephrasing…"; then one block per version, rewritten parts in full, unchanged sentences faded and marked "unchanged", and "Already fits this tone" when every segment is kept. A failure (or no reply within 250 s) just ends the loading state. A result is shown only while the field still holds the passage it was computed from at the same offsets; otherwise it is dropped. Blur forgets it. Read-only for now: Replace and Replace all come next (#10).
+- **Logs.** `rephrase.requested` (passage length), `rephrase.done` (timing, length), `rephrase.failed` (code), `rephrase.version_dropped` (count). Never text.
 
 ## UX: underlines, badge, card
 

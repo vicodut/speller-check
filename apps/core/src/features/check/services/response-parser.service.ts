@@ -1,20 +1,10 @@
 import { ModelIssue } from "@gc/protocol";
 import { z } from "zod";
 import { type AppError, appError } from "../../../shared/errors";
+import { extractJson } from "../../../shared/model-json";
 import { err, ok, type Result } from "../../../shared/result";
 
 const Envelope = z.union([z.object({ issues: z.array(z.unknown()) }), z.array(z.unknown())]);
-
-/** Removes reasoning blocks and code fences, then keeps the outermost JSON value. */
-const extractJson = (raw: string): string => {
-  const text = raw
-    .replace(/<think>[\s\S]*?<\/think>/g, "")
-    .replace(/```(?:json)?/g, "")
-    .trim();
-  const first = text.search(/[[{]/);
-  const last = Math.max(text.lastIndexOf("}"), text.lastIndexOf("]"));
-  return first === -1 || last < first ? text : text.slice(first, last + 1);
-};
 
 /**
  * Parses the model reply. The envelope must be valid ({ issues: [...] }, or a bare array);

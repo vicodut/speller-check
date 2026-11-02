@@ -18,9 +18,10 @@ export const badgeLabel = (state: BadgeState): BadgeLabel => {
       return { text: "", title: "Checking…", variant: "checking" };
     case "count": {
       const n = state.issues.length;
-      if (n === 0) return { text: "✓", title: "No issues found", variant: "clean" };
+      if (n === 0)
+        return { text: "✓", title: "No issues found: click to rephrase", variant: "clean" };
       const text = n > 9 ? "9+" : String(n);
-      return { text, title: `${plural(n)}: click to list them`, variant: "issues" };
+      return { text, title: `${plural(n)}: click to list them or rephrase`, variant: "issues" };
     }
     case "failed":
       return {

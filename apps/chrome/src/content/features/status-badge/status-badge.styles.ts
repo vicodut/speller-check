@@ -18,7 +18,7 @@ export const BADGE_CSS = `
   z-index: 2147483647;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.gc-badge[hidden], .gc-panel[hidden] { display: none; }
+.gc-badge[hidden], .gc-panel[hidden], .gc-list[hidden] { display: none; }
 .gc-checking {
   border: 2px solid rgba(62, 99, 221, 0.25);
   border-top-color: #3e63dd;
@@ -26,7 +26,7 @@ export const BADGE_CSS = `
   pointer-events: none;
   animation: gc-spin 0.8s linear infinite;
 }
-.gc-clean { background: #30a46c; }
+.gc-clean { background: #30a46c; cursor: pointer; }
 .gc-issues { background: #e5484d; cursor: pointer; }
 .gc-failed { background: #f76b15; }
 .gc-offline { background: #8b8d98; }
@@ -37,8 +37,8 @@ export const BADGE_CSS = `
 }
 .gc-panel {
   position: fixed;
-  width: 260px;
-  max-height: 240px;
+  width: 280px;
+  max-height: 360px;
   overflow-y: auto;
   box-sizing: border-box;
   padding: 4px;
@@ -61,11 +61,16 @@ export const BADGE_CSS = `
   cursor: pointer;
 }
 .gc-item:hover, .gc-item:focus-visible { background: rgba(0, 0, 0, 0.06); }
+.gc-list:not([hidden]) + .gc-extra:not(:empty) {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  margin-top: 4px;
+}
 .gc-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
 .gc-original { text-decoration: line-through; opacity: 0.7; overflow-wrap: anywhere; }
 .gc-suggestion { font-weight: 600; overflow-wrap: anywhere; }
 @media (prefers-color-scheme: dark) {
   .gc-panel { background: #212225; color: #edeef0; }
   .gc-item:hover, .gc-item:focus-visible { background: rgba(255, 255, 255, 0.08); }
+  .gc-list:not([hidden]) + .gc-extra:not(:empty) { border-color: rgba(255, 255, 255, 0.1); }
 }
 `;

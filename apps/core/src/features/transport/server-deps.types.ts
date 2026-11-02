@@ -1,4 +1,4 @@
-import type { CheckRequest, CoreMessage } from "@gc/protocol";
+import type { CheckRequest, CoreMessage, RephraseResult } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import type { Result } from "../../shared/result";
 
@@ -13,4 +13,6 @@ export type SessionPort = {
 export type ServerDeps = {
   createSession(publish: (message: CoreMessage) => void): SessionPort;
   addDictionaryTerm(term: string): Promise<Result<void, AppError>>;
+  /** Four tones of the passage at `caret` (RephraseService in production). */
+  rephrase(input: { text: string; caret: number }): Promise<Result<RephraseResult, AppError>>;
 };

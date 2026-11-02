@@ -123,4 +123,33 @@ describe("ContentPortHub", () => {
     ]);
     expect(late.received).toEqual([{ type: "core.status", status: "unreachable" }]);
   });
+
+  test("routes rephrase requests and results like a field's check", () => {
+    const { hub, toCore, a } = setup();
+    a.send({ type: "rephrase.request", fieldId: "f1", version: 2, text: "Hi.", caret: 0 });
+    expect(toCore).toEqual([
+      { type: "rephrase.request", fieldId: "p1/f1", version: 2, text: "Hi.", caret: 0 },
+    ]);
+    const result = {
+      type: "rephrase.result" as const,
+      version: 2,
+      passage: { start: 0, end: 3 },
+      sentences: [{ text: "Hi.", start: 0, end: 3 }],
+      language: "en" as const,
+      versions: [{ tone: "casual" as const, segments: [{ from: 0, to: 0, keep: true as const }] }],
+    };
+    hub.fromCore({ ...result, fieldId: "p1/f1" });
+    expect(a.received).toEqual([{ ...result, fieldId: "f1" }]);
+  });
+
+  test("a rephrase the core can't take fails at once", () => {
+    const hub = new ContentPortHub(() => false);
+    const port = new FakePort();
+    hub.attach(port);
+    port.received.length = 0;
+    port.send({ type: "rephrase.request", fieldId: "f1", version: 2, text: "Hi.", caret: 0 });
+    expect(port.received).toEqual([
+      { type: "error", code: "core_unavailable", fieldId: "f1", request: "rephrase" },
+    ]);
+  });
 });

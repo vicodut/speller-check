@@ -24,7 +24,7 @@ describe("badgeLabel", () => {
   test("shows the count, capped at 9+", () => {
     expect(badgeLabel({ kind: "count", issues: issues(3) })).toMatchObject({
       text: "3",
-      title: "3 issues: click to list them",
+      title: "3 issues: click to list them or rephrase",
     });
     expect(badgeLabel({ kind: "count", issues: issues(12) }).text).toBe("9+");
     expect(badgeLabel({ kind: "count", issues: issues(1) }).title).toStartWith("1 issue:");

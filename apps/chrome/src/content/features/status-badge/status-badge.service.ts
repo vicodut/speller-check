@@ -1,15 +1,12 @@
 import type { Issue } from "@gc/protocol";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { WatchedField } from "../../shared/issue-view";
+import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
 import { badgePosition, type FieldBox, panelPlacement } from "./badge-position.util";
 import { type BadgeState, badgeLabel } from "./badge-state.util";
-import { renderIssueList } from "./issue-list.view";
 import { BADGE_CSS } from "./status-badge.styles";
 
-export type StatusBadgeCallbacks = {
-  /** The user picked an issue from the badge's list. */
-  select(field: WatchedField, issue: Issue): void;
-};
+export type StatusBadgeCallbacks = BadgePanelCallbacks;
 
 const fieldBox = (field: WatchedField): FieldBox => {
   const rect = field.getBoundingClientRect();
@@ -37,14 +34,17 @@ const fieldBox = (field: WatchedField): FieldBox => {
 /** Keeps the field focused when the badge or its list is clicked (a blur would close the field). */
 const keepFocus = (el: HTMLElement) => el.addEventListener("mousedown", (e) => e.preventDefault());
 
+/** Variants whose badge opens the panel: a done check, with or without issues. */
+const PANEL_VARIANTS = new Set(["issues", "clean"]);
+
 /**
  * The focused field's corner badge: a spinner while checking, then the issue count (click for
- * the list), a failed check, or an unreachable core.
+ * the panel), a failed check, or an unreachable core.
  */
 export class StatusBadge {
   private readonly host = document.createElement("gc-status");
   private readonly badge = document.createElement("div");
-  private readonly panel = document.createElement("div");
+  private readonly panel: BadgePanel;
   private readonly frame = createFrameScheduler(() => this.place());
   private readonly resize = new ResizeObserver(() => this.frame.schedule());
   private readonly onMove = () => this.frame.schedule();
@@ -53,18 +53,17 @@ export class StatusBadge {
   /** The view's latest visible issues for the field, shown once the check is done. */
   private latest: readonly Issue[] = [];
 
-  constructor(private readonly callbacks: StatusBadgeCallbacks) {
+  constructor(callbacks: StatusBadgeCallbacks) {
+    this.panel = new BadgePanel(this.host, callbacks);
     this.host.style.setProperty("all", "initial");
     const shadow = this.host.attachShadow({ mode: "closed" });
     const style = document.createElement("style");
-    style.textContent = BADGE_CSS;
+    style.textContent = BADGE_CSS + (callbacks.section?.css ?? "");
     this.badge.hidden = true;
-    this.panel.className = "gc-panel";
-    this.panel.hidden = true;
     keepFocus(this.badge);
-    keepFocus(this.panel);
+    keepFocus(this.panel.el);
     this.badge.addEventListener("click", () => this.togglePanel());
-    shadow.append(style, this.badge, this.panel);
+    shadow.append(style, this.badge, this.panel.el);
     document.documentElement.appendChild(this.host);
   }
 
@@ -96,12 +95,18 @@ export class StatusBadge {
     if (this.field) this.set({ kind: "offline", status });
   }
 
+  /** The panel's section changed (e.g. a rephrase arrived): re-render it if open. */
+  refreshPanel(field: WatchedField): void {
+    this.panel.refresh(field);
+    this.place();
+  }
+
   hide(field?: WatchedField): void {
     if (field && field !== this.field) return;
     this.detach();
     this.state = null;
     this.badge.hidden = true;
-    this.closePanel();
+    this.panel.close();
   }
 
   dispose(): void {
@@ -117,48 +122,18 @@ export class StatusBadge {
     this.badge.textContent = text;
     this.badge.title = title;
     this.badge.hidden = false;
-    if (variant !== "issues") this.closePanel();
-    else if (!this.panel.hidden) this.renderPanel();
+    if (!PANEL_VARIANTS.has(variant)) this.panel.close();
+    else if (this.field) this.panel.refresh(this.field, this.latest);
     this.place();
   }
 
   private togglePanel(): void {
-    if (!this.panel.hidden) {
-      this.closePanel();
+    if (this.panel.isOpen) {
+      this.panel.close();
       return;
     }
-    if (this.state?.kind !== "count" || this.state.issues.length === 0) return;
-    this.panel.hidden = false;
-    this.renderPanel();
-    this.place();
-    // Capture phase, so page handlers that stop propagation can't keep the list open.
-    document.addEventListener("mousedown", this.onOutsideClick, true);
-    document.addEventListener("keydown", this.onEscape, true);
-  }
-
-  private closePanel(): void {
-    if (this.panel.hidden) return;
-    this.panel.hidden = true;
-    document.removeEventListener("mousedown", this.onOutsideClick, true);
-    document.removeEventListener("keydown", this.onEscape, true);
-  }
-
-  /** Clicks inside the closed shadow root are retargeted to the host, so they keep it open. */
-  private readonly onOutsideClick = (event: MouseEvent) => {
-    if (!event.composedPath().includes(this.host)) this.closePanel();
-  };
-
-  private readonly onEscape = (event: KeyboardEvent) => {
-    if (event.key === "Escape") this.closePanel();
-  };
-
-  private renderPanel(): void {
-    const field = this.field;
-    if (!field) return;
-    renderIssueList(this.panel, this.latest, (issue) => {
-      this.closePanel();
-      this.callbacks.select(field, issue);
-    });
+    if (this.state?.kind !== "count" || !this.field) return;
+    if (this.panel.open(this.field, this.state.issues)) this.place();
   }
 
   private place(): void {
@@ -166,12 +141,13 @@ export class StatusBadge {
     const position = badgePosition(fieldBox(this.field));
     this.badge.style.left = `${position.left}px`;
     this.badge.style.top = `${position.top}px`;
-    if (this.panel.hidden) return;
+    if (!this.panel.isOpen) return;
     const viewport = { width: innerWidth, height: innerHeight };
-    const spot = panelPlacement(position, viewport, this.panel.offsetHeight);
-    this.panel.style.right = `${spot.right}px`;
-    this.panel.style.top = spot.top === undefined ? "" : `${spot.top}px`;
-    this.panel.style.bottom = spot.bottom === undefined ? "" : `${spot.bottom}px`;
+    const spot = panelPlacement(position, viewport, this.panel.el.offsetHeight);
+    const style = this.panel.el.style;
+    style.right = `${spot.right}px`;
+    style.top = spot.top === undefined ? "" : `${spot.top}px`;
+    style.bottom = spot.bottom === undefined ? "" : `${spot.bottom}px`;
   }
 
   private attach(field: WatchedField): void {

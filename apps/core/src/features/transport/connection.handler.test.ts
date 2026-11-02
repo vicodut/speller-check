@@ -27,6 +27,7 @@ const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000) => {
       };
     },
     addDictionaryTerm: async () => ok(undefined),
+    rephrase: async () => err(appError("rephrase_no_sentence")),
     ...overrides,
   };
   const socket = {
@@ -128,5 +129,35 @@ describe("ConnectionHandler", () => {
       { type: "issues", fieldId: "f", version: 1, issues: [] },
     ]);
     expect(t.disposed()).toBe(1);
+  });
+
+  test("answers a rephrase request with its result, or a rephrase-tagged error", async () => {
+    const inputs: { text: string; caret: number }[] = [];
+    const result = {
+      passage: { start: 0, end: 3 },
+      sentences: [{ text: "Hi.", start: 0, end: 3 }],
+      language: "en" as const,
+      versions: [{ tone: "casual" as const, segments: [{ from: 0, to: 0, text: "Hey." }] }],
+    };
+    const t = setup({
+      rephrase: async (input) => {
+        inputs.push(input);
+        return input.caret === 0 ? ok(result) : err(appError("rephrase_no_sentence"));
+      },
+    });
+    await t.handler.receive(hello);
+    const request = { type: "rephrase.request", fieldId: "f", version: 4, text: "Hi." };
+    await t.handler.receive(JSON.stringify({ ...request, caret: 0 }));
+    await t.handler.receive(JSON.stringify({ ...request, caret: 3 }));
+    expect(inputs).toEqual([
+      { text: "Hi.", caret: 0 },
+      { text: "Hi.", caret: 3 },
+    ]);
+    expect(t.sent.slice(1)).toEqual([
+      { type: "rephrase.result", fieldId: "f", version: 4, ...result },
+      { type: "error", code: "rephrase_no_sentence", fieldId: "f", request: "rephrase" },
+    ]);
+    expect(t.updates).toEqual([]);
+    t.handler.dispose();
   });
 });
