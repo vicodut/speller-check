@@ -17,6 +17,7 @@ import {
 } from "./issue-filter.util";
 import { createMirrorMeasurer, type FieldMeasurer } from "./mirror-measure.service";
 import { createOverlayHost, type OverlayHost } from "./overlay-host.service";
+import { scrollRectIntoView } from "./scroll-into-view.service";
 import { drawUnderlines } from "./underline-layer.service";
 
 type Session = { field: WatchedField; issues: readonly Issue[]; detach: () => void };
@@ -47,6 +48,7 @@ export class IssueViewService implements IssueView {
     if (!this.session || this.session.field !== field || !this.ui) return;
     const target = sameOccurrence(this.visible(this.session), issue);
     if (!target) return;
+    this.reveal(field, target);
     this.ui.card.open(target);
     this.redraw();
   }
@@ -139,6 +141,15 @@ export class IssueViewService implements IssueView {
     const open = this.ui?.card.current();
     const fresh = open ? sameOccurrence(issues, open) : undefined;
     if (fresh) this.ui?.card.retarget(fresh);
+  }
+
+  /** Scrolls the field (and the page) so the issue shows; the caret stays where it is. */
+  private reveal(field: WatchedField, issue: Issue): void {
+    if (!this.ui) return;
+    const measurer = this.measurer(field, this.ui.overlay.scratch);
+    const rect = measurer.firstRect(issue.start, issue.end);
+    measurer.remove();
+    if (rect) scrollRectIntoView(rect, field);
   }
 
   private measurer(field: WatchedField, scratch: HTMLElement): FieldMeasurer {

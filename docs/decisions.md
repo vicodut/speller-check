@@ -40,3 +40,4 @@
 - 2026-11-01: Dismissals are keyed on original + suggestion + 12 characters of text on each side (not the offset), so they survive edits elsewhere in the field but not edits right next to the issue.
 - 2026-11-01: Prompt: keep the writer's meaning (fix the verb, not the subject), report every error in a sentence, multi-word errors as one issue, `original` = smallest complete wrong phrase, plus one worked example not taken from the fixtures. qwen3:8b fixtures: 16/20 hits (14 accepted) → 19/20 (19 accepted), extras 3 → 2.
 - 2026-11-01: The locator trims whole words a suggestion echoes from right before/after `original` ("has went" → "I went" in "I has went" becomes "went"), so Accept can't duplicate them.
+- 2026-11-01: Picking an issue from the badge list scrolls its first line into view (the field, each scrollable ancestor, then the window; instant, with an 8 px margin) before opening the card. The caret and focus are left alone.
