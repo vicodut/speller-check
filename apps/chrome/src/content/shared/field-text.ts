@@ -1,10 +1,19 @@
+import { skipMatcherFor } from "../features/email-cleaning";
 import type { TextControl, WatchedField } from "./issue-view";
 import { buildTextModel, offsetOf, pointAt, type TextModel } from "./text-model";
 
 export const isTextControl = (field: WatchedField): field is TextControl =>
   field instanceof HTMLTextAreaElement || field instanceof HTMLInputElement;
 
-const model = (field: HTMLElement): TextModel<Node> => buildTextModel<Node>(field);
+/**
+ * The one text model of a contenteditable field. Everything that reads its text or maps offsets
+ * (sending, underlines, caret, write-back) goes through here, so email quotes and signatures are
+ * skipped the same way everywhere and are never sent to the core.
+ */
+const model = (field: HTMLElement): TextModel<Node> => {
+  const hostname = field.ownerDocument.defaultView?.location.hostname ?? "";
+  return buildTextModel<Node>(field, skipMatcherFor(hostname));
+};
 
 /** The field's full text: `value` for controls, the text model for contenteditable. */
 export const fieldText = (field: WatchedField): string =>
