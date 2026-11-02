@@ -42,3 +42,17 @@ Each app has its own CLAUDE.md with its conventions. Follow it when working ther
 - Put API keys in config files, fixtures or the repo.
 - Bind a server to anything other than `127.0.0.1`.
 - Edit generated files (`*.generated.*`) by hand.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `vicodut/speller-check`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: `GLOSSARY.md` at the root, `docs/decisions.md` as the decision record. See `docs/agents/domain.md`.
