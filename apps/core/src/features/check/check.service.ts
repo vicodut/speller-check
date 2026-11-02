@@ -2,31 +2,45 @@ import { type Issue, isTextTooLong } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
-import {
-  buildDictionaryContext,
-  type DictionaryEntry,
-  filterDictionaryTerms,
-  relevantEntries,
-} from "../dictionary";
+import { type DictionaryEntry, filterDictionaryTerms } from "../dictionary";
 import type { Provider } from "../providers";
+import { BATCH_MAX_CHARS, BATCH_MAX_SENTENCES } from "./check-limits.constants";
+import { checkBatch, type Hashed } from "./services/batch-checker.service";
 import type { CheckCache } from "./services/check-cache.service";
-import { locateIssue } from "./services/issue-locator.service";
 import { dropOverlaps, shiftIssue } from "./services/issue-offsets.service";
-import { requestModelIssues } from "./services/model-issues.requester";
 import { trimNeighbourEchoes } from "./services/neighbour-echo-trimmer.service";
-import { buildPrompt } from "./services/prompt-builder.service";
+import { splitBatches } from "./services/sentence-batcher.service";
 import { hashSentence } from "./services/sentence-hasher.service";
-import { type Sentence, segmentSentences } from "./services/sentence-segmenter.service";
+import { segmentSentences } from "./services/sentence-segmenter.service";
 
 export type DictionarySource = {
   load(): Promise<Result<DictionaryEntry[], AppError>>;
 };
 
-/** `version` is passed through untouched until reconcile lands (milestone 2). */
-export type CheckInput = { readonly text: string; readonly version?: number };
-export type CheckOutput = { readonly version?: number; readonly issues: Issue[] };
+/**
+ * `version` is passed through untouched. A check needing several batches calls `onPartial` after
+ * every batch but the last, with all issues found so far, then asks `isSuperseded`: true drops
+ * the remaining batches and the output says `superseded`. Both are optional (the CLI uses none).
+ */
+export type CheckInput = {
+  readonly text: string;
+  readonly version?: number;
+  readonly onPartial?: (issues: Issue[]) => void;
+  readonly isSuperseded?: () => boolean;
+};
+export type CheckOutput = {
+  readonly version?: number;
+  readonly issues: Issue[];
+  readonly superseded?: true;
+};
 
-type Hashed = Sentence & { readonly hash: string };
+type Run = {
+  readonly input: CheckInput;
+  readonly sentences: readonly Hashed[];
+  readonly entries: readonly DictionaryEntry[];
+};
+
+const BATCH_LIMITS = { maxSentences: BATCH_MAX_SENTENCES, maxChars: BATCH_MAX_CHARS };
 
 export class CheckService {
   constructor(
@@ -50,29 +64,58 @@ export class CheckService {
       ...s,
       hash: hashSentence(s.text),
     }));
-    const misses = uniqueByHash(sentences.filter((s) => !this.isCached(s)));
-    this.logger.info({ event: "cache.hit", len: sentences.length - misses.length });
+    const run: Run = { input, sentences, entries: entries.value };
+    const superseded = await this.checkBatches(run);
+    if (!superseded.ok) return this.fail(superseded.error);
+
+    const issues = this.collect(run, true);
+    const ms = performance.now() - startedAt;
+    this.logger.info({ event: "check.done", ms, len: issues.length });
+    const output = superseded.value ? { issues, superseded: true as const } : { issues };
+    return ok(input.version === undefined ? output : { version: input.version, ...output });
+  }
+
+  /** Checks uncached sentences batch by batch; `true` when the remaining batches were dropped. */
+  private async checkBatches(run: Run): Promise<Result<boolean, AppError>> {
+    const misses = uniqueByHash(run.sentences.filter((s) => !this.isCached(s)));
+    this.logger.info({ event: "cache.hit", len: run.sentences.length - misses.length });
     this.logger.info({ event: "cache.miss", len: misses.length });
+    const batches = splitBatches(misses, BATCH_LIMITS);
+    if (batches.length > 1) this.logger.info({ event: "check.batches", len: batches.length });
+    const deps = { provider: this.provider, cache: this.cache, logger: this.logger };
+    for (const [index, batch] of batches.entries()) {
+      const startedAt = performance.now();
+      const checked = await checkBatch(deps, batch, run.sentences, run.entries);
+      if (!checked.ok) return checked;
+      if (batches.length === 1) break;
+      const ms = performance.now() - startedAt;
+      this.logger.info({ event: "check.batch_done", ms, len: batch.length });
+      const left = batches.length - index - 1;
+      if (left === 0) break;
+      run.input.onPartial?.(this.collect(run, false));
+      if (run.input.isSuperseded?.()) {
+        this.logger.info({ event: "check.batches_dropped", len: left });
+        return ok(true);
+      }
+    }
+    return ok(false);
+  }
 
-    const checked = await this.checkSentences(misses, sentences, entries.value);
-    if (!checked.ok) return this.fail(checked.error);
-
-    const found = sentences.flatMap((s) => this.cachedIssues(s));
-    const issues = this.resolveConflicts(filterDictionaryTerms(found, entries.value), input.text);
-    this.logger.info({
-      event: "check.done",
-      ms: performance.now() - startedAt,
-      len: issues.length,
-    });
-    return ok(input.version === undefined ? { issues } : { version: input.version, issues });
+  /** All issues found so far in the run's text (sentences not checked yet have none). */
+  private collect(run: Run, final: boolean): Issue[] {
+    const found = run.sentences.flatMap((s) => this.cachedIssues(s));
+    const kept = filterDictionaryTerms(found, run.entries);
+    return this.resolveConflicts(kept, run.input.text, final);
   }
 
   /** One result holds no two issues on overlapping ranges or fixing the same spot twice. */
-  private resolveConflicts(found: readonly Issue[], text: string): Issue[] {
+  private resolveConflicts(found: readonly Issue[], text: string, log: boolean): Issue[] {
     const disjoint = dropOverlaps(found);
     const issues = trimNeighbourEchoes(disjoint, text);
-    this.logDropped("issues.overlap_dropped", found.length - disjoint.length);
-    this.logDropped("issues.echo_dropped", disjoint.length - issues.length);
+    if (log) {
+      this.logDropped("issues.overlap_dropped", found.length - disjoint.length);
+      this.logDropped("issues.echo_dropped", disjoint.length - issues.length);
+    }
     return issues;
   }
 
@@ -89,39 +132,6 @@ export class CheckService {
     return issues.map((issue) => shiftIssue(issue, sentence.start));
   }
 
-  /** One batched model call for the uncached sentences; stores each sentence's result in the cache. */
-  private async checkSentences(
-    targets: readonly Hashed[],
-    all: readonly Hashed[],
-    entries: readonly DictionaryEntry[],
-  ): Promise<Result<null, AppError>> {
-    if (targets.length === 0) return ok(null);
-    const context = neighbours(targets, all).map((s) => s.text);
-    const batchText = [...targets.map((s) => s.text), ...context].join("\n");
-    const messages = buildPrompt({
-      sentences: targets.map((s) => s.text),
-      context,
-      dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
-    });
-    const modelIssues = await requestModelIssues(this.provider, messages, this.logger);
-    if (!modelIssues.ok) return modelIssues;
-
-    const located = modelIssues.value.flatMap((issue) => {
-      const result = locateIssue(issue, targets);
-      if (!result.ok) this.logger.info({ event: "locate.dropped", code: result.error.code });
-      return result.ok ? [result.value] : [];
-    });
-    for (const sentence of targets) {
-      const own = located.filter((i) => i.start >= sentence.start && i.end <= sentence.end);
-      this.cache.set(
-        this.provider.model,
-        sentence.hash,
-        own.map((i) => shiftIssue(i, -sentence.start)),
-      );
-    }
-    return ok(null);
-  }
-
   private fail(error: AppError): Result<never, AppError> {
     this.logger.error({ event: "check.failed", code: error.code });
     return err(error);
@@ -131,13 +141,3 @@ export class CheckService {
 const uniqueByHash = (sentences: readonly Hashed[]): Hashed[] => [
   ...new Map(sentences.map((s) => [s.hash, s] as const)).values(),
 ];
-
-/** Sentences directly before or after a target that aren't targets themselves, in text order. */
-const neighbours = (targets: readonly Hashed[], all: readonly Hashed[]): Hashed[] => {
-  const targetSet = new Set(targets);
-  return all.filter(
-    (s, i) =>
-      !targetSet.has(s) &&
-      (targetSet.has(all[i - 1] as Hashed) || targetSet.has(all[i + 1] as Hashed)),
-  );
-};

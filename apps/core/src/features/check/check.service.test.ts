@@ -154,6 +154,17 @@ describe("CheckService", () => {
     expect(logs.join("\n")).not.toContain("going");
   });
 
+  test("checks a long text in batches and still returns one complete result", async () => {
+    const typo = (i: number): ModelIssue => ({ ...has, original: `w${i}x`, context: `a w${i}x b` });
+    const ids = Array.from({ length: 25 }, (_, i) => i);
+    const { service, prompts } = setup(ids.map(typo));
+    const text = ids.map((i) => `It is a w${i}x b.`).join(" ");
+    const result = await service.check({ text });
+    expect(prompts).toHaveLength(2);
+    expect(spans(text, result)).toEqual(ids.map((i) => `w${i}x`));
+    expect(result.ok && result.value.superseded).toBeUndefined();
+  });
+
   test("passes the version through", async () => {
     const { service } = setup([]);
     expect(await service.check({ text: "Fine.", version: 7 })).toEqual({

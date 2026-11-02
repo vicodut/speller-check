@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Issue } from "@gc/protocol";
-import { badgeLabel, withRephraseReady } from "./badge-state.util";
+import { badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
 
 const issues = (n: number): Issue[] =>
   Array.from({ length: n }, (_, i) => ({
@@ -46,6 +46,15 @@ describe("badgeLabel too long", () => {
     expect(label.text).toBe("…");
     expect(label.title).toContain("Too long");
     expect(label.title).toContain("20,000");
+  });
+});
+
+describe("resultState", () => {
+  test("a pending result keeps the spinner; the final one shows the count", () => {
+    expect(resultState(issues(2), true)).toEqual({ kind: "checking" });
+    expect(badgeLabel(resultState(issues(2), true)).variant).toBe("checking");
+    expect(resultState(issues(2), false)).toEqual({ kind: "count", issues: issues(2) });
+    expect(resultState(issues(2))).toEqual({ kind: "count", issues: issues(2) });
   });
 });
 

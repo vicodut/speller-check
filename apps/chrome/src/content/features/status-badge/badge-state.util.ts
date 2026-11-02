@@ -14,6 +14,13 @@ const CAP = MAX_TEXT_LENGTH.toLocaleString("en-US");
 
 const plural = (n: number) => (n === 1 ? "1 issue" : `${n} issues`);
 
+/**
+ * The state after a result: a `pending` one (more batches are coming) keeps the spinner, so a
+ * partial count is never shown as final; the last one shows the count.
+ */
+export const resultState = (issues: readonly Issue[], pending?: boolean): BadgeState =>
+  pending ? { kind: "checking" } : { kind: "count", issues };
+
 /** Text, tooltip and style variant for a state. Counts above 9 show as "9+". */
 export const badgeLabel = (state: BadgeState): BadgeLabel => {
   switch (state.kind) {
