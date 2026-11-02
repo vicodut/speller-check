@@ -1,12 +1,14 @@
 import type { TextControl, WatchedField } from "../../shared/issue-view";
 import { buildMirrorStyle, type FieldKind } from "./mirror-style.util";
-import { clipRects, type Rect } from "./rect.util";
+import { clipRects, offsetRect, type Rect } from "./rect.util";
 import { splitAtRange } from "./text-split.util";
 
 /** Measures on-screen rects of text ranges in one field, through a hidden mirror div. */
 export type FieldMeasurer = {
   /** Visible line rects of [start, end), in viewport coordinates, clipped to the field. */
   rangeRects(start: number, end: number): Rect[];
+  /** The first line rect of [start, end), unclipped (it may lie outside the field), if any. */
+  firstRect(start: number, end: number): Rect | undefined;
   remove(): void;
 };
 
@@ -52,22 +54,21 @@ const createMirrorDiv = (field: TextControl, parent: Node): HTMLDivElement => {
 export const createMirrorMeasurer = (field: TextControl, parent: Node): FieldMeasurer => {
   const mirror = createMirrorDiv(field, parent);
   const box = visibleBox(field);
+  /** Line rects of [start, end) in viewport coordinates, before clipping to the field. */
+  const rawRects = (start: number, end: number): Rect[] => {
+    const parts = splitAtRange(field.value, start, end);
+    if (parts.range === "") return [];
+    const span = document.createElement("span");
+    span.textContent = parts.range;
+    mirror.replaceChildren(parts.before, span, parts.after);
+    const origin = mirror.getBoundingClientRect();
+    const dx = box.left - field.clientLeft - origin.left - field.scrollLeft;
+    const dy = box.top - field.clientTop - origin.top - field.scrollTop;
+    return [...span.getClientRects()].map((r) => offsetRect(toRect(r), dx, dy));
+  };
   return {
-    rangeRects(start, end) {
-      const parts = splitAtRange(field.value, start, end);
-      if (parts.range === "") return [];
-      const span = document.createElement("span");
-      span.textContent = parts.range;
-      mirror.replaceChildren(parts.before, span, parts.after);
-      const origin = mirror.getBoundingClientRect();
-      const dx = box.left - field.clientLeft - origin.left - field.scrollLeft;
-      const dy = box.top - field.clientTop - origin.top - field.scrollTop;
-      const rects = [...span.getClientRects()].map((r) => {
-        const rect = toRect(r);
-        return { ...rect, left: rect.left + dx, top: rect.top + dy };
-      });
-      return clipRects(rects, box);
-    },
+    rangeRects: (start, end) => clipRects(rawRects(start, end), box),
+    firstRect: (start, end) => rawRects(start, end)[0],
     remove() {
       mirror.remove();
     },
