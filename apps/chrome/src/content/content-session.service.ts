@@ -4,8 +4,9 @@ import { FieldWatcher } from "./features/field-watcher";
 import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./features/rephrase";
 import type { StopSession } from "./features/site-gate";
 import { StatusBadge } from "./features/status-badge";
-import { canSendRephrase, messageForChange } from "./features/text-cap";
+import { canSendRephrase } from "./features/text-cap";
 import { createIssueView } from "./features/underlines";
+import { FieldChecks } from "./field-checks.service";
 import { CorePort } from "./shared/core-port";
 import { fieldCaret, fieldText } from "./shared/field-text";
 import type { WatchedField } from "./shared/issue-view";
@@ -15,7 +16,10 @@ export const startSession = (doc: Document): StopSession => {
   const port = new CorePort((message) => onBackground(message));
   let status: ConnectionStatus | undefined;
   const view = createIssueView({
-    addToDictionary: (term) => port.send({ type: "dictionary.add", term }),
+    addToDictionary: (term) => {
+      checks.dictionaryChanged();
+      port.send({ type: "dictionary.add", term });
+    },
     visibleChanged: (field, issues) => badge.issues(field, issues),
   });
   // Rephrase lives in the badge panel only; it never feeds the issue count.
@@ -40,26 +44,20 @@ export const startSession = (doc: Document): StopSession => {
       hasNews: (field) => rephrase.hasNews(field),
     },
   });
+  // Focus, edits, blur and results; refocusing an unchanged field reuses its last result.
+  const checks = new FieldChecks({
+    send: (message) => port.send(message),
+    view,
+    badge,
+    status: () => status,
+  });
   const watcher = new FieldWatcher(doc, {
-    changed: (field, fieldId, version, text) => {
+    changed: (field, fieldId, version, text, cause) => {
       rephrase.track(field, fieldId, version);
-      const message = messageForChange({ fieldId, version, text });
-      if (message.type === "field.closed") {
-        // Over the cap: no text is sent and the old underlines no longer match.
-        view.clear(field);
-        badge.tooLong(field);
-      } else if (status === "auth_failed" || status === "unreachable") {
-        // While the core is unusable the background drops the text; say so instead of spinning.
-        badge.offline(status, field);
-      } else badge.checking(field);
-      port.send(message);
+      checks.changed(field, fieldId, version, text, cause);
     },
     // A blur keeps the field's rephrase: its tones still arrive and are shown on the next open.
-    closed: (field, fieldId) => {
-      badge.hide(field);
-      view.clear(field);
-      port.send({ type: "field.closed", fieldId });
-    },
+    closed: (field, fieldId) => checks.closed(field, fieldId),
   });
 
   const onBackground = (message: BackgroundMessage): void => {
@@ -69,15 +67,13 @@ export const startSession = (doc: Document): StopSession => {
       return;
     }
     if (message.type === "core.ready") {
+      checks.coreReady();
       watcher.resendFocused();
       return;
     }
     if (message.type === "issues") {
-      // Only the current version is drawn; anything older is stale and dropped.
-      const field = watcher.currentField(message.fieldId, message.version);
-      if (!field) return;
-      view.show(field, message.issues);
-      badge.done(field);
+      // Only the current version is drawn; a blurred field's result is only remembered.
+      checks.issues(message, watcher.currentField(message.fieldId, message.version));
       return;
     }
     // Rephrase replies may concern a closed (blurred) field; the controller knows its fields.
@@ -89,10 +85,8 @@ export const startSession = (doc: Document): StopSession => {
       if (message.fieldId !== undefined) rephrase.fail(message.fieldId, message.requestId);
       return;
     }
-    const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
-    if (!field) return;
-    view.clear(field);
-    badge.failed(field, message.code);
+    if (message.fieldId === undefined) return;
+    checks.failed(message.fieldId, message.code, watcher.openField(message.fieldId));
   };
 
   // The port opens lazily on the first focused field, so idle pages don't wake the worker.
@@ -101,6 +95,7 @@ export const startSession = (doc: Document): StopSession => {
     // Stopping the watcher closes the focused field (no text), then the port goes for good.
     watcher.stop();
     port.close();
+    checks.dispose();
     view.dispose();
     badge.dispose();
   };
