@@ -6,7 +6,15 @@ import { RephraseToneResult } from "./rephrase.schema";
 export const ReadyMessage = z.object({ type: z.literal("ready") });
 export type ReadyMessage = z.infer<typeof ReadyMessage>;
 
-export const IssuesCoreMessage = IssuesMessage.extend({ type: z.literal("issues") });
+/**
+ * All issues found so far for the field's `version`. `pending: true` on every publish but the
+ * last of a check run in batches (more are coming); absent on the final publish and on a
+ * single-batch check. Each message is a complete issue list, so clients may ignore `pending`.
+ */
+export const IssuesCoreMessage = IssuesMessage.extend({
+  type: z.literal("issues"),
+  pending: z.boolean().optional(),
+});
 export type IssuesCoreMessage = z.infer<typeof IssuesCoreMessage>;
 
 /** Which rephrase request a reply belongs to: the field, its version and the client's id. */

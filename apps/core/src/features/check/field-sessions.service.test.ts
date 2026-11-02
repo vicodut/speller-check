@@ -119,18 +119,21 @@ describe("FieldSessions", () => {
     });
   });
 
-  test("drops an older result arriving after a newer one", async () => {
-    const { clock, calls, published, logs, sessions } = setup();
+  test("a newer check waits for the one in flight, then checks the latest text once", async () => {
+    const { clock, calls, published, sessions } = setup();
     sessions.update({ fieldId: "f", version: 1, text: "teh" });
     clock.fire();
     sessions.update({ fieldId: "f", version: 2, text: "teh cat" });
     clock.fire();
-    calls[1]?.resolve(ok({ version: 2, issues: [issueIn("teh cat", "teh")] }));
-    await flush();
+    sessions.update({ fieldId: "f", version: 3, text: "teh cats" });
+    clock.fire();
+    expect(calls).toHaveLength(1);
     calls[0]?.resolve(ok({ version: 1, issues: [issueIn("teh", "teh")] }));
     await flush();
-    expect(published.map((m) => m.type === "issues" && m.version)).toEqual([2]);
-    expect(logs.some((l) => l.includes("session.stale_dropped"))).toBe(true);
+    expect(calls.map((c) => c.version)).toEqual([1, 3]);
+    calls[1]?.resolve(ok({ version: 3, issues: [] }));
+    await flush();
+    expect(published.map((m) => m.type === "issues" && m.version)).toEqual([3, 3]);
   });
 
   test("publishes an older result reconciled when it arrives first", async () => {

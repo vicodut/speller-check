@@ -3,7 +3,7 @@ import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { WatchedField } from "../../shared/issue-view";
 import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
 import { badgePosition, type FieldBox, panelPlacement } from "./badge-position.util";
-import { type BadgeState, badgeLabel, withRephraseReady } from "./badge-state.util";
+import { type BadgeState, badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
 import { BADGE_CSS } from "./status-badge.styles";
 
 export type StatusBadgeCallbacks = BadgePanelCallbacks;
@@ -82,9 +82,9 @@ export class StatusBadge {
     if (this.state?.kind === "count") this.set({ kind: "count", issues });
   }
 
-  /** A result for the field's current text arrived. */
-  done(field: WatchedField): void {
-    if (field === this.field) this.set({ kind: "count", issues: this.latest });
+  /** A result for the field's current text arrived; a `pending` one keeps the spinner. */
+  done(field: WatchedField, pending?: boolean): void {
+    if (field === this.field) this.set(resultState(this.latest, pending));
   }
 
   /** The field's text is over the cap: nothing was sent, its issues are gone. */

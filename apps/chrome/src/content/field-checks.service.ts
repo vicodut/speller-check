@@ -24,7 +24,8 @@ export type FieldChecksDeps = {
   };
   badge: {
     checking(field: WatchedField): void;
-    done(field: WatchedField): void;
+    /** A result arrived; `pending` (more batches coming) keeps the spinner. */
+    done(field: WatchedField, pending?: boolean): void;
     tooLong(field: WatchedField): void;
     offline(status: OfflineStatus, field?: WatchedField): void;
     failed(field: WatchedField, code: string): void;
@@ -92,13 +93,19 @@ export class FieldChecks implements FieldWatcherCallbacks {
     this.closing.set(fieldId, timer);
   }
 
-  /** A result; `field` is set only when it is for the focused field's current version. */
+  /**
+   * A result; `field` is set only when it is for the focused field's current version. A
+   * `pending` one (a batched check with more to come) is drawn but keeps the spinner, isn't
+   * remembered and doesn't release a held `field.closed`: only the final result does.
+   */
   issues(message: IssuesCoreMessage, field: WatchedField | undefined): void {
-    this.memory.received(message.fieldId, message.version, message.issues);
-    if (!this.memory.isPending(message.fieldId)) this.finishClose(message.fieldId);
+    if (!message.pending) {
+      this.memory.received(message.fieldId, message.version, message.issues);
+      if (!this.memory.isPending(message.fieldId)) this.finishClose(message.fieldId);
+    }
     if (!field) return;
     this.deps.view.show(field, message.issues);
-    this.deps.badge.done(field);
+    this.deps.badge.done(field, message.pending);
   }
 
   /** A check failed; `field` is set when the field is still open. */

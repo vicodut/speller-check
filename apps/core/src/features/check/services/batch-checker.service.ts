@@ -1,0 +1,66 @@
+import type { AppError } from "../../../shared/errors";
+import type { Logger } from "../../../shared/logger";
+import { ok, type Result } from "../../../shared/result";
+import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
+import type { Provider } from "../../providers";
+import type { CheckCache } from "./check-cache.service";
+import { locateIssue } from "./issue-locator.service";
+import { shiftIssue } from "./issue-offsets.service";
+import { requestModelIssues } from "./model-issues.requester";
+import { buildPrompt } from "./prompt-builder.service";
+import type { Sentence } from "./sentence-segmenter.service";
+
+export type Hashed = Sentence & { readonly hash: string };
+
+export type BatchCheckDeps = {
+  readonly provider: Provider;
+  readonly cache: CheckCache;
+  readonly logger: Logger;
+};
+
+/**
+ * One model call for a batch of uncached sentences, with the sentences around them (`all`) as
+ * context; stores each sentence's result in the cache.
+ */
+export const checkBatch = async (
+  deps: BatchCheckDeps,
+  targets: readonly Hashed[],
+  all: readonly Hashed[],
+  entries: readonly DictionaryEntry[],
+): Promise<Result<null, AppError>> => {
+  if (targets.length === 0) return ok(null);
+  const context = neighbours(targets, all).map((s) => s.text);
+  const batchText = [...targets.map((s) => s.text), ...context].join("\n");
+  const messages = buildPrompt({
+    sentences: targets.map((s) => s.text),
+    context,
+    dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
+  });
+  const modelIssues = await requestModelIssues(deps.provider, messages, deps.logger);
+  if (!modelIssues.ok) return modelIssues;
+
+  const located = modelIssues.value.flatMap((issue) => {
+    const result = locateIssue(issue, targets);
+    if (!result.ok) deps.logger.info({ event: "locate.dropped", code: result.error.code });
+    return result.ok ? [result.value] : [];
+  });
+  for (const sentence of targets) {
+    const own = located.filter((i) => i.start >= sentence.start && i.end <= sentence.end);
+    deps.cache.set(
+      deps.provider.model,
+      sentence.hash,
+      own.map((i) => shiftIssue(i, -sentence.start)),
+    );
+  }
+  return ok(null);
+};
+
+/** Sentences directly before or after a target that aren't targets themselves, in text order. */
+const neighbours = (targets: readonly Hashed[], all: readonly Hashed[]): Hashed[] => {
+  const targetSet = new Set(targets);
+  return all.filter(
+    (s, i) =>
+      !targetSet.has(s) &&
+      (targetSet.has(all[i - 1] as Hashed) || targetSet.has(all[i + 1] as Hashed)),
+  );
+};

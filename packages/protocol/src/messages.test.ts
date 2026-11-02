@@ -23,6 +23,13 @@ describe("ClientMessage", () => {
 });
 
 describe("CoreMessage", () => {
+  test("issues accepts an optional boolean pending flag", () => {
+    const issues = { type: "issues" as const, fieldId: "f1", version: 1, issues: [] };
+    expect(CoreMessage.parse({ ...issues, pending: true })).toEqual({ ...issues, pending: true });
+    expect(CoreMessage.parse(issues)).not.toHaveProperty("pending");
+    expect(CoreMessage.safeParse({ ...issues, pending: "yes" }).success).toBe(false);
+  });
+
   test("accepts ready, issues, error and settings.changed", () => {
     const messages = [
       { type: "ready" },
