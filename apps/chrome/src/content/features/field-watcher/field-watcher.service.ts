@@ -3,9 +3,18 @@ import type { WatchedField } from "../../shared/issue-view";
 import { isWatchableField } from "./field-eligibility.policy";
 import { FieldRegistry } from "./field-registry.store";
 
+/** Why a field is reported: it gained focus, its value changed, or it is sent again. */
+export type ChangeCause = "focus" | "input" | "resend";
+
 export type FieldWatcherCallbacks = {
   /** The field gained focus or its value changed. `text` is the full value. */
-  changed(field: WatchedField, fieldId: string, version: number, text: string): void;
+  changed(
+    field: WatchedField,
+    fieldId: string,
+    version: number,
+    text: string,
+    cause: ChangeCause,
+  ): void;
   /** The field lost focus, or stopped being watchable. */
   closed(field: WatchedField, fieldId: string): void;
 };
@@ -51,7 +60,7 @@ export class FieldWatcher {
   start(): void {
     for (const [type, listener] of this.listeners) this.doc.addEventListener(type, listener, true);
     const active = asWatchable(this.doc.activeElement);
-    if (active) this.track(active);
+    if (active) this.track(active, "focus");
   }
 
   stop(): void {
@@ -63,7 +72,7 @@ export class FieldWatcher {
 
   /** Sends the focused field again with a new version (e.g. after the core reconnected). */
   resendFocused(): void {
-    if (this.focused) this.track(this.focused);
+    if (this.focused) this.track(this.focused, "resend");
   }
 
   /** The open field for `fieldId` if `version` is current; undefined when stale or closed. */
@@ -78,14 +87,14 @@ export class FieldWatcher {
 
   private onFocus(event: Event): void {
     const field = asWatchable(eventTarget(event));
-    if (field) this.track(field);
+    if (field) this.track(field, "focus");
   }
 
   private onInput(event: Event): void {
     const target = eventTarget(event);
     if (target !== this.focused || !this.focused) return;
     // The field may have turned into a password, readonly or disabled field since focus.
-    if (asWatchable(target)) this.track(this.focused);
+    if (asWatchable(target)) this.track(this.focused, "input");
     else this.release(this.focused);
   }
 
@@ -93,11 +102,12 @@ export class FieldWatcher {
     if (this.focused && eventTarget(event) === this.focused) this.release(this.focused);
   }
 
-  private track(field: WatchedField): void {
+  /** Every report gets a new version, so results for earlier ones are always stale. */
+  private track(field: WatchedField, cause: ChangeCause): void {
     if (this.focused && this.focused !== field) this.release(this.focused);
     this.focused = field;
     const { fieldId, version } = this.registry.bump(field);
-    this.callbacks.changed(field, fieldId, version, fieldText(field));
+    this.callbacks.changed(field, fieldId, version, fieldText(field), cause);
   }
 
   private release(field: WatchedField): void {
