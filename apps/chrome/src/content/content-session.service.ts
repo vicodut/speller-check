@@ -28,8 +28,11 @@ export const startSession = (doc: Document): StopSession => {
     select: (field, issue) => view.open(field, issue),
     section: {
       css: REPHRASE_CSS,
-      render: (container, field) =>
-        renderRephraseSection(container, rephrase.state(field), () => rephrase.request(field)),
+      render: (container, field) => {
+        rephrase.seen(field);
+        renderRephraseSection(container, rephrase.state(field), () => rephrase.request(field));
+      },
+      hasNews: (field) => rephrase.hasNews(field),
     },
   });
   const watcher = new FieldWatcher(doc, {
@@ -40,8 +43,8 @@ export const startSession = (doc: Document): StopSession => {
       else badge.checking(field);
       port.send({ type: "text.changed", fieldId, version, text });
     },
+    // A blur keeps the field's rephrase: its tones still arrive and are shown on the next open.
     closed: (field, fieldId) => {
-      rephrase.forget(field);
       badge.hide(field);
       view.clear(field);
       port.send({ type: "field.closed", fieldId });
@@ -66,14 +69,19 @@ export const startSession = (doc: Document): StopSession => {
       badge.done(field);
       return;
     }
+    // Rephrase replies may concern a closed (blurred) field; the controller knows its fields.
+    if (message.type === "rephrase.tone" || message.type === "rephrase.done") {
+      rephrase.receive(message);
+      return;
+    }
+    if (message.request === "rephrase") {
+      if (message.fieldId !== undefined) rephrase.fail(message.fieldId, message.requestId);
+      return;
+    }
     const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
     if (!field) return;
-    if (message.type === "rephrase.result") rephrase.receive(field, message);
-    else if (message.request === "rephrase") rephrase.fail(field);
-    else {
-      view.clear(field);
-      badge.failed(field, message.code);
-    }
+    view.clear(field);
+    badge.failed(field, message.code);
   };
 
   // The port opens lazily on the first focused field, so idle pages don't wake the worker.

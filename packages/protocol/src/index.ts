@@ -4,6 +4,7 @@ export {
   DictionaryAddMessage,
   FieldClosedMessage,
   HelloMessage,
+  RephraseCancelMessage,
   RephraseRequestMessage,
   TextChangedMessage,
 } from "./client-message.dto";
@@ -12,7 +13,8 @@ export {
   ErrorMessage,
   IssuesCoreMessage,
   ReadyMessage,
-  RephraseResultMessage,
+  RephraseDoneMessage,
+  RephraseToneMessage,
   SettingsChangedMessage,
 } from "./core-message.dto";
 export { Issue } from "./issue.schema";
@@ -21,13 +23,12 @@ export { IssueType, ModelIssue, ModelResponse } from "./model-issue.schema";
 export {
   ModelRephraseResponse,
   ModelRephraseSegment,
-  ModelRephraseVersion,
 } from "./model-rephrase.schema";
 export {
   RephraseLanguage,
-  RephraseResult,
   RephraseSegment,
   RephraseSentence,
   RephraseTone,
+  RephraseToneResult,
   RephraseVersion,
 } from "./rephrase.schema";

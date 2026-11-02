@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { RephraseTone } from "./rephrase.schema";
 
 /** Sentence numbers as shown in the prompt (1-based). */
 const SentenceNumbers = z.array(z.number().int().positive()).min(1);
@@ -11,12 +10,6 @@ export const ModelRephraseSegment = z.union([
 ]);
 export type ModelRephraseSegment = z.infer<typeof ModelRephraseSegment>;
 
-export const ModelRephraseVersion = z.object({
-  tone: RephraseTone,
-  segments: z.array(ModelRephraseSegment),
-});
-export type ModelRephraseVersion = z.infer<typeof ModelRephraseVersion>;
-
 /** "fr", "French", "fr-FR"… count as French; anything else as English. */
 const LooseLanguage = z
   .unknown()
@@ -26,11 +19,11 @@ const LooseLanguage = z
   );
 
 /**
- * The model's reply envelope. Versions stay unknown here: each one is validated on its own,
- * so one bad version doesn't sink the others.
+ * The model's reply for one tone. Segments stay unknown here: the core validates them
+ * against its own sentence split.
  */
 export const ModelRephraseResponse = z.object({
   language: LooseLanguage,
-  versions: z.array(z.unknown()),
+  segments: z.array(z.unknown()),
 });
 export type ModelRephraseResponse = z.infer<typeof ModelRephraseResponse>;

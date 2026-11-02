@@ -15,7 +15,8 @@ export const REPHRASE_CSS = `
 }
 .gc-rephrase:hover, .gc-rephrase:focus-visible { background: rgba(62, 99, 221, 0.1); }
 .gc-rephrase:disabled { color: #8b8d98; cursor: default; background: none; }
-.gc-rephrase-loading { padding: 6px 8px; color: #60646c; }
+.gc-rephrase-loading { padding: 6px 8px; color: #60646c; font-size: 12px; }
+.gc-version + .gc-rephrase-loading { border-top: 1px solid rgba(0, 0, 0, 0.06); }
 .gc-version { padding: 6px 8px; }
 .gc-version + .gc-version { border-top: 1px solid rgba(0, 0, 0, 0.06); }
 .gc-tone { font-weight: 700; font-size: 12px; margin-bottom: 4px; }

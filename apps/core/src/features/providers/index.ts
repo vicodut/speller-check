@@ -3,4 +3,4 @@ export {
   type OpenAiCompatibleConfig,
   OpenAiCompatibleProvider,
 } from "./openai-compatible.provider";
-export type { ChatMessage, Provider } from "./provider";
+export type { ChatMessage, CompleteOptions, Provider } from "./provider";

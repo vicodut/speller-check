@@ -43,3 +43,10 @@ export const badgeLabel = (state: BadgeState): BadgeLabel => {
           };
   }
 };
+
+/**
+ * Adds the "rephrase ready" line to the tooltip (the badge also gets a dot). The text, so the
+ * issue count, never changes.
+ */
+export const withRephraseReady = (label: BadgeLabel, ready: boolean): BadgeLabel =>
+  ready ? { ...label, title: `${label.title} · Rephrase ready` } : label;

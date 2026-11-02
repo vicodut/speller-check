@@ -1,8 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { CheckRequest, CoreMessage } from "@gc/protocol";
-import { appError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
-import { err, ok } from "../../shared/result";
+import { ok } from "../../shared/result";
 import { WebSocketServer } from "./websocket.server";
 
 const TOKEN = "s".repeat(43);
@@ -26,7 +25,12 @@ const server = new WebSocketServer(
       terms.push(term);
       return ok(undefined);
     },
-    rephrase: async () => err(appError("rephrase_no_sentence")),
+    createRephraser: () => ({
+      request: async () => undefined,
+      edited: () => undefined,
+      cancel: () => undefined,
+      dispose: () => undefined,
+    }),
   },
   new Logger(() => undefined),
 );

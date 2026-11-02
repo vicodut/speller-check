@@ -3,7 +3,7 @@ import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { WatchedField } from "../../shared/issue-view";
 import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
 import { badgePosition, type FieldBox, panelPlacement } from "./badge-position.util";
-import { type BadgeState, badgeLabel } from "./badge-state.util";
+import { type BadgeState, badgeLabel, withRephraseReady } from "./badge-state.util";
 import { BADGE_CSS } from "./status-badge.styles";
 
 export type StatusBadgeCallbacks = BadgePanelCallbacks;
@@ -45,6 +45,7 @@ export class StatusBadge {
   private readonly host = document.createElement("gc-status");
   private readonly badge = document.createElement("div");
   private readonly panel: BadgePanel;
+  private readonly section: StatusBadgeCallbacks["section"];
   private readonly frame = createFrameScheduler(() => this.place());
   private readonly resize = new ResizeObserver(() => this.frame.schedule());
   private readonly onMove = () => this.frame.schedule();
@@ -54,6 +55,7 @@ export class StatusBadge {
   private latest: readonly Issue[] = [];
 
   constructor(callbacks: StatusBadgeCallbacks) {
+    this.section = callbacks.section;
     this.panel = new BadgePanel(this.host, callbacks);
     this.host.style.setProperty("all", "initial");
     const shadow = this.host.attachShadow({ mode: "closed" });
@@ -95,9 +97,10 @@ export class StatusBadge {
     if (this.field) this.set({ kind: "offline", status });
   }
 
-  /** The panel's section changed (e.g. a rephrase arrived): re-render it if open. */
+  /** The panel's section changed (e.g. a rephrase tone arrived): re-render it if open. */
   refreshPanel(field: WatchedField): void {
     this.panel.refresh(field);
+    this.paint();
     this.place();
   }
 
@@ -117,14 +120,21 @@ export class StatusBadge {
 
   private set(state: BadgeState): void {
     this.state = state;
-    const { text, title, variant } = badgeLabel(state);
-    this.badge.className = `gc-badge gc-${variant}`;
+    this.badge.hidden = false;
+    if (!PANEL_VARIANTS.has(badgeLabel(state).variant)) this.panel.close();
+    else if (this.field) this.panel.refresh(this.field, this.latest);
+    this.paint();
+    this.place();
+  }
+
+  /** Draws the state, plus the "rephrase ready" marker while the section has unseen news. */
+  private paint(): void {
+    if (!this.state) return;
+    const ready = !!this.field && !!this.section?.hasNews(this.field);
+    const { text, title, variant } = withRephraseReady(badgeLabel(this.state), ready);
+    this.badge.className = `gc-badge gc-${variant}${ready ? " gc-ready" : ""}`;
     this.badge.textContent = text;
     this.badge.title = title;
-    this.badge.hidden = false;
-    if (!PANEL_VARIANTS.has(variant)) this.panel.close();
-    else if (this.field) this.panel.refresh(this.field, this.latest);
-    this.place();
   }
 
   private togglePanel(): void {
@@ -133,7 +143,9 @@ export class StatusBadge {
       return;
     }
     if (this.state?.kind !== "count" || !this.field) return;
-    if (this.panel.open(this.field, this.state.issues)) this.place();
+    if (!this.panel.open(this.field, this.state.issues)) return;
+    this.paint();
+    this.place();
   }
 
   private place(): void {

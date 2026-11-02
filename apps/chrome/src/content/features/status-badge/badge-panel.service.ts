@@ -5,7 +5,10 @@ import { renderIssueList } from "./issue-list.view";
 /** Extra content below the issue list (the rephrase section), wired by the session. */
 export type PanelSection = {
   readonly css: string;
+  /** Renders the section; called only while the panel is open for `field`. */
   render(container: HTMLElement, field: WatchedField): void;
+  /** Whether the section has something the writer hasn't seen: the badge shows a marker. */
+  hasNews(field: WatchedField): boolean;
 };
 
 export type BadgePanelCallbacks = {

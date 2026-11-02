@@ -42,11 +42,13 @@ export const RephraseVersion = z.object({
 });
 export type RephraseVersion = z.infer<typeof RephraseVersion>;
 
-/** What a rephrase computes for the passage at the caret. */
-export const RephraseResult = z.object({
+/**
+ * One tone of the passage at the caret, sent as soon as it is ready. Each one carries the
+ * passage and its sentences, so it can be shown on its own.
+ */
+export const RephraseToneResult = RephraseVersion.extend({
   passage: Span,
   sentences: z.array(RephraseSentence).min(1),
   language: RephraseLanguage,
-  versions: z.array(RephraseVersion).min(1),
 });
-export type RephraseResult = z.infer<typeof RephraseResult>;
+export type RephraseToneResult = z.infer<typeof RephraseToneResult>;

@@ -4,6 +4,7 @@ export type ErrorCode =
   | "provider_network"
   | "provider_http"
   | "provider_bad_response"
+  | "provider_cancelled"
   | "model_invalid_json"
   | "dictionary_read_failed"
   | "dictionary_invalid"
@@ -16,7 +17,8 @@ export type ErrorCode =
   | "server_start_failed"
   | "origin_forbidden"
   | "rephrase_no_sentence"
-  | "rephrase_no_valid_version";
+  | "rephrase_no_valid_version"
+  | "rephrase_cancelled";
 
 /** Expected failure. Carries a code and optional HTTP status, never user text. */
 export type AppError = { readonly code: ErrorCode; readonly status?: number };

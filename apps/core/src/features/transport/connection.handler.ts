@@ -1,8 +1,8 @@
-import { ClientMessage, type CoreMessage, type RephraseRequestMessage } from "@gc/protocol";
+import { ClientMessage, type CoreMessage } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
-import type { ServerDeps, SessionPort } from "./server-deps.types";
+import type { RephrasePort, ServerDeps, SessionPort } from "./server-deps.types";
 
 /** Socket operations the handler needs; Bun's ServerWebSocket in production, a fake in tests. */
 export type ConnectionSocket = {
@@ -15,12 +15,15 @@ export type ConnectionOptions = { readonly token: string; readonly helloTimeoutM
 /** WebSocket close code 1008: policy violation. */
 const POLICY_VIOLATION = 1008;
 
+/** What an authenticated connection routes to. */
+type Routes = { readonly session: SessionPort; readonly rephraser: RephrasePort };
+
 /**
- * One connection's state: waits for a valid `hello`, then routes messages to its session.
- * Never echoes or logs message content.
+ * One connection's state: waits for a valid `hello`, then routes messages to its check session
+ * and its rephrases. Never echoes or logs message content.
  */
 export class ConnectionHandler {
-  private session: SessionPort | undefined;
+  private routes: Routes | undefined;
   private closed = false;
   private readonly helloTimer: ReturnType<typeof setTimeout>;
 
@@ -36,7 +39,7 @@ export class ConnectionHandler {
   async receive(raw: string | Buffer): Promise<void> {
     if (this.closed) return;
     const message = parseClientMessage(raw);
-    if (!this.session) {
+    if (!this.routes) {
       this.authenticate(message);
       return;
     }
@@ -45,15 +48,16 @@ export class ConnectionHandler {
       this.send({ type: "error", code: "message_invalid" });
       return;
     }
-    await this.route(message, this.session);
+    await this.route(message, this.routes);
   }
 
   /** Called when the socket closes, whoever closed it. */
   dispose(): void {
     this.closed = true;
     clearTimeout(this.helloTimer);
-    this.session?.dispose();
-    this.session = undefined;
+    this.routes?.session.dispose();
+    this.routes?.rephraser.dispose();
+    this.routes = undefined;
   }
 
   private authenticate(message: ClientMessage | undefined): void {
@@ -62,16 +66,22 @@ export class ConnectionHandler {
       return;
     }
     clearTimeout(this.helloTimer);
-    this.session = this.deps.createSession((out) => this.send(out));
+    const publish = (out: CoreMessage) => this.send(out);
+    this.routes = {
+      session: this.deps.createSession(publish),
+      rephraser: this.deps.createRephraser(publish),
+    };
     this.send({ type: "ready" });
   }
 
-  private async route(message: ClientMessage, session: SessionPort): Promise<void> {
+  /** A field closing (blur) leaves its rephrase running, so the tones still arrive. */
+  private async route(message: ClientMessage, { session, rephraser }: Routes): Promise<void> {
     switch (message.type) {
       case "hello":
         return; // Already authenticated: ignored.
       case "text.changed":
         session.update({ fieldId: message.fieldId, version: message.version, text: message.text });
+        rephraser.edited(message.fieldId, message.text);
         return;
       case "field.closed":
         session.close(message.fieldId);
@@ -79,16 +89,11 @@ export class ConnectionHandler {
       case "dictionary.add":
         return this.addTerm(message.term);
       case "rephrase.request":
-        return this.rephrase(message);
+        return rephraser.request(message);
+      case "rephrase.cancel":
+        rephraser.cancel(message.fieldId);
+        return;
     }
-  }
-
-  /** Answers with the result, or an error tagged `request: "rephrase"` (never a failed check). */
-  private async rephrase(message: RephraseRequestMessage): Promise<void> {
-    const { fieldId, version } = message;
-    const result = await this.deps.rephrase({ text: message.text, caret: message.caret });
-    if (result.ok) this.send({ type: "rephrase.result", fieldId, version, ...result.value });
-    else this.send({ type: "error", code: result.error.code, fieldId, request: "rephrase" });
   }
 
   private async addTerm(term: string): Promise<void> {
