@@ -68,6 +68,8 @@ Only changed sentences are sent to the model, and every result is checked agains
 
 1. **Capture.** A client (Swift helper or Chrome extension) watches the focused field and sends its full text to the core on change.
 
+   In a contenteditable field the Chrome extension leaves out text the writer didn't write: `blockquote`s on every site, and on Gmail (`mail.google.com`) the quoted thread and the signature (`.gmail_quote`, `.gmail_quote_container`, `.gmail_extra`, `.gmail_attr`, `.gmail_signature`, `.gmail_signature_prefix`). Skipped parts are never sent, underlined or written to; a skipped block still separates the lines around it, and offsets map between the sent text and the DOM through the same text model everywhere. Providers are pluggable adapters picked by hostname (the `email-cleaning` feature); others (Outlook…) come later.
+
 2. **Debounce.** The core waits 1 s after the last keystroke before checking.
 
 3. **Snapshot.** Each request carries a `fieldId` and an incrementing `version`. The core keeps the text of that version.
@@ -246,5 +248,5 @@ Build the brain first, prove it in Chrome, then take on the hard native part.
 
 - [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
 
-- [ ] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor?
+- [ ] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor? (In progress, #4: email quotes and signatures are now skipped; length cap and batching to come.)
 

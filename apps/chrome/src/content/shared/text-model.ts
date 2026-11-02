@@ -4,7 +4,14 @@ export type NodeLike = {
   readonly nodeName: string;
   readonly nodeValue: string | null;
   readonly childNodes: ArrayLike<NodeLike>;
+  /** Present on elements; lets skip matchers test class names. */
+  readonly classList?: { contains(token: string): boolean };
 };
+
+/** True for an element whose whole subtree is left out of the model (e.g. an email quote). */
+export type SkipMatcher = (element: NodeLike) => boolean;
+
+const skipNothing: SkipMatcher = () => false;
 
 /** A run of the model's text: from a text node, or a synthetic newline (`node` null). */
 type Segment<N> = { readonly start: number; readonly end: number; readonly node: N | null };
@@ -26,8 +33,14 @@ const BLOCKS = new Set([
   ...["P", "PRE", "SECTION", "TABLE", "TR", "UL"],
 ]);
 
-/** Builds the model: text nodes in order, `<br>` as "\n", one "\n" between blocks. */
-export const buildTextModel = <N extends NodeLike>(root: N): TextModel<N> => {
+/**
+ * Builds the model: text nodes in order, `<br>` as "\n", one "\n" between blocks.
+ * Elements `skip` matches (never the root) are left out, as if they were an empty block or span.
+ */
+export const buildTextModel = <N extends NodeLike>(
+  root: N,
+  skip: SkipMatcher = skipNothing,
+): TextModel<N> => {
   const segments: Segment<N>[] = [];
   let text = "";
   // A block boundary only becomes a newline once more text follows it.
@@ -55,6 +68,11 @@ export const buildTextModel = <N extends NodeLike>(root: N): TextModel<N> => {
       return;
     }
     const block = isRoot || BLOCKS.has(node.nodeName);
+    if (!isRoot && skip(node)) {
+      // A skipped block still separates the lines around it.
+      if (block) pendingBreak = true;
+      return;
+    }
     if (block && !isRoot) pendingBreak = true;
     const children = Array.from(node.childNodes as ArrayLike<N>);
     children.forEach((child, i) => {
