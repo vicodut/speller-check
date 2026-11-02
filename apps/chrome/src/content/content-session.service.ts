@@ -1,0 +1,65 @@
+// One checking session for this frame: field watcher, underlines/card, badge and core port.
+import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
+import { FieldWatcher } from "./features/field-watcher";
+import type { StopSession } from "./features/site-gate";
+import { StatusBadge } from "./features/status-badge";
+import { createIssueView } from "./features/underlines";
+import { CorePort } from "./shared/core-port";
+
+/** Starts watching fields; the returned function removes all UI and closes the port. */
+export const startSession = (doc: Document): StopSession => {
+  const port = new CorePort((message) => onBackground(message));
+  let status: ConnectionStatus | undefined;
+  const view = createIssueView({
+    addToDictionary: (term) => port.send({ type: "dictionary.add", term }),
+    visibleChanged: (field, issues) => badge.issues(field, issues),
+  });
+  const badge = new StatusBadge({ select: (field, issue) => view.open(field, issue) });
+  const watcher = new FieldWatcher(doc, {
+    changed: (field, fieldId, version, text) => {
+      // While the core is unusable the background drops the text; say so instead of spinning.
+      if (status === "auth_failed" || status === "unreachable") badge.offline(status, field);
+      else badge.checking(field);
+      port.send({ type: "text.changed", fieldId, version, text });
+    },
+    closed: (field, fieldId) => {
+      badge.hide(field);
+      view.clear(field);
+      port.send({ type: "field.closed", fieldId });
+    },
+  });
+
+  const onBackground = (message: BackgroundMessage): void => {
+    if (message.type === "core.status") {
+      status = message.status;
+      if (status === "auth_failed" || status === "unreachable") badge.offline(status);
+      return;
+    }
+    if (message.type === "core.ready") {
+      watcher.resendFocused();
+      return;
+    }
+    if (message.type === "issues") {
+      // Only the current version is drawn; anything older is stale and dropped.
+      const field = watcher.currentField(message.fieldId, message.version);
+      if (!field) return;
+      view.show(field, message.issues);
+      badge.done(field);
+      return;
+    }
+    const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
+    if (!field) return;
+    view.clear(field);
+    badge.failed(field, message.code);
+  };
+
+  // The port opens lazily on the first focused field, so idle pages don't wake the worker.
+  watcher.start();
+  return () => {
+    // Stopping the watcher closes the focused field (no text), then the port goes for good.
+    watcher.stop();
+    port.close();
+    view.dispose();
+    badge.dispose();
+  };
+};

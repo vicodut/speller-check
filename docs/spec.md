@@ -185,7 +185,7 @@ The app never logs text, never reads secure fields, and keeps API keys in the ma
 
 | App blocklist | 1Password, Keychain Access, terminals | Bundle IDs |
 
-| Site blocklist | banking domains (user-defined) | Chrome only |
+| Site blocklist | banking domains (user-defined) | Chrome only; host + subdomains, parent frames count; changes apply to open tabs without a reload |
 
 | Local-only mode | off | Refuses any non-localhost base URL |
 
