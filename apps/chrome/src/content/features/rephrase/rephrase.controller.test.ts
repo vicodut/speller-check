@@ -1,57 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  RephraseDoneMessage,
-  RephraseRequestMessage,
-  RephraseTone,
-  RephraseToneMessage,
-} from "@gc/protocol";
-import { MAX_KEPT_FIELDS, RephraseController } from "./rephrase.controller";
-
-type FakeField = { text: string; caret: number | null };
-
-const setup = (text = "Intro. Hello there.", caret: number | null = 10, timeoutMs = 1000) => {
-  const field: FakeField = { text, caret };
-  const sent: RephraseRequestMessage[] = [];
-  let changes = 0;
-  const controller = new RephraseController<FakeField>({
-    send: (m) => sent.push(m),
-    readText: (f) => f.text,
-    readCaret: (f) => f.caret,
-    changed: () => changes++,
-    timeoutMs,
-  });
-  controller.track(field, "f1", 3);
-  return { field, sent, controller, changes: () => changes };
-};
-
-const tone = (name: RephraseTone, requestId = 1, version = 3): RephraseToneMessage => ({
-  type: "rephrase.tone",
-  fieldId: "f1",
-  version,
-  requestId,
-  passage: { start: 0, end: 19 },
-  sentences: [
-    { text: "Intro.", start: 0, end: 6 },
-    { text: "Hello there.", start: 7, end: 19 },
-  ],
-  language: "en",
-  tone: name,
-  segments: [
-    { from: 0, to: 0, keep: true },
-    { from: 1, to: 1, text: "Hey." },
-  ],
-});
-
-const done = (requestId = 1, count = 1): RephraseDoneMessage => ({
-  type: "rephrase.done",
-  fieldId: "f1",
-  version: 3,
-  requestId,
-  count,
-});
-
-const tones = (state: ReturnType<RephraseController<FakeField>["state"]>) =>
-  state.kind === "result" ? state.versions.map((v) => v.tone) : [];
+import { MAX_KEPT_FIELDS } from "./rephrase.controller";
+import { done, type FakeField, setup, tone, tones } from "./rephrase-controller.fixture";
 
 describe("RephraseController", () => {
   test("is enabled only when the caret is in a sentence", () => {
@@ -98,7 +47,7 @@ describe("RephraseController", () => {
     expect(state.kind === "result" && state.pending).toEqual(["Casual", "Concise", "Friendlier"]);
     expect(state.kind === "result" && state.versions[0]?.rows).toEqual([
       { kind: "unchanged", text: "Intro." },
-      { kind: "rewritten", text: "Hey." },
+      { kind: "rewritten", text: "Hey.", segment: 1, replace: "available" },
     ]);
     controller.receive(tone("concise"));
     controller.receive(done(1, 2));

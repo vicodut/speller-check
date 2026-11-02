@@ -4,6 +4,8 @@ import {
   type RephraseToneResult,
   type RephraseVersion,
 } from "@gc/protocol";
+import type { ReplacedRun } from "../write-back";
+import { isVersionApplied, type ReplaceStatus, segmentStatus } from "./rephrase-replace.model";
 
 /** The tones received so far for one request, with the passage they were computed on. */
 export type RephraseDraft = Pick<RephraseToneResult, "passage" | "sentences" | "language"> & {
@@ -12,7 +14,13 @@ export type RephraseDraft = Pick<RephraseToneResult, "passage" | "sentences" | "
 
 /** A rewritten part, or original sentences the version leaves as they are (shown faded). */
 export type RephraseRow =
-  | { readonly kind: "rewritten"; readonly text: string }
+  | {
+      readonly kind: "rewritten";
+      readonly text: string;
+      /** Index of its segment in the version, for Replace. */
+      readonly segment: number;
+      readonly replace: ReplaceStatus;
+    }
   | { readonly kind: "unchanged"; readonly text: string };
 
 export type RephraseVersionView = {
@@ -20,6 +28,8 @@ export type RephraseVersionView = {
   readonly label: string;
   /** Every segment is kept: the panel says "Already fits this tone". */
   readonly fits: boolean;
+  /** Replace all is offered: the version rewrites something the field doesn't hold yet. */
+  readonly replaceAll: boolean;
   readonly rows: readonly RephraseRow[];
 };
 
@@ -62,13 +72,20 @@ export const pendingToneLabels = (draft: RephraseDraft | undefined): string[] =>
   return RephraseTone.options.slice(last + 1).map((tone) => labels[tone]);
 };
 
-/** Maps a draft to one block of rows per version; consecutive unchanged sentences share a row. */
-export const buildRephraseView = (draft: RephraseDraft): RephraseVersionView[] =>
+/**
+ * Maps a draft to one block of rows per version; consecutive unchanged sentences share a row.
+ * `runs` are the parts already replaced in the field, which set each Replace button.
+ */
+export const buildRephraseView = (
+  draft: RephraseDraft,
+  runs: readonly ReplacedRun[] = [],
+): RephraseVersionView[] =>
   draft.versions.map((version) => {
     const rows: RephraseRow[] = [];
-    for (const segment of version.segments) {
+    for (const [index, segment] of version.segments.entries()) {
       if ("text" in segment) {
-        rows.push({ kind: "rewritten", text: segment.text });
+        const replace = segmentStatus(segment, runs);
+        rows.push({ kind: "rewritten", text: segment.text, segment: index, replace });
         continue;
       }
       const original = draft.sentences
@@ -80,20 +97,13 @@ export const buildRephraseView = (draft: RephraseDraft): RephraseVersionView[] =
         rows[rows.length - 1] = { ...last, text: `${last.text} ${original}` };
       else rows.push({ kind: "unchanged", text: original });
     }
+    const fits = rows.every((row) => row.kind === "unchanged");
+    const replaceAll = !fits && !isVersionApplied(version, runs);
     return {
       tone: version.tone,
       label: LABELS[draft.language][version.tone],
-      fits: rows.every((row) => row.kind === "unchanged"),
+      fits,
+      replaceAll,
       rows,
     };
   });
-
-/** A result is only used while the field still holds the passage it was computed from, in place. */
-export const isPassageCurrent = (
-  draft: Pick<RephraseDraft, "passage">,
-  sentText: string,
-  currentText: string,
-): boolean => {
-  const { start, end } = draft.passage;
-  return currentText.slice(start, end) === sentText.slice(start, end);
-};

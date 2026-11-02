@@ -3,7 +3,6 @@ import type { RephraseToneResult } from "@gc/protocol";
 import {
   addTone,
   buildRephraseView,
-  isPassageCurrent,
   pendingToneLabels,
   type RephraseDraft,
 } from "./rephrase-view.model";
@@ -50,11 +49,24 @@ describe("buildRephraseView", () => {
       tone: "casual",
       label: "Casual",
       fits: false,
+      replaceAll: true,
       rows: [
-        { kind: "rewritten", text: "One and two." },
+        { kind: "rewritten", text: "One and two.", segment: 0, replace: "available" },
         { kind: "unchanged", text: "Three." },
       ],
     });
+  });
+
+  test("replaced parts set each Replace button and Replace all", () => {
+    const [casual, concise] = buildRephraseView(draft(), [
+      { from: 0, to: 1, text: "One and two." },
+    ]);
+    expect(casual?.rows[0]).toMatchObject({ replace: "applied" });
+    expect(casual?.replaceAll).toBe(false);
+    expect(concise?.replaceAll).toBe(false);
+    const [blocked] = buildRephraseView(draft(), [{ from: 1, to: 2, text: "x" }]);
+    expect(blocked?.rows[0]).toMatchObject({ replace: "blocked" });
+    expect(blocked?.replaceAll).toBe(true);
   });
 
   test("a version that keeps everything already fits the tone", () => {
@@ -92,15 +104,5 @@ describe("addTone and pendingToneLabels", () => {
     const later = addTone(addTone(undefined, tone("professional")), tone("concise"));
     expect(later.versions.map((v) => v.tone)).toEqual(["professional", "concise"]);
     expect(pendingToneLabels(later)).toEqual(["Friendlier"]);
-  });
-});
-
-describe("isPassageCurrent", () => {
-  test("is true while the passage text is unchanged, even after edits elsewhere", () => {
-    const sent = "Hello One. Two. Three.";
-    expect(isPassageCurrent(draft(), sent, sent)).toBe(true);
-    expect(isPassageCurrent(draft(), sent, `${sent} More text.`)).toBe(true);
-    expect(isPassageCurrent(draft(), sent, "Hello One. Too. Three.")).toBe(false);
-    expect(isPassageCurrent(draft(), sent, `Oh ${sent}`)).toBe(false);
   });
 });

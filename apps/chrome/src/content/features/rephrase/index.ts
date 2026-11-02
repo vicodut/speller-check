@@ -4,4 +4,4 @@ export {
   type RephrasePanelState,
 } from "./rephrase.controller";
 export { REPHRASE_CSS } from "./rephrase.styles";
-export { renderRephraseSection } from "./rephrase-section.view";
+export { type RephraseSectionActions, renderRephraseSection } from "./rephrase-section.view";

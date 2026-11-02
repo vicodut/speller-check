@@ -5,9 +5,16 @@ import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./featu
 import type { StopSession } from "./features/site-gate";
 import { StatusBadge } from "./features/status-badge";
 import { createIssueView } from "./features/underlines";
+import { applyFix } from "./features/write-back";
 import { CorePort } from "./shared/core-port";
 import { fieldCaret, fieldText } from "./shared/field-text";
 import type { WatchedField } from "./shared/issue-view";
+
+const copyText = (text: string): Promise<boolean> =>
+  navigator.clipboard.writeText(text).then(
+    () => true,
+    () => false,
+  );
 
 /** Starts watching fields; the returned function removes all UI and closes the port. */
 export const startSession = (doc: Document): StopSession => {
@@ -22,6 +29,8 @@ export const startSession = (doc: Document): StopSession => {
     send: (message) => port.send(message),
     readText: fieldText,
     readCaret: fieldCaret,
+    // Same write-back as Accept; the edit's input events then get the new text checked.
+    apply: applyFix,
     changed: (field) => badge.refreshPanel(field),
   });
   const badge = new StatusBadge({
@@ -30,7 +39,11 @@ export const startSession = (doc: Document): StopSession => {
       css: REPHRASE_CSS,
       render: (container, field) => {
         rephrase.seen(field);
-        renderRephraseSection(container, rephrase.state(field), () => rephrase.request(field));
+        renderRephraseSection(container, rephrase.state(field), {
+          rephrase: () => rephrase.request(field),
+          replace: (tone, segment) => void rephrase.replace(field, tone, segment),
+          copy: copyText,
+        });
       },
       hasNews: (field) => rephrase.hasNews(field),
     },
