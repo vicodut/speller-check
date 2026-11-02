@@ -30,6 +30,7 @@ export const BADGE_CSS = `
 .gc-issues { background: #e5484d; cursor: pointer; }
 .gc-failed { background: #f76b15; }
 .gc-offline { background: #8b8d98; }
+.gc-too-long { background: #8b8d98; }
 .gc-ready:not(.gc-checking)::after {
   content: "";
   position: absolute;

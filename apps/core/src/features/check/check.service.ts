@@ -1,5 +1,5 @@
-import type { Issue } from "@gc/protocol";
-import type { AppError } from "../../shared/errors";
+import { type Issue, isTextTooLong } from "@gc/protocol";
+import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import {
@@ -39,6 +39,10 @@ export class CheckService {
   async check(input: CheckInput): Promise<Result<CheckOutput, AppError>> {
     const startedAt = performance.now();
     this.logger.info({ event: "check.start", len: input.text.length });
+    if (isTextTooLong(input.text)) {
+      this.logger.error({ event: "check.failed", code: "text_too_long", len: input.text.length });
+      return err(appError("text_too_long"));
+    }
     const entries = await this.dictionary.load();
     if (!entries.ok) return this.fail(entries.error);
 

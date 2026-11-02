@@ -39,7 +39,7 @@ const PANEL_VARIANTS = new Set(["issues", "clean"]);
 
 /**
  * The focused field's corner badge: a spinner while checking, then the issue count (click for
- * the panel), a failed check, or an unreachable core.
+ * the panel), a failed check, a field too long to check, or an unreachable core.
  */
 export class StatusBadge {
   private readonly host = document.createElement("gc-status");
@@ -87,8 +87,17 @@ export class StatusBadge {
     if (field === this.field) this.set({ kind: "count", issues: this.latest });
   }
 
+  /** The field's text is over the cap: nothing was sent, its issues are gone. */
+  tooLong(field: WatchedField): void {
+    this.latest = [];
+    this.attach(field);
+    this.set({ kind: "too_long" });
+  }
+
+  /** A late failure of a check sent before the field went over the cap doesn't replace it. */
   failed(field: WatchedField, code: string): void {
-    if (field === this.field) this.set({ kind: "failed", code });
+    if (field !== this.field || this.state?.kind === "too_long") return;
+    this.set({ kind: "failed", code });
   }
 
   /** The core can't be used; shown on the field the badge is on, if any. */

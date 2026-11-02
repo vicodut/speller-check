@@ -1,4 +1,9 @@
-import { ClientMessage, type CoreMessage } from "@gc/protocol";
+import {
+  ClientMessage,
+  type CoreMessage,
+  isTextTooLong,
+  type RephraseRequestMessage,
+} from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
@@ -89,6 +94,7 @@ export class ConnectionHandler {
       case "dictionary.add":
         return this.addTerm(message.term);
       case "rephrase.request":
+        if (isTextTooLong(message.text)) return this.refuseRephrase(message);
         return rephraser.request(message);
       case "rephrase.cancel":
         rephraser.cancel(message.fieldId);
@@ -100,6 +106,13 @@ export class ConnectionHandler {
     const result = await this.deps.addDictionaryTerm(term);
     if (result.ok) this.logger.info({ event: "dictionary.added" });
     else this.fail(result.error.code);
+  }
+
+  /** Safety net: clients don't send text over the cap. Refused before any model call. */
+  private refuseRephrase({ fieldId, requestId, text }: RephraseRequestMessage): void {
+    const code = "text_too_long";
+    this.logger.error({ event: "rephrase.failed", code, len: text.length });
+    this.send({ type: "error", code, fieldId, request: "rephrase", requestId });
   }
 
   private reject(): void {

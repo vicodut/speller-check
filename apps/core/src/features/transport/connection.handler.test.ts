@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { CheckRequest, CoreMessage } from "@gc/protocol";
+import { type CheckRequest, type CoreMessage, MAX_TEXT_LENGTH } from "@gc/protocol";
 import { appError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
 import { err, ok } from "../../shared/result";
@@ -158,6 +158,24 @@ describe("ConnectionHandler", () => {
     expect(t.rephraseCalls).toEqual(["request f 1", "edited f", "cancel f"]);
     t.handler.dispose();
     expect(t.rephraseCalls.at(-1)).toBe("dispose");
+  });
+
+  test("refuses a rephrase of text over the cap with text_too_long", async () => {
+    const t = setup();
+    await t.handler.receive(hello);
+    const text = `Secret. ${"a".repeat(MAX_TEXT_LENGTH)}`;
+    const request = { type: "rephrase.request", fieldId: "f", version: 1, requestId: 7, caret: 0 };
+    await t.handler.receive(JSON.stringify({ ...request, text }));
+    expect(t.rephraseCalls).toEqual([]);
+    expect(t.sent.at(-1)).toEqual({
+      type: "error",
+      code: "text_too_long",
+      fieldId: "f",
+      request: "rephrase",
+      requestId: 7,
+    });
+    expect(t.logs.join("\n")).not.toContain("Secret");
+    t.handler.dispose();
   });
 
   test("rephrase replies go out on the socket", async () => {

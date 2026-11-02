@@ -4,6 +4,7 @@ import { FieldWatcher } from "./features/field-watcher";
 import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./features/rephrase";
 import type { StopSession } from "./features/site-gate";
 import { StatusBadge } from "./features/status-badge";
+import { canSendRephrase, messageForChange } from "./features/text-cap";
 import { createIssueView } from "./features/underlines";
 import { CorePort } from "./shared/core-port";
 import { fieldCaret, fieldText } from "./shared/field-text";
@@ -19,7 +20,11 @@ export const startSession = (doc: Document): StopSession => {
   });
   // Rephrase lives in the badge panel only; it never feeds the issue count.
   const rephrase = new RephraseController<WatchedField>({
-    send: (message) => port.send(message),
+    // Over the cap the panel can't open; this guards a request racing the field growing.
+    send: (message) => {
+      if (canSendRephrase(message)) port.send(message);
+      else rephrase.fail(message.fieldId, message.requestId);
+    },
     readText: fieldText,
     readCaret: fieldCaret,
     changed: (field) => badge.refreshPanel(field),
@@ -38,10 +43,16 @@ export const startSession = (doc: Document): StopSession => {
   const watcher = new FieldWatcher(doc, {
     changed: (field, fieldId, version, text) => {
       rephrase.track(field, fieldId, version);
-      // While the core is unusable the background drops the text; say so instead of spinning.
-      if (status === "auth_failed" || status === "unreachable") badge.offline(status, field);
-      else badge.checking(field);
-      port.send({ type: "text.changed", fieldId, version, text });
+      const message = messageForChange({ fieldId, version, text });
+      if (message.type === "field.closed") {
+        // Over the cap: no text is sent and the old underlines no longer match.
+        view.clear(field);
+        badge.tooLong(field);
+      } else if (status === "auth_failed" || status === "unreachable") {
+        // While the core is unusable the background drops the text; say so instead of spinning.
+        badge.offline(status, field);
+      } else badge.checking(field);
+      port.send(message);
     },
     // A blur keeps the field's rephrase: its tones still arrive and are shown on the next open.
     closed: (field, fieldId) => {

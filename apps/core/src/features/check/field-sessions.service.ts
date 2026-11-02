@@ -1,5 +1,5 @@
-import type { CheckRequest, CoreMessage, Issue } from "@gc/protocol";
-import type { AppError } from "../../shared/errors";
+import { type CheckRequest, type CoreMessage, type Issue, isTextTooLong } from "@gc/protocol";
+import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import type { Result } from "../../shared/result";
 import { reconcileIssues } from "./services/issue-reconciler.service";
@@ -87,6 +87,16 @@ export class FieldSessions {
   private async run(field: Field): Promise<void> {
     field.timer = undefined;
     const snapshot = field.latest;
+    if (isTextTooLong(snapshot.text)) {
+      // Safety net: clients don't send text over the cap. Refused before any model call.
+      this.logger.error({
+        event: "check.failed",
+        code: "text_too_long",
+        len: snapshot.text.length,
+      });
+      this.publishError(field, snapshot, appError("text_too_long"));
+      return;
+    }
     const result = await this.checker.check({ text: snapshot.text, version: snapshot.version });
     // Closed (or closed and reopened) fields and disposed sessions drop their results.
     if (this.disposed || this.fields.get(field.id) !== field) return;

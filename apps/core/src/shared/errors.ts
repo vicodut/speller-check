@@ -18,7 +18,8 @@ export type ErrorCode =
   | "origin_forbidden"
   | "rephrase_no_sentence"
   | "rephrase_no_valid_version"
-  | "rephrase_cancelled";
+  | "rephrase_cancelled"
+  | "text_too_long";
 
 /** Expected failure. Carries a code and optional HTTP status, never user text. */
 export type AppError = { readonly code: ErrorCode; readonly status?: number };
