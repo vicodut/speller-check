@@ -1,11 +1,8 @@
 // Content script: watches text fields and shows the core's issues. Never logs field text.
-import { loadSettings } from "../shared/extension-settings";
-import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
+import { loadSettings, onSettingsChanged } from "../shared/extension-settings";
 import { isSiteBlocked } from "../shared/site-blocklist";
-import { FieldWatcher } from "./features/field-watcher";
-import { StatusBadge } from "./features/status-badge";
-import { createIssueView } from "./features/underlines";
-import { CorePort } from "./shared/core-port";
+import { startSession } from "./content-session.service";
+import { SiteGate } from "./features/site-gate";
 
 /** This frame's host and its ancestors' hosts, so an embedded frame on a blocked site stays off. */
 const frameHostnames = (): string[] => {
@@ -19,58 +16,19 @@ const frameHostnames = (): string[] => {
   return [location.hostname, ...ancestors];
 };
 
-const start = async (): Promise<void> => {
-  // Blocklist first: nothing is watched or connected on a blocked site.
-  const { blockedSites } = await loadSettings();
-  if (frameHostnames().some((host) => isSiteBlocked(host, blockedSites))) return;
-
-  const port = new CorePort((message) => onBackground(message));
-  let status: ConnectionStatus | undefined;
-  const view = createIssueView({
-    addToDictionary: (term) => port.send({ type: "dictionary.add", term }),
-    visibleChanged: (field, issues) => badge.issues(field, issues),
-  });
-  const badge = new StatusBadge({ select: (field, issue) => view.open(field, issue) });
-  const watcher = new FieldWatcher(document, {
-    changed: (field, fieldId, version, text) => {
-      // While the core is unusable the background drops the text; say so instead of spinning.
-      if (status === "auth_failed" || status === "unreachable") badge.offline(status, field);
-      else badge.checking(field);
-      port.send({ type: "text.changed", fieldId, version, text });
-    },
-    closed: (field, fieldId) => {
-      badge.hide(field);
-      view.clear(field);
-      port.send({ type: "field.closed", fieldId });
-    },
-  });
-
-  const onBackground = (message: BackgroundMessage): void => {
-    if (message.type === "core.status") {
-      status = message.status;
-      if (status === "auth_failed" || status === "unreachable") badge.offline(status);
-      return;
+// Blocklist first: nothing is watched or connected on a blocked site, and changes apply live.
+const gate = new SiteGate({
+  isBlocked: ({ blockedSites }) =>
+    frameHostnames().some((host) => isSiteBlocked(host, blockedSites)),
+  start: () => startSession(document),
+  load: loadSettings,
+  subscribe: (listener) => {
+    try {
+      onSettingsChanged(listener);
+    } catch {
+      // Extension context invalidated: keep the state from the initial load.
     }
-    if (message.type === "core.ready") {
-      watcher.resendFocused();
-      return;
-    }
-    if (message.type === "issues") {
-      // Only the current version is drawn; anything older is stale and dropped.
-      const field = watcher.currentField(message.fieldId, message.version);
-      if (!field) return;
-      view.show(field, message.issues);
-      badge.done(field);
-      return;
-    }
-    const field = message.fieldId === undefined ? undefined : watcher.openField(message.fieldId);
-    if (!field) return;
-    view.clear(field);
-    badge.failed(field, message.code);
-  };
+  },
+});
 
-  // The port opens lazily on the first focused field, so idle pages don't wake the worker.
-  watcher.start();
-};
-
-void start();
+void gate.init();
