@@ -19,14 +19,45 @@ export const REPHRASE_CSS = `
 .gc-version + .gc-rephrase-loading { border-top: 1px solid rgba(0, 0, 0, 0.06); }
 .gc-version { padding: 6px 8px; }
 .gc-version + .gc-version { border-top: 1px solid rgba(0, 0, 0, 0.06); }
-.gc-tone { font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+.gc-version-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.gc-tone { font-weight: 700; font-size: 12px; }
 .gc-rewrite, .gc-unchanged { overflow-wrap: anywhere; margin-bottom: 4px; }
+.gc-rewrite { display: flex; align-items: flex-start; gap: 8px; }
+.gc-rewrite-text { flex: 1; min-width: 0; }
 .gc-unchanged { opacity: 0.5; }
-.gc-unchanged-tag { margin-left: 6px; font-size: 11px; font-style: italic; }
+.gc-unchanged-tag, .gc-replaced-tag { margin-left: 6px; font-size: 11px; font-style: italic; }
+.gc-replaced-tag { color: #30a46c; white-space: nowrap; }
+.gc-replace {
+  all: unset;
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #3e63dd;
+  cursor: pointer;
+}
+.gc-replace:hover, .gc-replace:focus-visible { background: rgba(62, 99, 221, 0.1); }
+.gc-copy-fallback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #ad5700;
+}
+.gc-copy-note { flex: 1; }
 .gc-fits { font-size: 12px; color: #30a46c; }
 @media (prefers-color-scheme: dark) {
   .gc-version + .gc-version { border-color: rgba(255, 255, 255, 0.1); }
-  .gc-rephrase { color: #9eb1ff; }
+  .gc-rephrase, .gc-replace { color: #9eb1ff; }
+  .gc-copy-fallback { color: #ffa057; }
   .gc-rephrase-loading { color: #b0b4ba; }
 }
 `;

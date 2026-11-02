@@ -1,49 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { RephraseToneResult } from "@gc/protocol";
-import { type AppError, appError } from "../../shared/errors";
-import { Logger } from "../../shared/logger";
-import { err, ok, type Result } from "../../shared/result";
-import type { ChatMessage, CompleteOptions, Provider } from "../providers";
-import { RephraseService } from "./rephrase.service";
-
-type Reply = string | AppError;
-
-/** Replies with each scripted reply in turn (the last one repeats) and records the prompts. */
-const fakeProvider = (replies: Reply[], onCall?: (call: number) => void) => {
-  const prompts: string[] = [];
-  let call = 0;
-  const provider: Provider = {
-    model: "test-model",
-    healthcheck: async () => true,
-    complete: async (
-      messages: readonly ChatMessage[],
-      _options?: CompleteOptions,
-    ): Promise<Result<string, AppError>> => {
-      prompts.push(messages.map((m) => m.content).join("\n"));
-      onCall?.(call);
-      const reply = replies[Math.min(call++, replies.length - 1)] ?? "";
-      return typeof reply === "string" ? ok(reply) : err(reply);
-    },
-  };
-  return { provider, prompts };
-};
-
-const keepAll = (n: number) =>
-  Array.from({ length: n }, (_, i) => ({ sentences: [i + 1], keep: true }));
-const reply = (segments: unknown[], language = "en") => JSON.stringify({ language, segments });
-
-const setup = (replies: Reply[], onCall?: (call: number) => void) => {
-  const { provider, prompts } = fakeProvider(replies, onCall);
-  const logs: string[] = [];
-  const service = new RephraseService(provider, new Logger((line) => logs.push(line)));
-  const tones: RephraseToneResult[] = [];
-  const run = (text: string, caret: number, signal?: AbortSignal) =>
-    service.rephrase({ text, caret }, { signal, onTone: (t) => tones.push(t) });
-  return { run, prompts, logs, tones };
-};
-
-const TEXT = "Intro line.\n\nThe meeting moved to Monday. Bring the 3 reports. Thanks.";
-const caret = TEXT.indexOf("Bring");
+import { appError } from "../../shared/errors";
+import { ok } from "../../shared/result";
+import { caret, keepAll, reply, setup, TEXT } from "./rephrase-service.fixture";
 
 describe("RephraseService", () => {
   test("one call per tone, in display order, on the caret's numbered sentences", async () => {
@@ -76,7 +34,9 @@ describe("RephraseService", () => {
 
   test("sends each tone as soon as it is ready", async () => {
     const seenBeforeCall: number[] = [];
-    const t = setup([reply(keepAll(3))], () => seenBeforeCall.push(t.tones.length));
+    const t = setup([reply(keepAll(3))], {
+      onCall: () => seenBeforeCall.push(t.tones.length),
+    });
     await t.run(TEXT, caret);
     expect(seenBeforeCall).toEqual([0, 1, 2, 3]);
   });
@@ -146,8 +106,10 @@ describe("RephraseService", () => {
 
   test("a cancelled run stops calling the model and drops the reply in flight", async () => {
     const cancel = new AbortController();
-    const t = setup([reply(keepAll(3))], (call) => {
-      if (call === 1) cancel.abort();
+    const t = setup([reply(keepAll(3))], {
+      onCall: (call) => {
+        if (call === 1) cancel.abort();
+      },
     });
     const result = await t.run(TEXT, caret, cancel.signal);
     expect(!result.ok && result.error.code).toBe("rephrase_cancelled");

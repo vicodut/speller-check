@@ -1,7 +1,7 @@
 import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import { OpenAiCompatibleProvider } from "./features/providers";
-import { RephraseJobs, RephraseService } from "./features/rephrase";
+import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { Settings } from "./features/settings";
 import { WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
@@ -32,7 +32,7 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
     { ...config, timeoutMs: REPHRASE_TIMEOUT_MS },
     logger,
   );
-  const rephraseService = new RephraseService(rephraseProvider, logger);
+  const rephraseService = new RephraseService(rephraseProvider, logger, new RephraseCache());
   return { checkService, dictionary, rephraseService };
 };
 

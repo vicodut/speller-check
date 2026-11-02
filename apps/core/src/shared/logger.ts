@@ -33,6 +33,7 @@ export type LogEvent =
   | "rephrase.version_dropped"
   | "rephrase.tone_done"
   | "rephrase.tone_failed"
+  | "rephrase.tone_cached"
   | "cli.failed";
 
 /** The only fields a log line can carry: names, durations, lengths/counts and error codes. */

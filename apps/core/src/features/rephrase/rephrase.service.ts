@@ -1,14 +1,10 @@
-import {
-  type ModelRephraseResponse,
-  type RephraseSegment,
-  RephraseTone,
-  type RephraseToneResult,
-} from "@gc/protocol";
+import { type ModelRephraseResponse, RephraseTone, type RephraseToneResult } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import type { ChatMessage, Provider } from "../providers";
 import { type Passage, selectPassage } from "./services/passage-selector.service";
+import { hashPassage, type RephraseCache, type ToneReply } from "./services/rephrase-cache.service";
 import {
   buildRephrasePrompt,
   REPHRASE_RETRY_MESSAGE,
@@ -25,20 +21,18 @@ export type RephraseRun = {
   onTone(tone: RephraseToneResult): void;
 };
 
-type ToneReply = {
-  readonly language: ModelRephraseResponse["language"];
-  segments: RephraseSegment[];
-};
-
 /**
  * Rephrases the passage at the caret with one short model call per tone, in display order.
  * A failed or invalid tone is skipped. Resolves to the number of tones sent. Offsets come from
- * the core's own sentence split; the model only answers by sentence number. Never logs text.
+ * the core's own sentence split; the model only answers by sentence number. Validated tones are
+ * cached per model + passage + tone, so a repeat replays them at once and only calls the model
+ * for the missing ones. Never logs text.
  */
 export class RephraseService {
   constructor(
     private readonly provider: Provider,
     private readonly logger: Logger,
+    private readonly cache: RephraseCache,
   ) {}
 
   async rephrase(input: RephraseInput, run: RephraseRun): Promise<Result<number, AppError>> {
@@ -47,23 +41,43 @@ export class RephraseService {
     if (!passage) return this.fail(appError("rephrase_no_sentence"));
     this.logger.info({ event: "rephrase.requested", len: passage.end - passage.start });
 
+    const hash = hashPassage(passage.sentences.map((s) => s.text));
     let sent = 0;
     let lastError = appError("rephrase_no_valid_version");
     for (const tone of RephraseTone.options) {
       if (run.signal?.aborted) break;
-      const reply = await this.tone(passage, tone, run.signal);
+      const reply = await this.cachedTone(passage, hash, tone, run.signal);
       if (run.signal?.aborted) break;
       if (!reply.ok) {
         lastError = reply.error;
         continue;
       }
-      run.onTone({ ...located(passage), tone, ...reply.value });
+      const { language, segments } = reply.value;
+      run.onTone({ ...located(passage), tone, language, segments: [...segments] });
       sent++;
     }
     if (run.signal?.aborted) return this.fail(appError("rephrase_cancelled"));
     if (sent === 0) return this.fail(lastError);
     this.logger.info({ event: "rephrase.done", ms: performance.now() - startedAt, len: sent });
     return ok(sent);
+  }
+
+  /** The tone from the cache, else from the model (and then cached). */
+  private async cachedTone(
+    passage: Passage,
+    hash: string,
+    tone: RephraseTone,
+    signal: AbortSignal | undefined,
+  ): Promise<Result<ToneReply, AppError>> {
+    const model = this.provider.model;
+    const cached = this.cache.get(model, hash, tone);
+    if (cached) {
+      this.logger.info({ event: "rephrase.tone_cached", len: cached.segments.length });
+      return ok(cached);
+    }
+    const reply = await this.tone(passage, tone, signal);
+    if (reply.ok && !signal?.aborted) this.cache.set(model, hash, tone, reply.value);
+    return reply;
   }
 
   /** One tone: a model call (one retry on invalid JSON), then validation against the split. */
