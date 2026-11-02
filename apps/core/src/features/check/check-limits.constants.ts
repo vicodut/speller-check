@@ -5,7 +5,7 @@
 export const DEBOUNCE_MS = 1000;
 
 /** Most uncached sentences sent to the model in one call. */
-export const BATCH_MAX_SENTENCES = 20;
+export const BATCH_MAX_SENTENCES = 10;
 
 /** Most characters of uncached sentence text sent to the model in one call. */
-export const BATCH_MAX_CHARS = 3000;
+export const BATCH_MAX_CHARS = 1500;

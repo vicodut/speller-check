@@ -91,16 +91,16 @@ const summary = (messages: CoreMessage[]) =>
 describe("FieldSessions with batched checks", () => {
   test("a long first check runs in batches and publishes all issues found so far", async () => {
     const { fire, calls, published, sessions } = setup();
-    sessions.update({ fieldId: "f", version: 1, text: longText(45) });
+    sessions.update({ fieldId: "f", version: 1, text: longText(25) });
     fire();
     await flush();
     const answered = { n: 0 };
     for (let i = 0; i < 3; i++) await replyNext(calls, answered);
-    expect(calls.map((c) => c.sentences.length)).toEqual([BATCH_MAX_SENTENCES, 20, 5]);
+    expect(calls.map((c) => c.sentences.length)).toEqual([BATCH_MAX_SENTENCES, 10, 5]);
     expect(summary(published)).toEqual([
+      { version: 1, count: typos(10), pending: true },
       { version: 1, count: typos(20), pending: true },
-      { version: 1, count: typos(40), pending: true },
-      { version: 1, count: typos(45), pending: undefined },
+      { version: 1, count: typos(25), pending: undefined },
     ]);
     expect(published.at(-1)).not.toHaveProperty("pending");
   });
@@ -118,7 +118,7 @@ describe("FieldSessions with batched checks", () => {
 
   test("an edit mid-check finishes the batch in flight, drops the rest and restarts", async () => {
     const { fire, calls, logs, published, sessions } = setup();
-    const v1 = longText(45);
+    const v1 = longText(25);
     const v2 = `${v1} Added teh line.`;
     sessions.update({ fieldId: "f", version: 1, text: v1 });
     fire();
@@ -131,37 +131,37 @@ describe("FieldSessions with batched checks", () => {
     const answered = { n: 0 };
     await replyNext(calls, answered);
     // The finished batch is published (reconciled onto v2); v1's last two batches never run.
-    expect(summary(published)).toEqual([{ version: 2, count: typos(20), pending: true }]);
+    expect(summary(published)).toEqual([{ version: 2, count: typos(10), pending: true }]);
     expect(logs).toContain('{"level":"info","event":"check.batches_dropped","len":2}');
-    // The restart sends only what the cache lacks: v1's sentences 20–44 and the new one.
-    expect(calls.map((c) => c.sentences.length)).toEqual([20, 20]);
-    expect(calls[1]?.sentences[0]).toBe("Line 20 is clean.");
+    // The restart sends only what the cache lacks: v1's sentences 10–24 and the new one.
+    expect(calls.map((c) => c.sentences.length)).toEqual([10, 10]);
+    expect(calls[1]?.sentences[0]).toBe("Line 10 is clean.");
     await replyNext(calls, answered);
     await replyNext(calls, answered);
-    expect(calls.map((c) => c.sentences.length)).toEqual([20, 20, 6]);
+    expect(calls.map((c) => c.sentences.length)).toEqual([10, 10, 6]);
     expect(summary(published).slice(1)).toEqual([
-      { version: 2, count: typos(40), pending: true },
-      { version: 2, count: typos(45) + 1, pending: undefined },
+      { version: 2, count: typos(20), pending: true },
+      { version: 2, count: typos(25) + 1, pending: undefined },
     ]);
   });
 
   test("a failed batch after a partial still reports the error", async () => {
     const { fire, calls, published, sessions } = setup();
-    sessions.update({ fieldId: "f", version: 1, text: longText(30) });
+    sessions.update({ fieldId: "f", version: 1, text: longText(15) });
     fire();
     await flush();
     const answered = { n: 0 };
     await replyNext(calls, answered);
     await replyNext(calls, answered, appError("provider_timeout"));
     expect(summary(published)).toEqual([
-      { version: 1, count: typos(20), pending: true },
+      { version: 1, count: typos(10), pending: true },
       { error: "provider_timeout" },
     ]);
   });
 
   test("closing the field drops the remaining batches and publishes nothing more", async () => {
     const { fire, calls, logs, published, sessions } = setup();
-    sessions.update({ fieldId: "f", version: 1, text: longText(45) });
+    sessions.update({ fieldId: "f", version: 1, text: longText(25) });
     fire();
     await flush();
     sessions.close("f");
@@ -173,7 +173,7 @@ describe("FieldSessions with batched checks", () => {
 
   test("logs batch counts and timings, never text", async () => {
     const { fire, calls, logs, sessions } = setup();
-    sessions.update({ fieldId: "f", version: 1, text: longText(25, "Secret") });
+    sessions.update({ fieldId: "f", version: 1, text: longText(15, "Secret") });
     fire();
     await flush();
     const answered = { n: 0 };
@@ -182,7 +182,7 @@ describe("FieldSessions with batched checks", () => {
     const lines = logs.map((l) => JSON.parse(l));
     expect(lines).toContainEqual({ level: "info", event: "check.batches", len: 2 });
     const timed = lines.filter((l) => l.event === "check.batch_done");
-    expect(timed.map((l) => l.len)).toEqual([20, 5]);
+    expect(timed.map((l) => l.len)).toEqual([10, 5]);
     expect(timed.every((l) => typeof l.ms === "number")).toBe(true);
     for (const fragment of ["Secret", "teh", "clean", "Spelling"]) {
       expect(logs.join("\n")).not.toContain(fragment);

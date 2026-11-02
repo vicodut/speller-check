@@ -156,7 +156,7 @@ describe("CheckService", () => {
 
   test("checks a long text in batches and still returns one complete result", async () => {
     const typo = (i: number): ModelIssue => ({ ...has, original: `w${i}x`, context: `a w${i}x b` });
-    const ids = Array.from({ length: 25 }, (_, i) => i);
+    const ids = Array.from({ length: 15 }, (_, i) => i);
     const { service, prompts } = setup(ids.map(typo));
     const text = ids.map((i) => `It is a w${i}x b.`).join(" ");
     const result = await service.check({ text });
