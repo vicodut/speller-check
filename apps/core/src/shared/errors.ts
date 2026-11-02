@@ -14,7 +14,9 @@ export type ErrorCode =
   | "auth_failed"
   | "message_invalid"
   | "server_start_failed"
-  | "origin_forbidden";
+  | "origin_forbidden"
+  | "rephrase_no_sentence"
+  | "rephrase_no_valid_version";
 
 /** Expected failure. Carries a code and optional HTTP status, never user text. */
 export type AppError = { readonly code: ErrorCode; readonly status?: number };

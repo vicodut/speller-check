@@ -3,6 +3,8 @@ import {
   ErrorMessage,
   FieldClosedMessage,
   IssuesCoreMessage,
+  RephraseRequestMessage,
+  RephraseResultMessage,
   TextChangedMessage,
 } from "@gc/protocol";
 import { z } from "zod";
@@ -15,6 +17,7 @@ export const ContentMessage = z.discriminatedUnion("type", [
   TextChangedMessage,
   FieldClosedMessage,
   DictionaryAddMessage,
+  RephraseRequestMessage,
 ]);
 export type ContentMessage = z.infer<typeof ContentMessage>;
 
@@ -35,6 +38,7 @@ export type CoreStatusMessage = z.infer<typeof CoreStatusMessage>;
 /** Background -> content script, over the port. Field ids are frame-local again. */
 export const BackgroundMessage = z.discriminatedUnion("type", [
   IssuesCoreMessage,
+  RephraseResultMessage,
   ErrorMessage,
   CoreReadyMessage,
   CoreStatusMessage,

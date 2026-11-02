@@ -20,11 +20,19 @@ export const DictionaryAddMessage = z.object({
 });
 export type DictionaryAddMessage = z.infer<typeof DictionaryAddMessage>;
 
+/** Asks for four tones of the passage around `caret` (an offset into `text`). */
+export const RephraseRequestMessage = CheckRequest.extend({
+  type: z.literal("rephrase.request"),
+  caret: z.number().int().nonnegative(),
+});
+export type RephraseRequestMessage = z.infer<typeof RephraseRequestMessage>;
+
 /** Messages a client (Swift helper, Chrome extension) sends to the core. */
 export const ClientMessage = z.discriminatedUnion("type", [
   HelloMessage,
   TextChangedMessage,
   FieldClosedMessage,
   DictionaryAddMessage,
+  RephraseRequestMessage,
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;
