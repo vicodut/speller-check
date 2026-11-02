@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { ModelIssue } from "@gc/protocol";
+import { MAX_TEXT_LENGTH, type ModelIssue } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
@@ -62,6 +62,15 @@ describe("CheckService", () => {
     const text = "Hello. I has went to the store. Les enfants est partis.";
     const result = await service.check({ text });
     expect(spans(text, result)).toEqual(["has went", "est"]);
+  });
+
+  test("refuses text over the cap with text_too_long before any model call", async () => {
+    const { service, prompts, logs } = setup([has]);
+    const text = `I has went. ${"a".repeat(MAX_TEXT_LENGTH)}`;
+    expect(spans(text, await service.check({ text }))).toBe("text_too_long");
+    expect(prompts).toHaveLength(0);
+    expect(logs.join("\n")).toContain(`"len":${text.length},"code":"text_too_long"`);
+    expect(logs.join("\n")).not.toContain("has went");
   });
 
   test("sends only changed sentences and reuses the cache", async () => {

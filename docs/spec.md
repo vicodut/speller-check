@@ -70,6 +70,8 @@ Only changed sentences are sent to the model, and every result is checked agains
 
    In a contenteditable field the Chrome extension leaves out text the writer didn't write: `blockquote`s on every site, and on Gmail (`mail.google.com`) the quoted thread and the signature (`.gmail_quote`, `.gmail_quote_container`, `.gmail_extra`, `.gmail_attr`, `.gmail_signature`, `.gmail_signature_prefix`). Skipped parts are never sent, underlined or written to; a skipped block still separates the lines around it, and offsets map between the sent text and the DOM through the same text model everywhere. Providers are pluggable adapters picked by hostname (the `email-cleaning` feature); others (Outlook…) come later.
 
+   **Length cap.** Sent text (after email cleaning) is capped at 20,000 characters (UTF-16 code units), `MAX_TEXT_LENGTH` in the protocol package, shared by the clients and the core; not a user setting. Over the cap the extension sends no text: it sends `field.closed` instead (so the core and background drop any check still pending for the field), clears the underlines and the badge shows "too long" (…). A rephrase of an over-cap field is never sent. When the field drops back under the cap, its text is sent again as a new version and checked as usual. As a safety net the core refuses longer text with `text_too_long` before any model call: a check (field session or `core check`) and a rephrase (`error {request: "rephrase"}`) alike. Logs carry the code and the length only.
+
 2. **Debounce.** The core waits 1 s after the last keystroke before checking.
 
 3. **Snapshot.** Each request carries a `fieldId` and an incrementing `version`. The core keeps the text of that version.
@@ -259,5 +261,5 @@ Build the brain first, prove it in Chrome, then take on the hard native part.
 
 - [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
 
-- [ ] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor? (In progress, #4: email quotes and signatures are now skipped; length cap and batching to come.)
+- [ ] How to handle very long fields (e.g. a long email): check only paragraphs near the cursor? (In progress, #4: email quotes and signatures are now skipped; fields over 20,000 characters show "too long" and aren't sent; batching to come.)
 

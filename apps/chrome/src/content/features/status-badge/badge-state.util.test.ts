@@ -39,6 +39,16 @@ describe("badgeLabel", () => {
   });
 });
 
+describe("badgeLabel too long", () => {
+  test("is its own state, naming the cap, with no panel variant", () => {
+    const label = badgeLabel({ kind: "too_long" });
+    expect(label.variant).toBe("too-long");
+    expect(label.text).toBe("…");
+    expect(label.title).toContain("Too long");
+    expect(label.title).toContain("20,000");
+  });
+});
+
 describe("withRephraseReady", () => {
   test("marks the tooltip but never changes the count", () => {
     const label = badgeLabel({ kind: "count", issues: issues(3) });

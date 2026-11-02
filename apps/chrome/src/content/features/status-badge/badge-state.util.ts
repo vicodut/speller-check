@@ -1,13 +1,16 @@
-import type { Issue } from "@gc/protocol";
+import { type Issue, MAX_TEXT_LENGTH } from "@gc/protocol";
 
-/** What the badge shows for the focused field. */
+/** What the badge shows for the focused field. "too_long": over the cap, nothing is sent. */
 export type BadgeState =
   | { readonly kind: "checking" }
   | { readonly kind: "count"; readonly issues: readonly Issue[] }
+  | { readonly kind: "too_long" }
   | { readonly kind: "failed"; readonly code: string }
   | { readonly kind: "offline"; readonly status: "auth_failed" | "unreachable" };
 
 export type BadgeLabel = { text: string; title: string; variant: string };
+
+const CAP = MAX_TEXT_LENGTH.toLocaleString("en-US");
 
 const plural = (n: number) => (n === 1 ? "1 issue" : `${n} issues`);
 
@@ -23,6 +26,12 @@ export const badgeLabel = (state: BadgeState): BadgeLabel => {
       const text = n > 9 ? "9+" : String(n);
       return { text, title: `${plural(n)}: click to list them or rephrase`, variant: "issues" };
     }
+    case "too_long":
+      return {
+        text: "…",
+        title: `Too long to check (over ${CAP} characters). Shorten it to check again.`,
+        variant: "too-long",
+      };
     case "failed":
       return {
         text: "!",
