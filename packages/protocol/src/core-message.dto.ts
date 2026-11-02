@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { IssuesMessage } from "./issues-message.dto";
-import { RephraseResult } from "./rephrase.schema";
+import { RephraseToneResult } from "./rephrase.schema";
 
 /** Sent once the hello token is accepted. */
 export const ReadyMessage = z.object({ type: z.literal("ready") });
@@ -9,22 +9,42 @@ export type ReadyMessage = z.infer<typeof ReadyMessage>;
 export const IssuesCoreMessage = IssuesMessage.extend({ type: z.literal("issues") });
 export type IssuesCoreMessage = z.infer<typeof IssuesCoreMessage>;
 
-export const RephraseResultMessage = RephraseResult.extend({
-  type: z.literal("rephrase.result"),
+/** Which rephrase request a reply belongs to: the field, its version and the client's id. */
+const RephraseReplyTo = {
   fieldId: z.string().min(1),
   version: z.number().int().nonnegative(),
+  requestId: z.number().int().nonnegative(),
+};
+
+/** One validated tone, sent as soon as it is ready (tones come in display order). */
+export const RephraseToneMessage = RephraseToneResult.extend({
+  type: z.literal("rephrase.tone"),
+  ...RephraseReplyTo,
 });
-export type RephraseResultMessage = z.infer<typeof RephraseResultMessage>;
+export type RephraseToneMessage = z.infer<typeof RephraseToneMessage>;
+
+/**
+ * Every tone has been tried and `count` of them were sent. A request with no valid tone ends
+ * with a rephrase error instead.
+ */
+export const RephraseDoneMessage = z.object({
+  type: z.literal("rephrase.done"),
+  ...RephraseReplyTo,
+  count: z.number().int().positive(),
+});
+export type RephraseDoneMessage = z.infer<typeof RephraseDoneMessage>;
 
 /**
  * An expected failure, as an error code only. `fieldId` is set when it concerns one field;
- * `request` is "rephrase" when a rephrase failed (a check failure leaves it out).
+ * `request` is "rephrase" when a rephrase failed (a check failure leaves it out), with the
+ * rephrase's `requestId` when known.
  */
 export const ErrorMessage = z.object({
   type: z.literal("error"),
   code: z.string().min(1),
   fieldId: z.string().min(1).optional(),
   request: z.literal("rephrase").optional(),
+  requestId: z.number().int().nonnegative().optional(),
 });
 export type ErrorMessage = z.infer<typeof ErrorMessage>;
 
@@ -40,7 +60,8 @@ export type SettingsChangedMessage = z.infer<typeof SettingsChangedMessage>;
 export const CoreMessage = z.discriminatedUnion("type", [
   ReadyMessage,
   IssuesCoreMessage,
-  RephraseResultMessage,
+  RephraseToneMessage,
+  RephraseDoneMessage,
   ErrorMessage,
   SettingsChangedMessage,
 ]);

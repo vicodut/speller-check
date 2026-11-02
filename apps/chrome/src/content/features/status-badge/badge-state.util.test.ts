@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Issue } from "@gc/protocol";
-import { badgeLabel } from "./badge-state.util";
+import { badgeLabel, withRephraseReady } from "./badge-state.util";
 
 const issues = (n: number): Issue[] =>
   Array.from({ length: n }, (_, i) => ({
@@ -36,5 +36,16 @@ describe("badgeLabel", () => {
     expect(badgeLabel({ kind: "failed", code: "provider_timeout" }).title).toContain(
       "provider_timeout",
     );
+  });
+});
+
+describe("withRephraseReady", () => {
+  test("marks the tooltip but never changes the count", () => {
+    const label = badgeLabel({ kind: "count", issues: issues(3) });
+    const ready = withRephraseReady(label, true);
+    expect(ready.text).toBe("3");
+    expect(ready.variant).toBe("issues");
+    expect(ready.title).toEndWith("Rephrase ready");
+    expect(withRephraseReady(label, false)).toEqual(label);
   });
 });

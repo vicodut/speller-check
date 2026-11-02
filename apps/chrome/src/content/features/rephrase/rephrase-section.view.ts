@@ -39,7 +39,18 @@ const versionBlock = (version: RephraseVersionView): HTMLElement => {
   return block;
 };
 
-/** The panel's rephrase section: the button, a loading line, or read-only versions. Text only. */
+/** One loading line per tone still to come; the first one is announced. */
+const pendingLines = (labels: readonly string[]): HTMLElement[] =>
+  labels.map((label, i) => {
+    const line = el("div", "gc-rephrase-loading", `${label}…`);
+    if (i === 0) line.setAttribute("role", "status");
+    return line;
+  });
+
+/**
+ * The panel's rephrase section: the button, or the versions received so far followed by a
+ * loading line per tone still to come. Text only.
+ */
 export const renderRephraseSection = (
   container: HTMLElement,
   state: RephrasePanelState,
@@ -47,10 +58,6 @@ export const renderRephraseSection = (
 ): void => {
   const section = el("div", "gc-rephrase-section");
   if (state.kind === "idle") section.append(rephraseButton(state.enabled, rephrase));
-  else if (state.kind === "loading") {
-    const loading = el("div", "gc-rephrase-loading", "Rephrasing…");
-    loading.setAttribute("role", "status");
-    section.append(loading);
-  } else section.append(...state.versions.map(versionBlock));
+  else section.append(...state.versions.map(versionBlock), ...pendingLines(state.pending));
   container.replaceChildren(section);
 };

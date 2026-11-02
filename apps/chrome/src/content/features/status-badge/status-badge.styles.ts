@@ -30,6 +30,17 @@ export const BADGE_CSS = `
 .gc-issues { background: #e5484d; cursor: pointer; }
 .gc-failed { background: #f76b15; }
 .gc-offline { background: #8b8d98; }
+.gc-ready:not(.gc-checking)::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #3e63dd;
+  box-shadow: 0 0 0 1.5px #fff;
+}
 @keyframes gc-spin { to { transform: rotate(360deg); } }
 @keyframes gc-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) {

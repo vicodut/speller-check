@@ -16,7 +16,9 @@ const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000) => {
   const closedFields: string[] = [];
   const logs: string[] = [];
   let disposed = 0;
+  const rephraseCalls: string[] = [];
   let publish: ((message: CoreMessage) => void) | undefined;
+  let publishRephrase: ((message: CoreMessage) => void) | undefined;
   const deps: ServerDeps = {
     createSession: (p) => {
       publish = p;
@@ -27,7 +29,17 @@ const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000) => {
       };
     },
     addDictionaryTerm: async () => ok(undefined),
-    rephrase: async () => err(appError("rephrase_no_sentence")),
+    createRephraser: (p) => {
+      publishRephrase = p;
+      return {
+        request: async (m) => {
+          rephraseCalls.push(`request ${m.fieldId} ${m.requestId}`);
+        },
+        edited: (fieldId) => rephraseCalls.push(`edited ${fieldId}`),
+        cancel: (fieldId) => rephraseCalls.push(`cancel ${fieldId}`),
+        dispose: () => rephraseCalls.push("dispose"),
+      };
+    },
     ...overrides,
   };
   const socket = {
@@ -45,6 +57,8 @@ const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000) => {
     logs,
     disposed: () => disposed,
     publish: (m: CoreMessage) => publish?.(m),
+    rephraseCalls,
+    publishRephrase: (m: CoreMessage) => publishRephrase?.(m),
   };
 };
 
@@ -131,33 +145,33 @@ describe("ConnectionHandler", () => {
     expect(t.disposed()).toBe(1);
   });
 
-  test("answers a rephrase request with its result, or a rephrase-tagged error", async () => {
-    const inputs: { text: string; caret: number }[] = [];
-    const result = {
-      passage: { start: 0, end: 3 },
-      sentences: [{ text: "Hi.", start: 0, end: 3 }],
-      language: "en" as const,
-      versions: [{ tone: "casual" as const, segments: [{ from: 0, to: 0, text: "Hey." }] }],
-    };
-    const t = setup({
-      rephrase: async (input) => {
-        inputs.push(input);
-        return input.caret === 0 ? ok(result) : err(appError("rephrase_no_sentence"));
-      },
-    });
+  test("routes rephrase requests, edits and cancels; a blur leaves the rephrase running", async () => {
+    const t = setup();
     await t.handler.receive(hello);
-    const request = { type: "rephrase.request", fieldId: "f", version: 4, text: "Hi." };
-    await t.handler.receive(JSON.stringify({ ...request, caret: 0 }));
-    await t.handler.receive(JSON.stringify({ ...request, caret: 3 }));
-    expect(inputs).toEqual([
-      { text: "Hi.", caret: 0 },
-      { text: "Hi.", caret: 3 },
-    ]);
-    expect(t.sent.slice(1)).toEqual([
-      { type: "rephrase.result", fieldId: "f", version: 4, ...result },
-      { type: "error", code: "rephrase_no_sentence", fieldId: "f", request: "rephrase" },
-    ]);
-    expect(t.updates).toEqual([]);
+    const request = { type: "rephrase.request", fieldId: "f", version: 4, requestId: 1 };
+    await t.handler.receive(JSON.stringify({ ...request, text: "Hi.", caret: 0 }));
+    await t.handler.receive(
+      JSON.stringify({ type: "text.changed", fieldId: "f", version: 5, text: "Ho." }),
+    );
+    await t.handler.receive(JSON.stringify({ type: "field.closed", fieldId: "f" }));
+    await t.handler.receive(JSON.stringify({ type: "rephrase.cancel", fieldId: "f" }));
+    expect(t.rephraseCalls).toEqual(["request f 1", "edited f", "cancel f"]);
+    t.handler.dispose();
+    expect(t.rephraseCalls.at(-1)).toBe("dispose");
+  });
+
+  test("rephrase replies go out on the socket", async () => {
+    const t = setup();
+    await t.handler.receive(hello);
+    const error = {
+      type: "error",
+      code: "rephrase_cancelled",
+      fieldId: "f",
+      request: "rephrase",
+      requestId: 1,
+    } as const;
+    t.publishRephrase(error);
+    expect(t.sent.at(-1)).toEqual(error);
     t.handler.dispose();
   });
 });

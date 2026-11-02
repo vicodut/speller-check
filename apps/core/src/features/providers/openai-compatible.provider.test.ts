@@ -86,6 +86,15 @@ describe("OpenAiCompatibleProvider.complete", () => {
     expect(await provider.complete(messages)).toEqual({ ok: false, error: { code } });
   });
 
+  test("a cancelled call aborts the request and reports provider_cancelled", async () => {
+    const { provider, calls } = setup([new DOMException("aborted", "AbortError")]);
+    const cancel = new AbortController();
+    cancel.abort();
+    const result = await provider.complete(messages, { signal: cancel.signal });
+    expect(result).toEqual({ ok: false, error: { code: "provider_cancelled" } });
+    expect(calls[0]?.init.signal?.aborted).toBe(true);
+  });
+
   test("rejects a response without choices", async () => {
     const { provider } = setup([json({ choices: [] })]);
     expect(await provider.complete(messages)).toEqual({

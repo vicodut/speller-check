@@ -1,9 +1,9 @@
 import type { z } from "zod";
-import { type AppError, appError } from "../../shared/errors";
+import { type AppError, appError, type ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { ChatCompletionResponse, ModelListResponse } from "./openai-compatible.schema";
-import type { ChatMessage, Provider } from "./provider";
+import type { ChatMessage, CompleteOptions, Provider } from "./provider";
 
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -31,15 +31,18 @@ export class OpenAiCompatibleProvider implements Provider {
     this.model = config.model;
   }
 
-  async complete(messages: readonly ChatMessage[]): Promise<Result<string, AppError>> {
+  async complete(
+    messages: readonly ChatMessage[],
+    options: CompleteOptions = {},
+  ): Promise<Result<string, AppError>> {
     const startedAt = performance.now();
     const len = messages.reduce((sum, m) => sum + m.content.length, 0);
     this.logger.info({ event: "provider.request", len });
-    let response = await this.post(messages);
+    let response = await this.post(messages, options.signal);
     if (!response.ok && this.jsonMode && isRejectedJsonMode(response.error)) {
       this.jsonMode = false;
       this.logger.info({ event: "provider.json_mode_disabled" });
-      response = await this.post(messages);
+      response = await this.post(messages, options.signal);
     }
     if (!response.ok) return response;
     const parsed = this.parse(ChatCompletionResponse, response.value);
@@ -64,7 +67,10 @@ export class OpenAiCompatibleProvider implements Provider {
     return (await this.listModels()).ok;
   }
 
-  private post(messages: readonly ChatMessage[]): Promise<Result<unknown, AppError>> {
+  private post(
+    messages: readonly ChatMessage[],
+    signal: AbortSignal | undefined,
+  ): Promise<Result<unknown, AppError>> {
     const body = {
       model: this.model,
       messages,
@@ -72,26 +78,27 @@ export class OpenAiCompatibleProvider implements Provider {
       ...(this.jsonMode ? { response_format: { type: "json_object" } } : {}),
       ...(this.config.reasoningEffort ? { reasoning_effort: this.config.reasoningEffort } : {}),
     };
-    return this.request("/chat/completions", { method: "POST", body: JSON.stringify(body) });
+    const init = { method: "POST", body: JSON.stringify(body) };
+    return this.request("/chat/completions", init, signal);
   }
 
-  private async request(path: string, init: RequestInit): Promise<Result<unknown, AppError>> {
+  private async request(
+    path: string,
+    init: RequestInit,
+    cancel?: AbortSignal,
+  ): Promise<Result<unknown, AppError>> {
+    const timeout = AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    const signal = cancel ? AbortSignal.any([timeout, cancel]) : timeout;
     try {
       const res = await this.fetchFn(`${this.config.baseUrl}${path}`, {
         ...init,
         headers: this.headers(),
-        signal: AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        signal,
       });
       if (!res.ok) return this.fail(appError("provider_http", res.status));
       return ok(await res.json());
     } catch (cause) {
-      const timedOut = cause instanceof DOMException && cause.name === "TimeoutError";
-      const code = timedOut
-        ? "provider_timeout"
-        : cause instanceof SyntaxError
-          ? "provider_bad_response"
-          : "provider_network";
-      return this.fail(appError(code));
+      return this.fail(appError(cancel?.aborted ? "provider_cancelled" : thrownCode(cause)));
     }
   }
 
@@ -111,6 +118,11 @@ export class OpenAiCompatibleProvider implements Provider {
     return err(error);
   }
 }
+
+const thrownCode = (cause: unknown): ErrorCode => {
+  if (cause instanceof DOMException && cause.name === "TimeoutError") return "provider_timeout";
+  return cause instanceof SyntaxError ? "provider_bad_response" : "provider_network";
+};
 
 const isRejectedJsonMode = (error: AppError): boolean =>
   error.code === "provider_http" && (error.status === 400 || error.status === 422);
