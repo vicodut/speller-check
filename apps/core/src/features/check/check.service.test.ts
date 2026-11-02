@@ -124,6 +124,27 @@ describe("CheckService", () => {
     expect(logs.some((l) => l.includes('"code":"issue_not_found"'))).toBe(true);
   });
 
+  test("never returns two fixes for the same words, and logs only counts", async () => {
+    const issue = (original: string, suggestion: string): ModelIssue => ({
+      original,
+      suggestion,
+      reason: "r",
+      context: "Their going to the park",
+      type: "grammar",
+    });
+    const known = [
+      issue("Their", "They're"),
+      issue("going", "are going"),
+      issue("Their going", "They're going"),
+    ];
+    const { service, logs } = setup(known);
+    const text = "Their going to the park.";
+    expect(spans(text, await service.check({ text }))).toEqual(["Their"]);
+    expect(logs).toContain('{"level":"info","event":"issues.overlap_dropped","len":1}');
+    expect(logs).toContain('{"level":"info","event":"issues.echo_dropped","len":1}');
+    expect(logs.join("\n")).not.toContain("going");
+  });
+
   test("passes the version through", async () => {
     const { service } = setup([]);
     expect(await service.check({ text: "Fine.", version: 7 })).toEqual({
