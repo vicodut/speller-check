@@ -13,6 +13,7 @@ import type { CheckCache } from "./services/check-cache.service";
 import { locateIssue } from "./services/issue-locator.service";
 import { dropOverlaps, shiftIssue } from "./services/issue-offsets.service";
 import { requestModelIssues } from "./services/model-issues.requester";
+import { trimNeighbourEchoes } from "./services/neighbour-echo-trimmer.service";
 import { buildPrompt } from "./services/prompt-builder.service";
 import { hashSentence } from "./services/sentence-hasher.service";
 import { type Sentence, segmentSentences } from "./services/sentence-segmenter.service";
@@ -53,13 +54,26 @@ export class CheckService {
     if (!checked.ok) return this.fail(checked.error);
 
     const found = sentences.flatMap((s) => this.cachedIssues(s));
-    const issues = dropOverlaps(filterDictionaryTerms(found, entries.value));
+    const issues = this.resolveConflicts(filterDictionaryTerms(found, entries.value), input.text);
     this.logger.info({
       event: "check.done",
       ms: performance.now() - startedAt,
       len: issues.length,
     });
     return ok(input.version === undefined ? { issues } : { version: input.version, issues });
+  }
+
+  /** One result holds no two issues on overlapping ranges or fixing the same spot twice. */
+  private resolveConflicts(found: readonly Issue[], text: string): Issue[] {
+    const disjoint = dropOverlaps(found);
+    const issues = trimNeighbourEchoes(disjoint, text);
+    this.logDropped("issues.overlap_dropped", found.length - disjoint.length);
+    this.logDropped("issues.echo_dropped", disjoint.length - issues.length);
+    return issues;
+  }
+
+  private logDropped(event: "issues.overlap_dropped" | "issues.echo_dropped", len: number): void {
+    if (len > 0) this.logger.info({ event, len });
   }
 
   private isCached(sentence: Hashed): boolean {

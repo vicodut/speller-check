@@ -13,6 +13,8 @@ export type LogEvent =
   | "parse.retry"
   | "parse.failed"
   | "locate.dropped"
+  | "issues.overlap_dropped"
+  | "issues.echo_dropped"
   | "dictionary.loaded"
   | "dictionary.filtered"
   | "dictionary.added"
