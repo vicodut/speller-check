@@ -64,3 +64,6 @@ export const done = (requestId = 1, count = 1): RephraseDoneMessage => ({
 
 export const tones = (state: ReturnType<RephraseController<FakeField>["state"]>) =>
   state.kind === "result" ? state.versions.map((v) => v.tone) : [];
+
+export const statuses = (state: ReturnType<RephraseController<FakeField>["state"]>) =>
+  state.tones.map((b) => b.status);

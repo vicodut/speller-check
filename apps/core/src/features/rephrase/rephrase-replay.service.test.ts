@@ -41,6 +41,17 @@ describe("RephraseService cache", () => {
     expect(t.tones.map((v) => v.tone)).toEqual(["professional", "casual", "concise", "friendlier"]);
   });
 
+  test("asking for more tones replays the cached ones and calls the model for the rest", async () => {
+    const t = setup([reply(keepAll(3))]);
+    await t.run(TEXT, caret, undefined, ["casual"]);
+    t.tones.length = 0;
+    const result = await t.run(TEXT, caret, undefined, ["casual", "concise"]);
+    expect(result).toEqual(ok(2));
+    expect(t.prompts).toHaveLength(2);
+    expect(t.prompts[1]).toMatch(/TONE: concise$/);
+    expect(t.tones.map((v) => v.tone)).toEqual(["casual", "concise"]);
+  });
+
   test("an edited passage misses the cache", async () => {
     const t = setup([reply(keepAll(3))]);
     await t.run(TEXT, caret);

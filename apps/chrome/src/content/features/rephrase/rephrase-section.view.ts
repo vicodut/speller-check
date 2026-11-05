@@ -1,10 +1,12 @@
 import type { RephraseTone } from "@gc/protocol";
 import type { RephrasePanelState } from "./rephrase.controller";
 import type { RephraseRow, RephraseVersionView } from "./rephrase-view.model";
+import type { ToneButtonView } from "./tone-picker.model";
 
 /** What the section's buttons do; wired by the session. */
 export type RephraseSectionActions = {
-  rephrase(): void;
+  /** Asks for one tone of the passage (added to the result already shown, if any). */
+  rephrase(tone: RephraseTone): void;
   /** Replace one rewritten part (by segment index), or the whole version without one. */
   replace(tone: RephraseTone, segment?: number): void;
   /** Copies text to the clipboard; false when the browser refused. */
@@ -31,13 +33,30 @@ const button = (className: string, label: string, onClick: () => void): HTMLButt
   return node;
 };
 
-const rephraseButton = (enabled: boolean, rephrase: () => void): HTMLButtonElement => {
-  const node = button("gc-rephrase", "Rephrase", rephrase);
-  node.disabled = !enabled;
-  node.title = enabled
-    ? "Rewrite the paragraph at the caret in four tones"
-    : "Put the caret inside a sentence to rephrase it";
-  return node;
+const TONE_TITLES = {
+  available: "Rewrite the paragraph at the caret in this tone",
+  loading: "This tone is on its way",
+  done: "This tone is shown below",
+} as const;
+
+/** One button per tone: a done or loading tone can't be asked again. */
+const toneRow = (
+  tones: readonly ToneButtonView[],
+  enabled: boolean,
+  rephrase: (tone: RephraseTone) => void,
+): HTMLElement => {
+  const row = el("div", "gc-tone-picker");
+  row.setAttribute("role", "group");
+  row.setAttribute("aria-label", "Rephrase");
+  for (const { tone, label, status } of tones) {
+    const node = button(`gc-rephrase gc-tone-${status}`, label, () => rephrase(tone));
+    node.disabled = !enabled || status !== "available";
+    node.title = enabled ? TONE_TITLES[status] : "Put the caret inside a sentence to rephrase it";
+    if (status === "loading") node.setAttribute("aria-busy", "true");
+    if (status === "done") node.setAttribute("aria-pressed", "true");
+    row.append(node);
+  }
+  return row;
 };
 
 const rowNode = (row: RephraseRow, replace: (segment: number) => void): HTMLElement => {
@@ -91,8 +110,8 @@ const pendingLines = (labels: readonly string[]): HTMLElement[] =>
   });
 
 /**
- * The panel's rephrase section: the button, or the versions received so far (with Replace and
- * Replace all) followed by a loading line per tone still to come. Text only.
+ * The panel's rephrase section: the tone buttons, then the versions received so far (with
+ * Replace and Replace all) followed by a loading line per tone still to come. Text only.
  */
 export const renderRephraseSection = (
   container: HTMLElement,
@@ -100,9 +119,9 @@ export const renderRephraseSection = (
   actions: RephraseSectionActions,
 ): void => {
   const section = el("div", "gc-rephrase-section");
-  if (state.kind === "idle") {
-    section.append(rephraseButton(state.enabled, actions.rephrase));
-  } else {
+  const enabled = state.kind === "result" || state.enabled;
+  section.append(toneRow(state.tones, enabled, actions.rephrase));
+  if (state.kind === "result") {
     if (state.copy !== undefined) section.append(copyFallback(state.copy, actions.copy));
     section.append(...state.versions.map((v) => versionBlock(v, actions)));
     section.append(...pendingLines(state.pending));

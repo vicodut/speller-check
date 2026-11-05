@@ -4,6 +4,12 @@ import { z } from "zod";
 export const RephraseTone = z.enum(["professional", "casual", "concise", "friendlier"]);
 export type RephraseTone = z.infer<typeof RephraseTone>;
 
+/** Tones asked for in one request: at least one, each at most once. */
+export const RephraseTones = z
+  .array(RephraseTone)
+  .min(1)
+  .refine((tones) => new Set(tones).size === tones.length, { message: "tones must be unique" });
+
 export const RephraseLanguage = z.enum(["en", "fr"]);
 export type RephraseLanguage = z.infer<typeof RephraseLanguage>;
 

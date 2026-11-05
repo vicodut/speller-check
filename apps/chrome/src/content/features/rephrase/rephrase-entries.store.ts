@@ -1,15 +1,23 @@
+import type { RephraseTone } from "@gc/protocol";
 import type { ReplacedRun } from "../write-back";
 import type { RephraseDraft } from "./rephrase-view.model";
 
-/** One field's rephrase request and what came of it. */
+/**
+ * One field's rephrase result and its running request. Every tone of it is asked for on the
+ * same text and caret, so they all share one passage.
+ */
 export type RephraseEntry = {
   readonly fieldId: string;
   readonly version: number;
-  readonly requestId: number;
-  /** The field text the request was computed on. */
+  /** The running (or last) request; replies to any other are dropped. */
+  requestId: number;
+  /** The field text the tones are computed on, and the caret in it. */
   readonly text: string;
+  readonly caret: number;
   draft: RephraseDraft | undefined;
   loading: boolean;
+  /** Tones asked for that haven't arrived yet; only meaningful while loading. */
+  pending: RephraseTone[];
   /** A tone arrived that the panel hasn't shown yet: the badge's "rephrase ready" marker. */
   news: boolean;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -20,6 +28,26 @@ export type RephraseEntry = {
   /** The last Replace couldn't edit the field: its text, offered to copy. */
   copy: string | undefined;
 };
+
+/** A new entry for the text and caret, before its first request. */
+export const newEntry = (
+  tracked: { readonly fieldId: string; readonly version: number },
+  text: string,
+  caret: number,
+): RephraseEntry => ({
+  ...tracked,
+  requestId: 0,
+  text,
+  caret,
+  draft: undefined,
+  loading: false,
+  pending: [],
+  news: false,
+  timer: undefined,
+  runs: [],
+  applying: false,
+  copy: undefined,
+});
 
 /** Results are kept for the last few fields only. */
 export const MAX_KEPT_FIELDS = 5;
@@ -55,6 +83,7 @@ export class RephraseEntries<F extends object> {
     if (!entry) return;
     clearTimeout(entry.timer);
     entry.loading = false;
+    entry.pending = [];
     this.entries.delete(field);
     this.kept.delete(entry.fieldId);
   }

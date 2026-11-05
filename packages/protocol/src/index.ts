@@ -31,6 +31,7 @@ export {
   RephraseSentence,
   RephraseTone,
   RephraseToneResult,
+  RephraseTones,
   RephraseVersion,
 } from "./rephrase.schema";
 export { isTextTooLong, MAX_TEXT_LENGTH } from "./text-limits";

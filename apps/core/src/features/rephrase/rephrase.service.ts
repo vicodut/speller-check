@@ -1,4 +1,4 @@
-import { type ModelRephraseResponse, RephraseTone, type RephraseToneResult } from "@gc/protocol";
+import type { ModelRephraseResponse, RephraseTone, RephraseToneResult } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
@@ -11,9 +11,14 @@ import {
 } from "./services/rephrase-prompt-builder.service";
 import { parseRephraseResponse } from "./services/rephrase-response-parser.service";
 import { validateSegments } from "./services/segment-validator.service";
+import { selectTones } from "./services/tone-selector.service";
 
-/** The field text and the caret offset in it. */
-export type RephraseInput = { readonly text: string; readonly caret: number };
+/** The field text, the caret offset in it, and the tones asked for (all four if omitted). */
+export type RephraseInput = {
+  readonly text: string;
+  readonly caret: number;
+  readonly tones?: readonly RephraseTone[] | undefined;
+};
 
 /** Receives each validated tone as soon as it is ready; `signal` stops the remaining calls. */
 export type RephraseRun = {
@@ -22,7 +27,8 @@ export type RephraseRun = {
 };
 
 /**
- * Rephrases the passage at the caret with one short model call per tone, in display order.
+ * Rephrases the passage at the caret with one short model call per tone asked for, in display
+ * order.
  * A failed or invalid tone is skipped. Resolves to the number of tones sent. Offsets come from
  * the core's own sentence split; the model only answers by sentence number. Validated tones are
  * cached per model + passage + tone, so a repeat replays them at once and only calls the model
@@ -44,7 +50,7 @@ export class RephraseService {
     const hash = hashPassage(passage.sentences.map((s) => s.text));
     let sent = 0;
     let lastError = appError("rephrase_no_valid_version");
-    for (const tone of RephraseTone.options) {
+    for (const tone of selectTones(input.tones)) {
       if (run.signal?.aborted) break;
       const reply = await this.cachedTone(passage, hash, tone, run.signal);
       if (run.signal?.aborted) break;

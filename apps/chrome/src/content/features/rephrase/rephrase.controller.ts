@@ -6,28 +6,14 @@ import type {
 } from "@gc/protocol";
 import { holdsPassage, type TextFix } from "../write-back";
 import { caretInSentence } from "./caret-sentence.util";
-import { RephraseEntries, type RephraseEntry } from "./rephrase-entries.store";
+import { newEntry, RephraseEntries, type RephraseEntry } from "./rephrase-entries.store";
+import { idlePanel, type RephrasePanelState, resultPanel } from "./rephrase-panel.model";
 import { planReplace } from "./rephrase-replace.model";
-import {
-  addTone,
-  buildRephraseView,
-  pendingToneLabels,
-  type RephraseVersionView,
-} from "./rephrase-view.model";
+import { addTone, shownTones } from "./rephrase-view.model";
+import { pendingAfterTone, tonesToRequest } from "./tone-picker.model";
 
 export { MAX_KEPT_FIELDS } from "./rephrase-entries.store";
-
-/** What the panel's rephrase section shows for a field. */
-export type RephrasePanelState =
-  | { readonly kind: "idle"; readonly enabled: boolean }
-  | {
-      readonly kind: "result";
-      readonly versions: readonly RephraseVersionView[];
-      /** Labels of the tones still loading; empty once the request is done. */
-      readonly pending: readonly string[];
-      /** The last Replace couldn't edit the field: this text is offered to copy instead. */
-      readonly copy?: string;
-    };
+export type { RephrasePanelState } from "./rephrase-panel.model";
 
 export type RephraseControllerDeps<F> = {
   send(message: RephraseRequestMessage): void;
@@ -45,9 +31,9 @@ export type RephraseControllerDeps<F> = {
 const DEFAULT_TIMEOUT_MS = 150_000;
 
 /**
- * Rephrase state per field: tones arrive one by one and the result is kept until its passage
- * changes, across panel closes and blurs. Replace writes parts into the field and the result
- * follows the new text. Never touches the issue count; a failure or a stale result goes idle.
+ * Rephrase state per field: each tone is asked for on its own click and added to the same
+ * result, which is kept until its passage changes, across panel closes and blurs. Replace writes
+ * parts into the field and the result follows the new text. Never touches the issue count; a failure or a stale result goes idle.
  */
 export class RephraseController<F extends object> {
   private readonly tracked = new WeakMap<F, { fieldId: string; version: number }>();
@@ -61,29 +47,23 @@ export class RephraseController<F extends object> {
     this.tracked.set(field, { fieldId, version });
   }
 
-  request(field: F): void {
+  /**
+   * The tone was clicked. With a result kept, the tone is added to it (same text and caret);
+   * otherwise a new result starts at the caret, which must be in a sentence.
+   */
+  request(field: F, tone: RephraseTone): void {
+    const kept = this.current(field);
+    if (kept) {
+      if (!kept.applying) this.ask(field, kept, tone);
+      return;
+    }
     const tracked = this.tracked.get(field);
-    if (!tracked || this.entries.get(field)?.loading) return;
     const text = this.deps.readText(field);
     const caret = this.deps.readCaret(field);
-    if (caret === null || !caretInSentence(text, caret)) return;
-    const requestId = this.nextRequestId++;
-    const entry: RephraseEntry = {
-      ...tracked,
-      requestId,
-      text,
-      draft: undefined,
-      loading: true,
-      news: false,
-      timer: undefined,
-      runs: [],
-      applying: false,
-      copy: undefined,
-    };
+    if (!tracked || caret === null || !caretInSentence(text, caret)) return;
+    const entry = newEntry(tracked, text, caret);
     this.entries.keep(field, entry);
-    this.arm(entry);
-    this.deps.send({ type: "rephrase.request", ...tracked, requestId, text, caret });
-    this.deps.changed(field);
+    this.ask(field, entry, tone);
   }
 
   /** A tone or the end of a request; replies to any other request are dropped. */
@@ -96,6 +76,7 @@ export class RephraseController<F extends object> {
       this.settle(entry);
     } else {
       entry.draft = addTone(entry.draft, message);
+      entry.pending = pendingAfterTone(entry.pending, message.tone);
       entry.news = true;
       this.arm(entry);
     }
@@ -115,17 +96,10 @@ export class RephraseController<F extends object> {
   /** The state to render now; a result whose passage has changed is dropped. */
   state(field: F): RephrasePanelState {
     const entry = this.current(field);
-    if (entry) {
-      const { draft, runs, copy } = entry;
-      const versions = draft ? buildRephraseView(draft, runs) : [];
-      const pending = entry.loading ? pendingToneLabels(draft) : [];
-      return copy === undefined
-        ? { kind: "result", versions, pending }
-        : { kind: "result", versions, pending, copy };
-    }
+    if (entry) return resultPanel(entry);
     const text = this.deps.readText(field);
     const enabled = this.tracked.has(field) && caretInSentence(text, this.deps.readCaret(field));
-    return { kind: "idle", enabled };
+    return idlePanel(enabled);
   }
 
   /**
@@ -170,6 +144,23 @@ export class RephraseController<F extends object> {
     return undefined;
   }
 
+  /**
+   * Asks the core for `tone`, unless it is shown or on its way. A new request supersedes the
+   * running one in the core, so it also carries the tones still in flight.
+   */
+  private ask(field: F, entry: RephraseEntry, tone: RephraseTone): void {
+    const inFlight = entry.loading ? entry.pending : [];
+    const tones = tonesToRequest(shownTones(entry.draft), inFlight, tone);
+    if (!tones) return;
+    entry.requestId = this.nextRequestId++;
+    entry.loading = true;
+    entry.pending = tones;
+    this.arm(entry);
+    const { fieldId, version, requestId, text, caret } = entry;
+    this.deps.send({ type: "rephrase.request", fieldId, version, requestId, text, caret, tones });
+    this.deps.changed(field);
+  }
+
   /** (Re)starts the backstop: no tone within the timeout ends the loading state. */
   private arm(entry: RephraseEntry): void {
     clearTimeout(entry.timer);
@@ -183,5 +174,6 @@ export class RephraseController<F extends object> {
     clearTimeout(entry.timer);
     entry.timer = undefined;
     entry.loading = false;
+    entry.pending = [];
   }
 }

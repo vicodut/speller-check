@@ -26,7 +26,7 @@ export class RephraseJobs {
   ) {}
 
   async request(message: RephraseRequestMessage): Promise<void> {
-    const { fieldId, version, requestId, text, caret } = message;
+    const { fieldId, version, requestId, text, caret, tones } = message;
     this.cancel(fieldId);
     const passage = selectPassage(text, caret);
     const span = passage && { start: passage.start, end: passage.end };
@@ -34,7 +34,7 @@ export class RephraseJobs {
     this.jobs.set(fieldId, job);
     const replyTo = { fieldId, version, requestId };
     const result = await this.rephraser.rephrase(
-      { text, caret },
+      { text, caret, tones },
       {
         signal: job.cancel.signal,
         onTone: (tone) => this.publish({ type: "rephrase.tone", ...replyTo, ...tone }),

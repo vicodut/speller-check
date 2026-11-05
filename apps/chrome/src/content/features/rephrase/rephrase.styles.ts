@@ -2,12 +2,11 @@
 export const REPHRASE_CSS = `
 .gc-rephrase-section { padding: 4px; }
 
+.gc-tone-picker { display: flex; flex-wrap: wrap; gap: 2px; }
 .gc-rephrase {
   all: unset;
-  display: block;
-  width: 100%;
   box-sizing: border-box;
-  padding: 6px 8px;
+  padding: 4px 8px;
   border-radius: 6px;
   font-weight: 600;
   color: #3e63dd;
@@ -15,6 +14,8 @@ export const REPHRASE_CSS = `
 }
 .gc-rephrase:hover, .gc-rephrase:focus-visible { background: rgba(62, 99, 221, 0.1); }
 .gc-rephrase:disabled { color: #8b8d98; cursor: default; background: none; }
+.gc-rephrase.gc-tone-loading::after { content: "…"; }
+.gc-rephrase.gc-tone-done::after { content: " ✓"; color: #30a46c; }
 .gc-rephrase-loading { padding: 6px 8px; color: #60646c; font-size: 12px; }
 .gc-version + .gc-rephrase-loading { border-top: 1px solid rgba(0, 0, 0, 0.06); }
 .gc-version { padding: 6px 8px; }
