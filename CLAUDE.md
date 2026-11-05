@@ -33,7 +33,7 @@ Each app has its own CLAUDE.md with its conventions. Follow it when working ther
 - Touching more than 3 files, or starting a new feature: propose a short plan and wait for my OK.
 - Ask before adding any dependency.
 - Write tests with the code. Pure logic (segmenting, hashing, offset mapping, versioning) is test-first.
-- Commit locally once `bun run check` passes, using Conventional Commits (`feat(core): …`). Never push.
+- Commit locally once `bun run check` passes, using Conventional Commits (`feat(core): …`). Push only when I ask.
 - When a decision changes, update `docs/spec.md` and add a dated line to `docs/decisions.md`.
 
 ## Never
