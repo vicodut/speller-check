@@ -7,6 +7,8 @@
 
 [Features](#features) • [Getting started](#getting-started) • [Usage](#usage) • [Configuration](#configuration) • [Project structure](#project-structure)
 
+![Underlined errors in a text field, with the suggestion card open on "I has went"](docs/images/suggestion-card.png)
+
 </div>
 
 A grammar and spelling checker for macOS, in English and standard French. A Chrome extension (and later a Swift menu-bar helper) sends the text you type to a local Bun/TypeScript core. The core calls any OpenAI-compatible LLM, local (e.g. Ollama) or cloud, and returns issues with exact text offsets, so they can be underlined right where you wrote them.
@@ -74,6 +76,17 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
 ## Usage
 
 Focus any text field in Chrome and type. Underlines appear about a second after you stop. Click one to open its card, or click the badge to list every issue and reach the **Rephrase** button.
+
+<table>
+<tr>
+<td><img src="docs/images/issue-list.png" alt="The badge panel listing four issues, with the Rephrase button"></td>
+<td><img src="docs/images/rephrase.png" alt="The Professional rephrase of the paragraph, with Replace and Replace all"></td>
+</tr>
+<tr>
+<td align="center">Every issue in the field, from the badge</td>
+<td align="center">Rephrase, here in the Professional tone</td>
+</tr>
+</table>
 
 The core also has a small CLI (`bun run --cwd apps/core cli` with no command prints its help).
 
