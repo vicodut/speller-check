@@ -28,8 +28,9 @@ describe("RephraseService", () => {
   test("the prompt says every version fixes errors and never keeps one", async () => {
     const t = setup([reply(keepAll(3))]);
     await t.run(TEXT, caret);
-    expect(t.prompts[0]).toContain("fixes all grammar, spelling and punctuation errors");
-    expect(t.prompts[0]).toContain("A sentence with any error is always rewritten, never kept.");
+    expect(t.prompts[0]).toContain("Fix every grammar, spelling and punctuation error.");
+    expect(t.prompts[0]).toContain("Keep a sentence");
+    expect(t.prompts[0]).toContain("only if it has no error");
   });
 
   test("sends each tone as soon as it is ready", async () => {
