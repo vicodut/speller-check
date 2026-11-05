@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Issue } from "@gc/protocol";
-import { badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
+import { badgeLabel, elapsedText, resultState, withRephraseReady } from "./badge-state.util";
 
 const issues = (n: number): Issue[] =>
   Array.from({ length: n }, (_, i) => ({
@@ -50,11 +50,52 @@ describe("badgeLabel too long", () => {
 });
 
 describe("resultState", () => {
-  test("a pending result keeps the spinner; the final one shows the count", () => {
-    expect(resultState(issues(2), true)).toEqual({ kind: "checking" });
-    expect(badgeLabel(resultState(issues(2), true)).variant).toBe("checking");
-    expect(resultState(issues(2), false)).toEqual({ kind: "count", issues: issues(2) });
-    expect(resultState(issues(2))).toEqual({ kind: "count", issues: issues(2) });
+  test("a pending result keeps the spinner and its start; the final one shows the count", () => {
+    expect(resultState(issues(2), 500, true)).toEqual({ kind: "checking", since: 500 });
+    expect(badgeLabel(resultState(issues(2), 500, true)).variant).toBe("checking");
+    expect(resultState(issues(2), 500, false)).toEqual({ kind: "count", issues: issues(2) });
+    expect(resultState(issues(2), 500)).toEqual({ kind: "count", issues: issues(2) });
+  });
+});
+
+describe("elapsedText", () => {
+  test("is empty for the first 10 s", () => {
+    expect(elapsedText(1_000, 1_000)).toBe("");
+    expect(elapsedText(1_000, 10_999)).toBe("");
+  });
+
+  test("counts whole seconds from 10 s", () => {
+    expect(elapsedText(1_000, 11_000)).toBe("10s");
+    expect(elapsedText(1_000, 24_500)).toBe("23s");
+    expect(elapsedText(0, 59_999)).toBe("59s");
+  });
+
+  test("switches to minutes and seconds from 60 s", () => {
+    expect(elapsedText(0, 60_000)).toBe("1m 0s");
+    expect(elapsedText(0, 61_000)).toBe("1m 1s");
+    expect(elapsedText(0, 185_000)).toBe("3m 5s");
+  });
+});
+
+describe("badgeLabel checking", () => {
+  test("shows the elapsed time from 10 s, in the label and the tooltip", () => {
+    const state = { kind: "checking", since: 0 } as const;
+    expect(badgeLabel(state, 9_000)).toEqual({
+      text: "",
+      title: "Checking…",
+      variant: "checking",
+      elapsed: "",
+    });
+    expect(badgeLabel(state, 23_000)).toMatchObject({ title: "Checking… 23s", elapsed: "23s" });
+    expect(badgeLabel(state, 61_000).elapsed).toBe("1m 1s");
+  });
+
+  test("without a clock it shows no time", () => {
+    expect(badgeLabel({ kind: "checking", since: 0 }).elapsed).toBe("");
+  });
+
+  test("other states have no elapsed time", () => {
+    expect(badgeLabel({ kind: "too_long" }, 99_000).elapsed).toBeUndefined();
   });
 });
 

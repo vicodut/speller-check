@@ -18,7 +18,23 @@ export const BADGE_CSS = `
   z-index: 2147483647;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
 }
-.gc-badge[hidden], .gc-panel[hidden], .gc-list[hidden] { display: none; }
+.gc-badge[hidden], .gc-panel[hidden], .gc-list[hidden], .gc-elapsed[hidden] { display: none; }
+.gc-elapsed {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #3e63dd;
+  font: 600 10px/1 system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2147483647;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
 .gc-checking {
   border: 2px solid rgba(62, 99, 221, 0.25);
   border-top-color: #3e63dd;
@@ -82,6 +98,7 @@ export const BADGE_CSS = `
 .gc-suggestion { font-weight: 600; overflow-wrap: anywhere; }
 @media (prefers-color-scheme: dark) {
   .gc-panel { background: #212225; color: #edeef0; }
+  .gc-elapsed { background: rgba(33, 34, 37, 0.92); color: #9eb1ff; }
   .gc-item:hover, .gc-item:focus-visible { background: rgba(255, 255, 255, 0.08); }
   .gc-list:not([hidden]) + .gc-extra:not(:empty) { border-color: rgba(255, 255, 255, 0.1); }
 }
