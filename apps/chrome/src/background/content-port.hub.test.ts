@@ -61,6 +61,15 @@ describe("ContentPortHub", () => {
     ]);
   });
 
+  test("forwards text.edit with the prefix and routes resync_needed back", () => {
+    const { hub, toCore, a } = setup();
+    const edit = { fieldId: "f1", version: 2, baseVersion: 1, start: 0, deleteCount: 0 };
+    a.send({ type: "text.edit", ...edit, insert: "x" });
+    expect(toCore).toEqual([{ type: "text.edit", ...edit, fieldId: "p1/f1", insert: "x" }]);
+    hub.fromCore({ type: "error", code: "resync_needed", fieldId: "p1/f1" });
+    expect(a.received).toEqual([{ type: "error", code: "resync_needed", fieldId: "f1" }]);
+  });
+
   test("routes issues and errors to the owning port with the prefix stripped", () => {
     const { hub, a, b } = setup();
     a.send(changed("f1"));

@@ -5,6 +5,7 @@ import {
   type IssuesCoreMessage,
   MAX_TEXT_LENGTH,
   type TextChangedMessage,
+  type TextEditMessage,
 } from "@gc/protocol";
 import type { ConnectionStatus } from "../shared/port-messages";
 import { MAX_REMEMBERED_FIELDS } from "./features/check-memory";
@@ -25,7 +26,7 @@ const fakeField = (): WatchedField => ({}) as WatchedField;
 
 /** A FieldChecks with recording fakes, driven like the field watcher drives it. */
 const setup = (settleMs = 1000) => {
-  const sent: (TextChangedMessage | FieldClosedMessage)[] = [];
+  const sent: (TextChangedMessage | TextEditMessage | FieldClosedMessage)[] = [];
   const shown: (readonly Issue[])[] = [];
   const badge: string[] = [];
   let status: ConnectionStatus | undefined = "ready";
@@ -102,7 +103,8 @@ describe("FieldChecks", () => {
     checks.issues(answer("f1", v1, [issue]), field);
     report(field, "f1", "teh cat", "input");
     report(field, "f1", "teh cat", "resend");
-    expect(types(sent)).toEqual(["text.changed", "text.changed", "text.changed"]);
+    // Typing sends an (empty) edit; the resend is the full text.
+    expect(types(sent)).toEqual(["text.changed", "text.edit", "text.changed"]);
   });
 
   test("a field never checked is checked on focus", () => {

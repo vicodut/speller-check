@@ -95,7 +95,7 @@ export class ContentPortHub {
     const message = parsed.data;
     if (message.type === "dictionary.add") {
       this.sendToCore(message);
-    } else if (message.type === "text.changed") {
+    } else if (message.type === "text.changed" || message.type === "text.edit") {
       this.sendToCore({ ...message, fieldId: this.router.open(portId, message.fieldId) });
     } else if (message.type === "rephrase.request") {
       this.rephrase(portId, message);

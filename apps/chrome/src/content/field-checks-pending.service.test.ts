@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { FieldClosedMessage, Issue, TextChangedMessage } from "@gc/protocol";
+import type { FieldClosedMessage, Issue, TextChangedMessage, TextEditMessage } from "@gc/protocol";
 import { FieldChecks } from "./field-checks.service";
 import type { WatchedField } from "./shared/issue-view";
 
@@ -14,7 +14,7 @@ const issueAt = (start: number): Issue => ({
 });
 
 const setup = () => {
-  const sent: (TextChangedMessage | FieldClosedMessage)[] = [];
+  const sent: (TextChangedMessage | TextEditMessage | FieldClosedMessage)[] = [];
   const shown: (readonly Issue[])[] = [];
   const badge: string[] = [];
   const checks = new FieldChecks({

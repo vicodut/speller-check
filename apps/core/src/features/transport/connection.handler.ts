@@ -3,10 +3,12 @@ import {
   type CoreMessage,
   isTextTooLong,
   type RephraseRequestMessage,
+  type TextEditMessage,
 } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
+import { ReceivedTexts } from "./received-texts.store";
 import type { RephrasePort, ServerDeps, SessionPort } from "./server-deps.types";
 
 /** Socket operations the handler needs; Bun's ServerWebSocket in production, a fake in tests. */
@@ -29,6 +31,8 @@ type Routes = { readonly session: SessionPort; readonly rephraser: RephrasePort 
  */
 export class ConnectionHandler {
   private routes: Routes | undefined;
+  /** Each open field's last received text: the base a `text.edit` applies to. */
+  private readonly texts = new ReceivedTexts();
   private closed = false;
   private readonly helloTimer: ReturnType<typeof setTimeout>;
 
@@ -87,10 +91,12 @@ export class ConnectionHandler {
       case "ping":
         return; // Keepalive from the Chrome extension: nothing to do, nothing to log.
       case "text.changed":
-        session.update({ fieldId: message.fieldId, version: message.version, text: message.text });
-        rephraser.edited(message.fieldId, message.text);
-        return;
+        this.texts.received(message.fieldId, message.version, message.text);
+        return this.textChanged(message.fieldId, message.version, message.text);
+      case "text.edit":
+        return this.applyEdit(message);
       case "field.closed":
+        this.texts.drop(message.fieldId);
         session.close(message.fieldId);
         return;
       case "dictionary.add":
@@ -102,6 +108,32 @@ export class ConnectionHandler {
         rephraser.cancel(message.fieldId);
         return;
     }
+  }
+
+  /** A full text or one rebuilt from an edit: the same check and rephrase path either way. */
+  private textChanged(fieldId: string, version: number, text: string): void {
+    this.routes?.session.update({ fieldId, version, text });
+    this.routes?.rephraser.edited(fieldId, text);
+  }
+
+  /** An edit the core can't apply (unknown field, other base, out of range) asks for a resync. */
+  private applyEdit(message: TextEditMessage): void {
+    const { fieldId, version } = message;
+    const text = this.texts.applyEdit(message);
+    if (text === undefined) {
+      this.logger.info({ event: "text.resync_needed", code: "resync_needed" });
+      this.send({ type: "error", code: "resync_needed", fieldId });
+      return;
+    }
+    if (isTextTooLong(text)) {
+      // Safety net: clients don't grow a field past the cap. Refused before any model call.
+      this.texts.drop(fieldId);
+      this.logger.error({ event: "check.failed", code: "text_too_long", len: text.length });
+      this.send({ type: "error", code: "text_too_long", fieldId });
+      return;
+    }
+    this.logger.info({ event: "text.edit_applied", len: text.length });
+    this.textChanged(fieldId, version, text);
   }
 
   private async addTerm(term: string): Promise<void> {

@@ -8,6 +8,7 @@ export {
   RephraseCancelMessage,
   RephraseRequestMessage,
   TextChangedMessage,
+  TextEditMessage,
 } from "./client-message.dto";
 export {
   CoreMessage,

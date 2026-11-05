@@ -30,6 +30,8 @@ export type LogEvent =
   | "connection.closed"
   | "connection.rejected"
   | "message.invalid"
+  | "text.edit_applied"
+  | "text.resync_needed"
   | "rephrase.requested"
   | "rephrase.done"
   | "rephrase.failed"

@@ -7,6 +7,7 @@ import {
   RephraseRequestMessage,
   RephraseToneMessage,
   TextChangedMessage,
+  TextEditMessage,
 } from "@gc/protocol";
 import { z } from "zod";
 
@@ -16,6 +17,7 @@ export const contentPortName = "gc-content";
 /** Content script -> background, over the port. Field ids are frame-local. */
 export const ContentMessage = z.discriminatedUnion("type", [
   TextChangedMessage,
+  TextEditMessage,
   FieldClosedMessage,
   DictionaryAddMessage,
   RephraseRequestMessage,
