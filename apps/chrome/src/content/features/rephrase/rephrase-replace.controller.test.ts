@@ -5,11 +5,12 @@ describe("RephraseController Replace", () => {
   /** A field with a result: Professional rewrites "Hello there.", Casual merges both. */
   const withResult = () => {
     const t = setup();
-    t.controller.request(t.field);
+    t.controller.request(t.field, "professional");
     t.controller.receive(tone("professional"));
-    const casual = tone("casual");
+    t.controller.request(t.field, "casual");
+    const casual = tone("casual", 2);
     t.controller.receive({ ...casual, segments: [{ from: 0, to: 1, text: "Hi, all." }] });
-    t.controller.receive(done(1, 2));
+    t.controller.receive(done(2, 1));
     return t;
   };
   const view = (t: ReturnType<typeof setup>) => {
@@ -53,7 +54,7 @@ describe("RephraseController Replace", () => {
 
   test("Replace all writes the whole passage in one edit", async () => {
     const t = setup("Intro. Hello there. Bye.", 10);
-    t.controller.request(t.field);
+    t.controller.request(t.field, "concise");
     t.controller.receive({
       ...tone("concise"),
       passage: { start: 0, end: 24 },

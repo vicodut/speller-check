@@ -21,8 +21,10 @@ const tone: RephraseToneResult = {
 const gatedRephraser = () => {
   const signals: AbortSignal[] = [];
   const releases: (() => void)[] = [];
+  const inputs: Parameters<Rephraser["rephrase"]>[0][] = [];
   const rephraser: Rephraser = {
-    rephrase: async (_input, run) => {
+    rephrase: async (input, run) => {
+      inputs.push(input);
       if (run.signal) signals.push(run.signal);
       run.onTone(tone);
       await new Promise<void>((resolve) => {
@@ -32,7 +34,7 @@ const gatedRephraser = () => {
       return run.signal?.aborted ? err(appError("rephrase_cancelled")) : ok(1);
     },
   };
-  return { rephraser, signals, release: () => releases.pop()?.() };
+  return { rephraser, signals, inputs, release: () => releases.pop()?.() };
 };
 
 const request = (requestId: number, text = TEXT) => ({
@@ -67,6 +69,14 @@ describe("RephraseJobs", () => {
       requestId: 1,
       count: 1,
     });
+  });
+
+  test("passes the tones asked for to the rephraser", async () => {
+    const t = setup();
+    const running = t.jobs.request({ ...request(1), tones: ["concise"] });
+    expect(t.inputs[0]?.tones).toEqual(["concise"]);
+    t.release();
+    await running;
   });
 
   test("a newer request for the field cancels the older one", async () => {

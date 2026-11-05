@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CheckRequest } from "./check-request.dto";
+import { RephraseTones } from "./rephrase.schema";
 
 /** First message on every connection; anything else before it closes the socket. */
 export const HelloMessage = z.object({ type: z.literal("hello"), token: z.string().min(1) });
@@ -21,14 +22,16 @@ export const DictionaryAddMessage = z.object({
 export type DictionaryAddMessage = z.infer<typeof DictionaryAddMessage>;
 
 /**
- * Asks for four tones of the passage around `caret` (an offset into `text`). `requestId` is
- * chosen by the client and echoed on every reply, so replies to an older request can be told
- * apart. A newer request for the same field cancels the older one.
+ * Asks for tones of the passage around `caret` (an offset into `text`): the ones in `tones`,
+ * or all four when it is omitted. They come in display order whatever the order asked.
+ * `requestId` is chosen by the client and echoed on every reply, so replies to an older
+ * request can be told apart. A newer request for the same field cancels the older one.
  */
 export const RephraseRequestMessage = CheckRequest.extend({
   type: z.literal("rephrase.request"),
   requestId: z.number().int().nonnegative(),
   caret: z.number().int().nonnegative(),
+  tones: RephraseTones.optional(),
 });
 export type RephraseRequestMessage = z.infer<typeof RephraseRequestMessage>;
 

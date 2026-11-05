@@ -25,6 +25,14 @@ describe("RephraseService", () => {
     expect(t.tones.map((v) => v.tone)).toEqual(["professional", "casual", "concise", "friendlier"]);
   });
 
+  test("calls the model only for the tones asked for, in display order", async () => {
+    const t = setup([reply(keepAll(3))]);
+    const result = await t.run(TEXT, caret, undefined, ["friendlier", "casual"]);
+    expect(result).toEqual(ok(2));
+    expect(t.prompts.map((p) => p.match(/TONE: (\w+)$/)?.[1])).toEqual(["casual", "friendlier"]);
+    expect(t.tones.map((v) => v.tone)).toEqual(["casual", "friendlier"]);
+  });
+
   test("the prompt says every version fixes errors and never keeps one", async () => {
     const t = setup([reply(keepAll(3))]);
     await t.run(TEXT, caret);

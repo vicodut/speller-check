@@ -43,6 +43,21 @@ describe("rephrase.request", () => {
     expect(ClientMessage.safeParse(noId).success).toBe(false);
   });
 
+  test("accepts the tones to make, in any order; omitted means all four", () => {
+    expect(ClientMessage.safeParse({ ...request, tones: ["casual"] }).success).toBe(true);
+    expect(ClientMessage.safeParse({ ...request, tones: ["concise", "casual"] }).success).toBe(
+      true,
+    );
+  });
+
+  test("rejects empty, repeated or unknown tones", () => {
+    expect(ClientMessage.safeParse({ ...request, tones: [] }).success).toBe(false);
+    expect(ClientMessage.safeParse({ ...request, tones: ["casual", "casual"] }).success).toBe(
+      false,
+    );
+    expect(ClientMessage.safeParse({ ...request, tones: ["angry"] }).success).toBe(false);
+  });
+
   test("a cancel names the field only", () => {
     expect(ClientMessage.safeParse({ type: "rephrase.cancel", fieldId: "f1" }).success).toBe(true);
     expect(ClientMessage.safeParse({ type: "rephrase.cancel", fieldId: "" }).success).toBe(false);

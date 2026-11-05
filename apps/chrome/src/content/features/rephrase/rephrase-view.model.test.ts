@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { RephraseToneResult } from "@gc/protocol";
-import {
-  addTone,
-  buildRephraseView,
-  pendingToneLabels,
-  type RephraseDraft,
-} from "./rephrase-view.model";
+import { addTone, buildRephraseView, type RephraseDraft } from "./rephrase-view.model";
 
 const located = {
   passage: { start: 6, end: 22 },
@@ -87,22 +82,15 @@ describe("buildRephraseView", () => {
   });
 });
 
-describe("addTone and pendingToneLabels", () => {
-  test("tones arrive one by one; the rest are pending", () => {
-    expect(pendingToneLabels(undefined)).toEqual([
-      "Professional",
-      "Casual",
-      "Concise",
-      "Friendlier",
-    ]);
-    const first = addTone(undefined, tone("professional", "fr"));
-    expect(first.versions.map((v) => v.tone)).toEqual(["professional"]);
-    expect(pendingToneLabels(first)).toEqual(["Décontracté", "Concis", "Plus chaleureux"]);
+describe("addTone", () => {
+  test("the first tone starts the draft with its passage and language", () => {
+    const first = addTone(undefined, tone("concise", "fr"));
+    expect(first.versions.map((v) => v.tone)).toEqual(["concise"]);
+    expect(first.language).toBe("fr");
   });
 
-  test("a tone the core skipped is no longer pending once a later one arrived", () => {
-    const later = addTone(addTone(undefined, tone("professional")), tone("concise"));
-    expect(later.versions.map((v) => v.tone)).toEqual(["professional", "concise"]);
-    expect(pendingToneLabels(later)).toEqual(["Friendlier"]);
+  test("versions stay in display order whatever order they arrive in", () => {
+    const later = addTone(addTone(undefined, tone("friendlier")), tone("casual"));
+    expect(later.versions.map((v) => v.tone)).toEqual(["casual", "friendlier"]);
   });
 });

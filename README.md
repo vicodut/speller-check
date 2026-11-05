@@ -21,7 +21,7 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
 - **Inline underlines**: in `input`, `textarea` and `contenteditable` fields, coloured by type (spelling red, grammar blue, punctuation orange, syntax purple).
 - **Suggestion card**: accept a fix, dismiss it, add a word to your dictionary, or copy the suggestion when a rich editor won't take the edit.
 - **Field badge**: an issue count in the corner of the focused field; click it to list every issue.
-- **Rephrase**: on demand, four versions of the paragraph at the caret (Professional, Casual, Concise, Friendlier), with Replace and Replace all.
+- **Rephrase**: on demand, pick a tone (Professional, Casual, Concise, Friendlier) and get that version of the paragraph at the caret; add more tones to compare, with Replace and Replace all.
 - **Personal dictionary**: terms you add are never flagged, and the model is told about them so it doesn't "correct" them.
 - **Any OpenAI-compatible model**: Ollama, LM Studio, llama.cpp or a cloud API, for English, French and mixed text.
 - **Private by design**: the core listens on `127.0.0.1` only, behind a per-install token; password fields are never read, and text, prompts and model replies are never logged.
@@ -75,7 +75,7 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
 
 ## Usage
 
-Focus any text field in Chrome and type. Underlines appear about a second after you stop. Click one to open its card, or click the badge to list every issue and reach the **Rephrase** button.
+Focus any text field in Chrome and type. Underlines appear about a second after you stop. Click one to open its card, or click the badge to list every issue and reach the **Rephrase** tone buttons.
 
 While a check runs, the badge is a spinner. On a slow local model, the time spent appears beside it after 10 s, so you can tell a long check from a stuck one:
 

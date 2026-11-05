@@ -32,8 +32,8 @@ export const RephraseToneMessage = RephraseToneResult.extend({
 export type RephraseToneMessage = z.infer<typeof RephraseToneMessage>;
 
 /**
- * Every tone has been tried and `count` of them were sent. A request with no valid tone ends
- * with a rephrase error instead.
+ * Every tone asked for has been tried and `count` of them were sent. A request with no valid
+ * tone ends with a rephrase error instead.
  */
 export const RephraseDoneMessage = z.object({
   type: z.literal("rephrase.done"),

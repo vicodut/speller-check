@@ -1,4 +1,4 @@
-import type { RephraseToneResult } from "@gc/protocol";
+import type { RephraseTone, RephraseToneResult } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
@@ -45,8 +45,8 @@ export const setup = (replies: Reply[], options: Options = {}) => {
   const logger = new Logger((line) => logs.push(line));
   const service = new RephraseService(provider, logger, options.cache ?? new RephraseCache());
   const tones: RephraseToneResult[] = [];
-  const run = (text: string, caret: number, signal?: AbortSignal) =>
-    service.rephrase({ text, caret }, { signal, onTone: (t) => tones.push(t) });
+  const run = (text: string, caret: number, signal?: AbortSignal, only?: RephraseTone[]) =>
+    service.rephrase({ text, caret, tones: only }, { signal, onTone: (t) => tones.push(t) });
   return { run, prompts, logs, tones };
 };
 

@@ -49,7 +49,7 @@ export const startSession = (doc: Document): StopSession => {
       render: (container, field) => {
         rephrase.seen(field);
         renderRephraseSection(container, rephrase.state(field), {
-          rephrase: () => rephrase.request(field),
+          rephrase: (tone) => rephrase.request(field, tone),
           replace: (tone, segment) => void rephrase.replace(field, tone, segment),
           copy: copyText,
         });
