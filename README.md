@@ -83,12 +83,12 @@ While a check runs, the badge is a spinner. On a slow local model, the time spen
 
 <table>
 <tr>
-<td><img src="docs/images/issue-list.png" alt="The badge panel listing four issues, with the Rephrase button"></td>
-<td><img src="docs/images/rephrase.png" alt="The Professional rephrase of the paragraph, with Replace and Replace all"></td>
+<td><img src="docs/images/issue-list.png" alt="The badge panel listing four issues, with the four rephrase tone buttons"></td>
+<td><img src="docs/images/rephrase.png" alt="The Concise rephrase of the paragraph, with Replace and Replace all"></td>
 </tr>
 <tr>
 <td align="center">Every issue in the field, from the badge</td>
-<td align="center">Rephrase, here in the Professional tone</td>
+<td align="center">Rephrase in the tone you pick, here Concise</td>
 </tr>
 </table>
 
