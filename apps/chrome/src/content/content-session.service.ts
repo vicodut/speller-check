@@ -99,6 +99,13 @@ export const startSession = (doc: Document): StopSession => {
       return;
     }
     if (message.fieldId === undefined) return;
+    if (message.code === "resync_needed") {
+      // The core lost the edit's base: resend the full text as a new version, not a failure.
+      const field = watcher.openField(message.fieldId);
+      checks.resyncNeeded(message.fieldId, field);
+      if (field) watcher.resendFocused();
+      return;
+    }
     checks.failed(message.fieldId, message.code, watcher.openField(message.fieldId));
   };
 

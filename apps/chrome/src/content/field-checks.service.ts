@@ -4,11 +4,13 @@ import type {
   Issue,
   IssuesCoreMessage,
   TextChangedMessage,
+  TextEditMessage,
 } from "@gc/protocol";
 import type { ConnectionStatus } from "../shared/port-messages";
 import { CheckMemoryStore } from "./features/check-memory";
 import type { ChangeCause, FieldWatcherCallbacks } from "./features/field-watcher";
 import { messageForChange } from "./features/text-cap";
+import { SentTexts } from "./features/text-edits";
 import type { WatchedField } from "./shared/issue-view";
 
 /** How long a blurred field waits for its in-flight result before it is closed anyway. */
@@ -17,7 +19,7 @@ export const SETTLE_TIMEOUT_MS = 60_000;
 type OfflineStatus = "auth_failed" | "unreachable";
 
 export type FieldChecksDeps = {
-  send(message: TextChangedMessage | FieldClosedMessage): void;
+  send(message: TextChangedMessage | TextEditMessage | FieldClosedMessage): void;
   view: {
     show(field: WatchedField, issues: readonly Issue[]): void;
     clear(field: WatchedField): void;
@@ -45,6 +47,8 @@ export class FieldChecks implements FieldWatcherCallbacks {
   private readonly memory = new CheckMemoryStore<WatchedField>();
   /** Blurred fields waiting for their in-flight result before `field.closed` is sent. */
   private readonly closing = new Map<string, ReturnType<typeof setTimeout>>();
+  /** Per field, the last text sent to the core: typing sends edits against it. */
+  private readonly edits = new SentTexts();
 
   constructor(private readonly deps: FieldChecksDeps) {}
 
@@ -76,14 +80,14 @@ export class FieldChecks implements FieldWatcherCallbacks {
         this.deps.badge.offline(status, field);
       else this.deps.badge.checking(field);
     }
-    this.deps.send(message);
+    this.send(message, cause);
   }
 
   closed(field: WatchedField, fieldId: string): void {
     this.deps.badge.hide(field);
     this.deps.view.clear(field);
     if (!this.memory.isPending(fieldId)) {
-      this.deps.send({ type: "field.closed", fieldId });
+      this.send({ type: "field.closed", fieldId });
       return;
     }
     const timer = setTimeout(
@@ -117,9 +121,21 @@ export class FieldChecks implements FieldWatcherCallbacks {
     this.deps.badge.failed(field, code);
   }
 
-  /** The core (re)connected: checks sent before will never answer. */
+  /**
+   * The core couldn't apply an edit: it is not a failed check. The next send of the field is
+   * its full text (the caller resends an open field); a closed one stops waiting for a result.
+   */
+  resyncNeeded(fieldId: string, field: WatchedField | undefined): void {
+    this.edits.forget(fieldId);
+    if (field) return;
+    this.memory.dropPending(fieldId);
+    this.finishClose(fieldId);
+  }
+
+  /** The core (re)connected: checks sent before will never answer and it knows no text. */
   coreReady(): void {
     for (const fieldId of [...this.closing.keys()]) this.finishClose(fieldId);
+    this.edits.reset();
   }
 
   /** A word was added to the dictionary: any remembered issue may now be wrong. */
@@ -152,6 +168,16 @@ export class FieldChecks implements FieldWatcherCallbacks {
     if (!this.closing.has(fieldId)) return;
     this.reopen(fieldId);
     this.memory.dropPending(fieldId);
-    this.deps.send({ type: "field.closed", fieldId });
+    this.send({ type: "field.closed", fieldId });
+  }
+
+  /** Typing sends an edit; a focus or resend sends the full text. A close drops the base. */
+  private send(message: TextChangedMessage | FieldClosedMessage, cause?: ChangeCause): void {
+    if (message.type === "field.closed") {
+      this.edits.forget(message.fieldId);
+      this.deps.send(message);
+    } else {
+      this.deps.send(this.edits.encode(message, cause !== "input"));
+    }
   }
 }

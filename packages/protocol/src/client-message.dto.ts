@@ -9,6 +9,23 @@ export type HelloMessage = z.infer<typeof HelloMessage>;
 export const TextChangedMessage = CheckRequest.extend({ type: z.literal("text.changed") });
 export type TextChangedMessage = z.infer<typeof TextChangedMessage>;
 
+/**
+ * One contiguous edit against the field's text at `baseVersion`, the last version the client
+ * sent: `deleteCount` UTF-16 code units at `start` are replaced by `insert`, giving `version`.
+ * The core answers an edit it can't apply (unknown field, other base, out of range) with
+ * `error {code: "resync_needed", fieldId}`, and the client sends the full text again.
+ */
+export const TextEditMessage = z.object({
+  type: z.literal("text.edit"),
+  fieldId: z.string().min(1),
+  version: z.number().int().nonnegative(),
+  baseVersion: z.number().int().nonnegative(),
+  start: z.number().int().nonnegative(),
+  deleteCount: z.number().int().nonnegative(),
+  insert: z.string(),
+});
+export type TextEditMessage = z.infer<typeof TextEditMessage>;
+
 export const FieldClosedMessage = z.object({
   type: z.literal("field.closed"),
   fieldId: z.string().min(1),
@@ -56,6 +73,7 @@ export type PingMessage = z.infer<typeof PingMessage>;
 export const ClientMessage = z.discriminatedUnion("type", [
   HelloMessage,
   TextChangedMessage,
+  TextEditMessage,
   FieldClosedMessage,
   DictionaryAddMessage,
   RephraseRequestMessage,
