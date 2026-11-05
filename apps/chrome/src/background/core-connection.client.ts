@@ -19,6 +19,9 @@ export type CoreConnectionDeps = {
   schedule?: (run: () => void, ms: number) => () => void;
 };
 
+/** Under Chrome's ~30 s idle limit for an MV3 worker; WebSocket traffic resets it (Chrome 116+). */
+const KEEPALIVE_MS = 20_000;
+
 const defaultSchedule = (run: () => void, ms: number): (() => void) => {
   const timer = setTimeout(run, ms);
   return () => clearTimeout(timer);
@@ -37,8 +40,10 @@ const parseCoreMessage = (data: unknown): CoreMessage | undefined => {
 /**
  * One WebSocket to the core: hello -> ready, then messages both ways.
  * Reconnects with capped exponential backoff; stops after `auth_failed` until settings change.
- * MV3: since Chrome 116, WebSocket traffic keeps the service worker alive. If the worker is
- * still stopped, it reconnects on its next start, when a content script opens a port.
+ * MV3: since Chrome 116, WebSocket traffic keeps the service worker alive, so while ready it
+ * pings every 20 s; a slow model call would otherwise leave the socket silent long enough for
+ * Chrome to stop the worker and drop the reply. If the worker is stopped anyway, it reconnects
+ * on its next start, when a content script opens a port.
  */
 export class CoreConnection {
   private socket: CoreSocket | undefined;
@@ -46,6 +51,7 @@ export class CoreConnection {
   private currentStatus: ConnectionStatus = "connecting";
   private attempt = 0;
   private cancelRetry: (() => void) | undefined;
+  private cancelKeepalive: (() => void) | undefined;
   private readonly createSocket: (url: string) => CoreSocket;
   private readonly schedule: (run: () => void, ms: number) => () => void;
 
@@ -96,6 +102,7 @@ export class CoreConnection {
     socket.onclose = () => {
       if (socket !== this.socket) return;
       this.socket = undefined;
+      this.stopKeepalive();
       if (this.currentStatus !== "auth_failed") this.retryLater();
     };
   }
@@ -111,6 +118,7 @@ export class CoreConnection {
       if (message.type !== "ready") return;
       this.attempt = 0;
       this.setStatus("ready");
+      this.keepAlive();
     }
     this.deps.onMessage(message);
   }
@@ -125,7 +133,23 @@ export class CoreConnection {
     }, delay);
   }
 
+  /** Sends a ping every KEEPALIVE_MS until the socket closes or is torn down. */
+  private keepAlive(): void {
+    this.stopKeepalive();
+    this.cancelKeepalive = this.schedule(() => {
+      this.cancelKeepalive = undefined;
+      if (!this.send({ type: "ping" })) return;
+      this.keepAlive();
+    }, KEEPALIVE_MS);
+  }
+
+  private stopKeepalive(): void {
+    this.cancelKeepalive?.();
+    this.cancelKeepalive = undefined;
+  }
+
   private teardown(): void {
+    this.stopKeepalive();
     this.cancelRetry?.();
     this.cancelRetry = undefined;
     const socket = this.socket;

@@ -42,6 +42,13 @@ export const RephraseCancelMessage = z.object({
 });
 export type RephraseCancelMessage = z.infer<typeof RephraseCancelMessage>;
 
+/**
+ * Keepalive the Chrome extension sends every 20 s while connected: Chrome stops an MV3 worker
+ * after ~30 s without activity, which would drop the socket during a slow model call. Ignored.
+ */
+export const PingMessage = z.object({ type: z.literal("ping") });
+export type PingMessage = z.infer<typeof PingMessage>;
+
 /** Messages a client (Swift helper, Chrome extension) sends to the core. */
 export const ClientMessage = z.discriminatedUnion("type", [
   HelloMessage,
@@ -50,5 +57,6 @@ export const ClientMessage = z.discriminatedUnion("type", [
   DictionaryAddMessage,
   RephraseRequestMessage,
   RephraseCancelMessage,
+  PingMessage,
 ]);
 export type ClientMessage = z.infer<typeof ClientMessage>;

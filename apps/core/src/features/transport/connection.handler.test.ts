@@ -105,6 +105,18 @@ describe("ConnectionHandler", () => {
     t.handler.dispose();
   });
 
+  test("ignores a ping: no reply, no routing, no log", async () => {
+    const t = setup();
+    await t.handler.receive(hello);
+    const logsBefore = t.logs.length;
+    await t.handler.receive(JSON.stringify({ type: "ping" }));
+    expect(t.sent).toEqual([{ type: "ready" }]);
+    expect(t.updates).toEqual([]);
+    expect(t.rephraseCalls).toEqual([]);
+    expect(t.logs).toHaveLength(logsBefore);
+    t.handler.dispose();
+  });
+
   test("answers an invalid message with message_invalid, without echoing or logging it", async () => {
     const t = setup();
     await t.handler.receive(hello);

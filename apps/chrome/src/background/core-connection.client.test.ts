@@ -25,7 +25,7 @@ const setup = () => {
   const sockets: FakeSocket[] = [];
   const statuses: ConnectionStatus[] = [];
   const messages: CoreMessage[] = [];
-  const timers: { run: () => void; ms: number }[] = [];
+  const timers: { run: () => void; ms: number; cancelled: boolean }[] = [];
   const connection = new CoreConnection({
     onMessage: (message) => messages.push(message),
     onStatus: (status) => statuses.push(status),
@@ -35,8 +35,11 @@ const setup = () => {
       return socket;
     },
     schedule: (run, ms) => {
-      timers.push({ run, ms });
-      return () => {};
+      const timer = { run, ms, cancelled: false };
+      timers.push(timer);
+      return () => {
+        timer.cancelled = true;
+      };
     },
   });
   const last = (): FakeSocket => sockets[sockets.length - 1] as FakeSocket;
@@ -79,7 +82,7 @@ describe("CoreConnection", () => {
     timers[1]?.run();
     last().receive({ type: "ready" });
     last().onclose?.();
-    expect(timers[2]?.ms).toBe(500);
+    expect(timers.filter((t) => t.ms !== 20_000)[2]?.ms).toBe(500);
     expect(statuses).toEqual(["unreachable", "ready", "connecting"]);
     expect(sockets).toHaveLength(3);
   });
@@ -103,5 +106,36 @@ describe("CoreConnection", () => {
     connection.configure({ ...settings, token: "" });
     expect(sockets).toHaveLength(0);
     expect(connection.status).toBe("auth_failed");
+  });
+
+  test("pings every 20 s while ready, so the MV3 worker isn't stopped mid-check", () => {
+    const { connection, timers, last } = setup();
+    connection.configure(settings);
+    last().onopen?.();
+    expect(timers).toHaveLength(0);
+    last().receive({ type: "ready" });
+    const pings = () => last().sent.filter((m) => (m as { type: string }).type === "ping");
+    const keepalive = () => timers.filter((t) => t.ms === 20_000 && !t.cancelled);
+    expect(keepalive()).toHaveLength(1);
+    keepalive()[0]?.run();
+    keepalive().at(-1)?.run();
+    expect(pings()).toHaveLength(2);
+    expect(keepalive().at(-1)?.ms).toBe(20_000);
+  });
+
+  test("stops pinging when the socket closes and starts again after a reconnect", () => {
+    const { connection, timers, last } = setup();
+    connection.configure(settings);
+    last().receive({ type: "ready" });
+    const first = last();
+    first.onclose?.();
+    const keepalive = () => timers.filter((t) => t.ms === 20_000 && !t.cancelled);
+    expect(keepalive()).toHaveLength(0);
+    timers.find((t) => t.ms !== 20_000)?.run();
+    last().receive({ type: "ready" });
+    expect(keepalive()).toHaveLength(1);
+    connection.configure({ ...settings, port: 8000 });
+    expect(keepalive()).toHaveLength(0);
+    expect(first.sent).toEqual([]);
   });
 });

@@ -8,6 +8,7 @@ describe("ClientMessage", () => {
       { type: "text.changed", fieldId: "f1", version: 3, text: "Hello." },
       { type: "field.closed", fieldId: "f1" },
       { type: "dictionary.add", term: "NestJS" },
+      { type: "ping" },
     ];
     for (const message of messages) expect(ClientMessage.safeParse(message).success).toBe(true);
   });

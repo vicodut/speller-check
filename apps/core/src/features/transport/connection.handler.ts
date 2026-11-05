@@ -84,6 +84,8 @@ export class ConnectionHandler {
     switch (message.type) {
       case "hello":
         return; // Already authenticated: ignored.
+      case "ping":
+        return; // Keepalive from the Chrome extension: nothing to do, nothing to log.
       case "text.changed":
         session.update({ fieldId: message.fieldId, version: message.version, text: message.text });
         rephraser.edited(message.fieldId, message.text);

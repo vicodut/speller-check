@@ -4,6 +4,7 @@ export {
   DictionaryAddMessage,
   FieldClosedMessage,
   HelloMessage,
+  PingMessage,
   RephraseCancelMessage,
   RephraseRequestMessage,
   TextChangedMessage,
