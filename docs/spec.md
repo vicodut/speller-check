@@ -170,7 +170,7 @@ Errors are underlined inline where the field exposes its layout, and counted in 
 
 **Underlines.** A wavy line under each issue, colour by `type` (e.g. red for spelling, blue for grammar). In Chrome, drawn by the extension over the page. In native apps, drawn by the Swift helper in a transparent overlay window, using the Accessibility API to get the on-screen bounds of each text range. Underlines follow scrolling and window moves, and disappear when the field loses focus.
 
-**Floating badge.** A small pill at the corner of the focused field showing the error count. Used in every app; it is the only indicator where inline bounds aren't available (Electron apps). Clicking it opens a panel listing all issues for that field. Picking an issue from the panel scrolls the field (and the page, if needed) so the issue is visible, then opens its card; focus and the caret stay where they were.
+**Floating badge.** A small pill at the corner of the focused field showing the error count. Used in every app; it is the only indicator where inline bounds aren't available (Electron apps). Clicking it opens a panel listing all issues for that field. Picking an issue from the panel scrolls the field (and the page, if needed) so the issue is visible, then opens its card; focus and the caret stay where they were. While a check runs the badge is a spinner; after 10 s a small label beside it shows the time spent on that version ("10s" … "59s", then "1m 0s", "1m 1s"), repainted every second and also in the tooltip ("Checking… 23s"). It starts when a version is sent, keeps running through partial (`pending`) results and stops on the final result, an error, "too long", blur or an unreachable core.
 
 **Suggestion card.** Opens on clicking an underline or a panel item:
 

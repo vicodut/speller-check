@@ -2,34 +2,12 @@ import type { Issue } from "@gc/protocol";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { WatchedField } from "../../shared/issue-view";
 import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
-import { badgePosition, type FieldBox, panelPlacement } from "./badge-position.util";
+import { BADGE_SIZE, badgePosition, panelPlacement } from "./badge-position.util";
 import { type BadgeState, badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
+import { fieldBox } from "./field-box.util";
 import { BADGE_CSS } from "./status-badge.styles";
 
 export type StatusBadgeCallbacks = BadgePanelCallbacks;
-
-const fieldBox = (field: WatchedField): FieldBox => {
-  const rect = field.getBoundingClientRect();
-  const style = getComputedStyle(field);
-  const border = (side: string) =>
-    Number.parseFloat(style.getPropertyValue(`border-${side}-width`)) || 0;
-  return {
-    left: rect.left,
-    top: rect.top,
-    width: rect.width,
-    height: rect.height,
-    borderRight: border("right"),
-    borderBottom: border("bottom"),
-    scrollbarX: Math.max(
-      0,
-      field.offsetWidth - field.clientWidth - border("left") - border("right"),
-    ),
-    scrollbarY: Math.max(
-      0,
-      field.offsetHeight - field.clientHeight - border("top") - border("bottom"),
-    ),
-  };
-};
 
 /** Keeps the field focused when the badge or its list is clicked (a blur would close the field). */
 const keepFocus = (el: HTMLElement) => el.addEventListener("mousedown", (e) => e.preventDefault());
@@ -37,13 +15,20 @@ const keepFocus = (el: HTMLElement) => el.addEventListener("mousedown", (e) => e
 /** Variants whose badge opens the panel: a done check, with or without issues. */
 const PANEL_VARIANTS = new Set(["issues", "clean"]);
 
+/** Gap between the elapsed-time label and the spinner, in px. */
+const ELAPSED_GAP = 4;
+
 /**
- * The focused field's corner badge: a spinner while checking, then the issue count (click for
- * the panel), a failed check, a field too long to check, or an unreachable core.
+ * The focused field's corner badge: a spinner while checking (with the elapsed time beside it
+ * after 10 s), then the issue count (click for the panel), a failed check, a field too long to
+ * check, or an unreachable core.
  */
 export class StatusBadge {
   private readonly host = document.createElement("gc-status");
   private readonly badge = document.createElement("div");
+  private readonly elapsed = document.createElement("div");
+  /** Repaints the elapsed time once a second while checking. */
+  private ticker: ReturnType<typeof setInterval> | undefined;
   private readonly panel: BadgePanel;
   private readonly section: StatusBadgeCallbacks["section"];
   private readonly frame = createFrameScheduler(() => this.place());
@@ -54,7 +39,11 @@ export class StatusBadge {
   /** The view's latest visible issues for the field, shown once the check is done. */
   private latest: readonly Issue[] = [];
 
-  constructor(callbacks: StatusBadgeCallbacks) {
+  /** `now`: the clock for elapsed times (injectable for tests). */
+  constructor(
+    callbacks: StatusBadgeCallbacks,
+    private readonly now: () => number = Date.now,
+  ) {
     this.section = callbacks.section;
     this.panel = new BadgePanel(this.host, callbacks);
     this.host.style.setProperty("all", "initial");
@@ -62,17 +51,19 @@ export class StatusBadge {
     const style = document.createElement("style");
     style.textContent = BADGE_CSS + (callbacks.section?.css ?? "");
     this.badge.hidden = true;
+    this.elapsed.className = "gc-elapsed";
+    this.elapsed.hidden = true;
     keepFocus(this.badge);
     keepFocus(this.panel.el);
     this.badge.addEventListener("click", () => this.togglePanel());
-    shadow.append(style, this.badge, this.panel.el);
+    shadow.append(style, this.elapsed, this.badge, this.panel.el);
     document.documentElement.appendChild(this.host);
   }
 
   checking(field: WatchedField): void {
     if (this.field !== field) this.latest = [];
     this.attach(field);
-    this.set({ kind: "checking" });
+    this.set({ kind: "checking", since: this.now() });
   }
 
   /** The view's visible issues changed; a done check shows them right away. */
@@ -82,9 +73,11 @@ export class StatusBadge {
     if (this.state?.kind === "count") this.set({ kind: "count", issues });
   }
 
-  /** A result for the field's current text arrived; a `pending` one keeps the spinner. */
+  /** A result for the field's current text arrived; a `pending` one keeps the spinner and time. */
   done(field: WatchedField, pending?: boolean): void {
-    if (field === this.field) this.set(resultState(this.latest, pending));
+    if (field !== this.field) return;
+    const since = this.state?.kind === "checking" ? this.state.since : this.now();
+    this.set(resultState(this.latest, since, pending));
   }
 
   /** The field's text is over the cap: nothing was sent, its issues are gone. */
@@ -118,6 +111,8 @@ export class StatusBadge {
     this.detach();
     this.state = null;
     this.badge.hidden = true;
+    this.elapsed.hidden = true;
+    this.tick(false);
     this.panel.close();
   }
 
@@ -130,6 +125,7 @@ export class StatusBadge {
   private set(state: BadgeState): void {
     this.state = state;
     this.badge.hidden = false;
+    this.tick(state.kind === "checking");
     if (!PANEL_VARIANTS.has(badgeLabel(state).variant)) this.panel.close();
     else if (this.field) this.panel.refresh(this.field, this.latest);
     this.paint();
@@ -140,10 +136,22 @@ export class StatusBadge {
   private paint(): void {
     if (!this.state) return;
     const ready = !!this.field && !!this.section?.hasNews(this.field);
-    const { text, title, variant } = withRephraseReady(badgeLabel(this.state), ready);
+    const label = badgeLabel(this.state, this.now());
+    const { text, title, variant } = withRephraseReady(label, ready);
     this.badge.className = `gc-badge gc-${variant}${ready ? " gc-ready" : ""}`;
     this.badge.textContent = text;
     this.badge.title = title;
+    this.elapsed.textContent = label.elapsed ?? "";
+    this.elapsed.hidden = !label.elapsed;
+  }
+
+  /** Runs the once-a-second repaint while checking, and stops it otherwise. */
+  private tick(on: boolean): void {
+    if (on && this.ticker === undefined) this.ticker = setInterval(() => this.paint(), 1000);
+    if (!on && this.ticker !== undefined) {
+      clearInterval(this.ticker);
+      this.ticker = undefined;
+    }
   }
 
   private togglePanel(): void {
@@ -162,6 +170,9 @@ export class StatusBadge {
     const position = badgePosition(fieldBox(this.field));
     this.badge.style.left = `${position.left}px`;
     this.badge.style.top = `${position.top}px`;
+    this.elapsed.style.right = `${innerWidth - position.left + ELAPSED_GAP}px`;
+    this.elapsed.style.top = `${position.top}px`;
+    this.elapsed.style.height = `${BADGE_SIZE}px`;
     if (!this.panel.isOpen) return;
     const viewport = { width: innerWidth, height: innerHeight };
     const spot = panelPlacement(position, viewport, this.panel.el.offsetHeight);

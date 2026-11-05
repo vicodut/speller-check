@@ -2,30 +2,52 @@ import { type Issue, MAX_TEXT_LENGTH } from "@gc/protocol";
 
 /** What the badge shows for the focused field. "too_long": over the cap, nothing is sent. */
 export type BadgeState =
-  | { readonly kind: "checking" }
+  /** `since`: when this version started checking (ms, same clock as `now` in `badgeLabel`). */
+  | { readonly kind: "checking"; readonly since: number }
   | { readonly kind: "count"; readonly issues: readonly Issue[] }
   | { readonly kind: "too_long" }
   | { readonly kind: "failed"; readonly code: string }
   | { readonly kind: "offline"; readonly status: "auth_failed" | "unreachable" };
 
-export type BadgeLabel = { text: string; title: string; variant: string };
+/** `elapsed`: only while checking; the time shown next to the spinner ("" before 10 s). */
+export type BadgeLabel = { text: string; title: string; variant: string; elapsed?: string };
 
 const CAP = MAX_TEXT_LENGTH.toLocaleString("en-US");
+
+/** How long a check spins before its elapsed time is shown. */
+export const ELAPSED_AFTER_MS = 10_000;
 
 const plural = (n: number) => (n === 1 ? "1 issue" : `${n} issues`);
 
 /**
- * The state after a result: a `pending` one (more batches are coming) keeps the spinner, so a
- * partial count is never shown as final; the last one shows the count.
+ * The state after a result: a `pending` one (more batches are coming) keeps the spinner and its
+ * start time, so a partial count is never shown as final; the last one shows the count.
  */
-export const resultState = (issues: readonly Issue[], pending?: boolean): BadgeState =>
-  pending ? { kind: "checking" } : { kind: "count", issues };
+export const resultState = (
+  issues: readonly Issue[],
+  since: number,
+  pending?: boolean,
+): BadgeState => (pending ? { kind: "checking", since } : { kind: "count", issues });
 
-/** Text, tooltip and style variant for a state. Counts above 9 show as "9+". */
-export const badgeLabel = (state: BadgeState): BadgeLabel => {
+/** Time spent checking: "" for the first 10 s, then "23s", and "1m 1s" from a minute. */
+export const elapsedText = (since: number, now: number): string => {
+  const ms = now - since;
+  if (ms < ELAPSED_AFTER_MS) return "";
+  const s = Math.floor(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
+};
+
+/**
+ * Text, tooltip and style variant for a state. Counts above 9 show as "9+". `now` (same clock
+ * as `since`) gives a check its elapsed time; without it none is shown.
+ */
+export const badgeLabel = (state: BadgeState, now?: number): BadgeLabel => {
   switch (state.kind) {
-    case "checking":
-      return { text: "", title: "Checking…", variant: "checking" };
+    case "checking": {
+      const elapsed = now === undefined ? "" : elapsedText(state.since, now);
+      const title = elapsed ? `Checking… ${elapsed}` : "Checking…";
+      return { text: "", title, variant: "checking", elapsed };
+    }
     case "count": {
       const n = state.issues.length;
       if (n === 0)
