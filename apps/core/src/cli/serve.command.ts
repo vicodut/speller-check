@@ -26,6 +26,9 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   const core = createCore(settings.value, logger);
   const server = createServer(core, { port: settings.value.port, token: token.value }, logger);
   if (!server.start().ok) return EXIT_FAILURE;
+  // Not awaited: clients can connect while the model loads; their first check then finds it
+  // loaded, or waits for it and retries once after a timeout.
+  void core.warmUp();
   await untilSignal();
   server.stop();
   return 0;
