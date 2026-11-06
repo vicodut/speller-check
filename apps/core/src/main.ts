@@ -31,6 +31,8 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
     apiKey: settings.apiKey,
     reasoningEffort: settings.reasoningEffort,
   };
+  // "OpenAI-compatible" is the HTTP format (/v1/chat/completions), not the OpenAI cloud: local
+  // servers (Ollama, LM Studio, llama.cpp) speak it too, so this one adapter covers every model.
   const base = new OpenAiCompatibleProvider(config, logger);
   const provider = new TimeoutRetryProvider(base, RETRY_TIMEOUT_MS, logger);
   const dictionary = new JsonDictionaryRepository(settings.dictionaryPath);
