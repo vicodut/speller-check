@@ -4,3 +4,4 @@ export {
   OpenAiCompatibleProvider,
 } from "./openai-compatible.provider";
 export type { ChatMessage, CompleteOptions, Provider } from "./provider";
+export { TimeoutRetryProvider } from "./timeout-retry.provider";

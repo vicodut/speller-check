@@ -111,6 +111,37 @@ describe("OpenAiCompatibleProvider.complete", () => {
   });
 });
 
+describe("OpenAiCompatibleProvider timeouts and warm-up", () => {
+  /** A fetch that never answers, so only the abort signal ends it. */
+  const hanging: FetchFn = (_url, init) =>
+    new Promise((_resolve, reject) =>
+      init.signal?.addEventListener("abort", () => reject(init.signal?.reason)),
+    );
+
+  test("a per-call timeoutMs replaces the configured one", async () => {
+    const config = { baseUrl: "http://x/v1", model: "m", timeoutMs: 60_000 };
+    const provider = new OpenAiCompatibleProvider(config, new Logger(() => {}), hanging);
+    const result = await provider.complete(messages, { timeoutMs: 5 });
+    expect(result).toEqual({ ok: false, error: { code: "provider_timeout" } });
+  });
+
+  test("warmUp sends a one-token request without JSON mode and logs its time", async () => {
+    const { provider, calls, logs } = setup([completion("ok")], { reasoningEffort: "none" });
+    await provider.warmUp();
+    expect(calls[0]?.url).toBe("http://127.0.0.1:11434/v1/chat/completions");
+    expect(calls[0]?.body).toMatchObject({ model: "m", max_tokens: 1, reasoning_effort: "none" });
+    expect(calls[0]?.body).not.toHaveProperty("response_format");
+    expect(logs.some((l) => l.includes('"provider.warmup"') && l.includes('"ms"'))).toBe(true);
+  });
+
+  test("a failed warm-up is logged with its code and never throws", async () => {
+    const { provider, logs } = setup([new TypeError("down")]);
+    await provider.warmUp();
+    expect(logs.some((l) => l.includes('"provider.warmup_failed"'))).toBe(true);
+    expect(logs.join("\n")).toContain("provider_network");
+  });
+});
+
 describe("OpenAiCompatibleProvider.listModels / healthcheck", () => {
   test("lists model ids", async () => {
     const { provider, calls } = setup([json({ data: [{ id: "a" }, { id: "b" }] })]);

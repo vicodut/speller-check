@@ -17,6 +17,8 @@ export type OpenAiCompatibleConfig = {
 };
 
 const DEFAULT_TIMEOUT_MS = 60_000;
+/** A cold local model can take over a minute to load (qwen3:8b on CPU: ~70 s). */
+const WARMUP_TIMEOUT_MS = 180_000;
 
 export class OpenAiCompatibleProvider implements Provider {
   readonly model: string;
@@ -38,11 +40,11 @@ export class OpenAiCompatibleProvider implements Provider {
     const startedAt = performance.now();
     const len = messages.reduce((sum, m) => sum + m.content.length, 0);
     this.logger.info({ event: "provider.request", len });
-    let response = await this.post(messages, options.signal);
+    let response = await this.post(messages, options);
     if (!response.ok && this.jsonMode && isRejectedJsonMode(response.error)) {
       this.jsonMode = false;
       this.logger.info({ event: "provider.json_mode_disabled" });
-      response = await this.post(messages, options.signal);
+      response = await this.post(messages, options);
     }
     if (!response.ok) return response;
     const parsed = this.parse(ChatCompletionResponse, response.value);
@@ -67,27 +69,48 @@ export class OpenAiCompatibleProvider implements Provider {
     return (await this.listModels()).ok;
   }
 
+  /** A one-token request so a local server loads the model before the first check needs it. */
+  async warmUp(): Promise<void> {
+    const startedAt = performance.now();
+    const body = {
+      model: this.model,
+      messages: [{ role: "user", content: "ok" }],
+      max_tokens: 1,
+      ...this.effort(),
+    };
+    const init = { method: "POST", body: JSON.stringify(body) };
+    const result = await this.request("/chat/completions", init, undefined, WARMUP_TIMEOUT_MS);
+    if (result.ok)
+      this.logger.info({ event: "provider.warmup", ms: performance.now() - startedAt });
+    else this.logger.error({ event: "provider.warmup_failed", code: result.error.code });
+  }
+
   private post(
     messages: readonly ChatMessage[],
-    signal: AbortSignal | undefined,
+    options: CompleteOptions,
   ): Promise<Result<unknown, AppError>> {
     const body = {
       model: this.model,
       messages,
       temperature: 0,
       ...(this.jsonMode ? { response_format: { type: "json_object" } } : {}),
-      ...(this.config.reasoningEffort ? { reasoning_effort: this.config.reasoningEffort } : {}),
+      ...this.effort(),
     };
     const init = { method: "POST", body: JSON.stringify(body) };
-    return this.request("/chat/completions", init, signal);
+    return this.request("/chat/completions", init, options.signal, options.timeoutMs);
+  }
+
+  private effort(): { reasoning_effort?: string } {
+    return this.config.reasoningEffort ? { reasoning_effort: this.config.reasoningEffort } : {};
   }
 
   private async request(
     path: string,
     init: RequestInit,
     cancel?: AbortSignal,
+    timeoutMs?: number,
   ): Promise<Result<unknown, AppError>> {
-    const timeout = AbortSignal.timeout(this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+    const timeout = AbortSignal.timeout(timeoutMs ?? this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS);
     const signal = cancel ? AbortSignal.any([timeout, cancel]) : timeout;
     try {
       const res = await this.fetchFn(`${this.config.baseUrl}${path}`, {
