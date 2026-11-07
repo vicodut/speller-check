@@ -56,6 +56,17 @@ describe("SettingsService", () => {
     expect(service.profiles()).toMatchObject({ activeProfileId: "p1", lockedByEnv: false });
   });
 
+  test("a file saved before the built-in mark gets its first local profile marked", async () => {
+    const { builtInProfileId: _, ...old } = firstRunFile("old");
+    const store = memoryStore({ ...old, profiles: [{ ...cloud, id: "c" }, ...old.profiles] });
+    const { service } = await open(store);
+    expect(store.file?.builtInProfileId).toBe("old");
+    expect(service.profiles().profiles.map((p) => [p.id, p.builtIn])).toEqual([
+      ["c", false],
+      ["old", true],
+    ]);
+  });
+
   test("an existing file is used as is", async () => {
     const { service, store } = await open(memoryStore(firstRunFile("old")));
     expect(store.saves).toBe(0);
@@ -101,9 +112,12 @@ describe("SettingsService", () => {
     expect(changes).toEqual([]);
   });
 
-  test("the active profile can't be removed", async () => {
+  test("the active profile can't be removed, nor the built-in Local one", async () => {
     const { service } = await open();
-    expect(await service.remove("p1")).toEqual(err(appError("profile_active")));
+    await service.create(cloud);
+    await service.activate("p2");
+    expect(await service.remove("p2")).toEqual(err(appError("profile_active")));
+    expect(await service.remove("p1")).toEqual(err(appError("profile_builtin")));
   });
 
   test("env vars lock the model: shown as env, no active profile, activation refused", async () => {

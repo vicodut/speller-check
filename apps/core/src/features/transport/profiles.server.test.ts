@@ -124,14 +124,18 @@ describe("profiles over HTTP", () => {
     expect(JSON.stringify(saved)).not.toContain("apiKey");
   });
 
-  test("the active profile can't be deleted; another one can", async () => {
-    const view = ProfilesView.parse(await (await api("/api/profiles")).json());
-    const active = view.activeProfileId ?? "";
-    const other = view.profiles.find((p) => p.id !== active)?.id ?? "";
+  test("neither the active nor the built-in profile can be deleted; another one can", async () => {
+    const added = ProfilesView.parse(await (await api("/api/profiles", "POST", cloud)).json());
+    const active = added.activeProfileId ?? "";
+    const builtIn = added.profiles.find((p) => p.builtIn)?.id ?? "";
+    const spare = added.profiles.find((p) => p.id !== active && !p.builtIn)?.id ?? "";
     const refused = await api(`/api/profiles/${active}`, "DELETE");
     expect(refused.status).toBe(409);
     expect(await refused.json()).toEqual({ error: "profile_active" });
-    expect((await api(`/api/profiles/${other}`, "DELETE")).status).toBe(200);
+    const local = await api(`/api/profiles/${builtIn}`, "DELETE");
+    expect(local.status).toBe(409);
+    expect(await local.json()).toEqual({ error: "profile_builtin" });
+    expect((await api(`/api/profiles/${spare}`, "DELETE")).status).toBe(200);
   });
 
   test("bad input and unknown ids are refused", async () => {

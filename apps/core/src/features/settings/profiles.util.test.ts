@@ -20,6 +20,7 @@ const cloud = {
 describe("firstRunFile", () => {
   test("holds one active Local profile on Ollama, and is a valid settings file", () => {
     const file = firstRunFile("p1");
+    expect(file.builtInProfileId).toBe("p1");
     expect(activeProfile(file)).toEqual({
       id: "p1",
       name: "Local",
@@ -54,10 +55,25 @@ describe("profile changes", () => {
   });
 
   test("removing an inactive profile works; the active one is refused", () => {
+    const file = addProfile(addProfile(firstRunFile("p1"), cloud, "p2"), cloud, "p3");
+    const active = activateProfile(file, "p2");
+    if (!active.ok) throw new Error("activate failed");
+    const removed = removeProfile(active.value, "p3");
+    expect(removed.ok && removed.value.profiles.map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(removeProfile(active.value, "p2")).toEqual({
+      ok: false,
+      error: { code: "profile_active" },
+    });
+  });
+
+  test("the built-in Local profile can never be removed, even when not active", () => {
     const file = addProfile(firstRunFile("p1"), cloud, "p2");
-    const removed = removeProfile(file, "p2");
-    expect(removed.ok && removed.value.profiles.map((p) => p.id)).toEqual(["p1"]);
-    expect(removeProfile(file, "p1")).toEqual({ ok: false, error: { code: "profile_active" } });
+    const active = activateProfile(file, "p2");
+    if (!active.ok) throw new Error("activate failed");
+    expect(removeProfile(active.value, "p1")).toEqual({
+      ok: false,
+      error: { code: "profile_builtin" },
+    });
   });
 
   test("an unknown id is profile_not_found", () => {

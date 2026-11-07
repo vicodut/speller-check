@@ -21,6 +21,7 @@ export type ErrorCode =
   | "method_not_allowed"
   | "profile_not_found"
   | "profile_active"
+  | "profile_builtin"
   | "settings_locked"
   | "settings_read_failed"
   | "settings_write_failed"

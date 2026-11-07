@@ -25,6 +25,7 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   profile_not_found: 404,
   method_not_allowed: 405,
   profile_active: 409,
+  profile_builtin: 409,
   settings_locked: 409,
 };
 

@@ -42,9 +42,11 @@ export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: 
             <button type="button" onClick={() => dispatch({ type: "edit", id: p.id })}>
               Edit
             </button>
-            <button type="button" disabled={busy || active} onClick={() => onDelete(p.id)}>
-              Delete
-            </button>
+            {!p.builtIn && (
+              <button type="button" disabled={busy || active} onClick={() => onDelete(p.id)}>
+                Delete
+              </button>
+            )}
           </li>
         );
       })}

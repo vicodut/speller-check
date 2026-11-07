@@ -10,6 +10,11 @@ export const SettingsFile = z
   .strictObject({
     version: z.literal(1),
     activeProfileId: z.string().min(1),
+    /**
+     * The first-run "Local" profile: it can be edited but never deleted. Optional only for files
+     * saved before it existed; opening such a file marks its first local profile.
+     */
+    builtInProfileId: z.string().min(1).optional(),
     profiles: z.array(Profile).min(1),
   })
   .refine((file) => file.profiles.some((p) => p.id === file.activeProfileId), {

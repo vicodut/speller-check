@@ -7,6 +7,7 @@ import {
   addProfile,
   firstRunFile,
   isLocalUrl,
+  markBuiltIn,
   removeProfile,
   updateProfile,
 } from "./profiles.util";
@@ -50,9 +51,8 @@ export class SettingsService {
   ): Promise<Result<SettingsService, AppError>> {
     const loaded = await store.load();
     if (!loaded.ok) return loaded;
-    let file = loaded.value;
-    if (!file) {
-      file = firstRunFile(newId());
+    const file = loaded.value ? markBuiltIn(loaded.value) : firstRunFile(newId());
+    if (file !== loaded.value) {
       const saved = await store.save(file);
       if (!saved.ok) return saved;
     }
@@ -72,7 +72,11 @@ export class SettingsService {
 
   profiles(): ProfilesView {
     return {
-      profiles: this.file.profiles.map((p) => ({ ...p, local: isLocalUrl(p.baseUrl) })),
+      profiles: this.file.profiles.map((p) => ({
+        ...p,
+        local: isLocalUrl(p.baseUrl),
+        builtIn: p.id === this.file.builtInProfileId,
+      })),
       activeProfileId: this.envModel ? null : this.file.activeProfileId,
       lockedByEnv: this.envModel !== null,
     };

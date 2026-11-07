@@ -47,11 +47,15 @@ export const ProfileInput = z.strictObject({
 });
 export type ProfileInput = z.infer<typeof ProfileInput>;
 
-/** A saved profile as the page shows it. `local`: its endpoint is on this Mac. */
+/**
+ * A saved profile as the page shows it. `local`: its endpoint is on this Mac. `builtIn`: the
+ * first-run "Local" profile, which can be edited but never deleted.
+ */
 export const ProfileView = z.strictObject({
   id: z.string().min(1),
   ...ProfileInput.shape,
   local: z.boolean(),
+  builtIn: z.boolean(),
 });
 export type ProfileView = z.infer<typeof ProfileView>;
 

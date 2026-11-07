@@ -21,6 +21,7 @@ const ERROR_TEXT: Record<string, string> = {
   bad_response: "The core answered with something this page doesn't understand.",
   body_invalid: "Check the profile: it needs a name, an http(s) base URL and a model.",
   profile_active: "That profile is in use. Switch to another one before deleting it.",
+  profile_builtin: "The Local profile can't be deleted; you can edit it.",
   profile_not_found: "That profile no longer exists. Reload the page.",
   settings_locked: "GC_* environment variables set the model, so profiles can't be switched.",
   settings_write_failed: "The core couldn't save the settings file.",

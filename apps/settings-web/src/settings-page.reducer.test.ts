@@ -16,6 +16,7 @@ const local = {
   model: "qwen3:8b",
   reasoningEffort: "none" as const,
   local: true,
+  builtIn: true,
 };
 const profiles: ProfilesView = { profiles: [local], activeProfileId: "p1", lockedByEnv: false };
 const draft = { name: "Cloud", baseUrl: "https://x.ai/v1", model: "m", reasoningEffort: null };
