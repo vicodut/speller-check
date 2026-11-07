@@ -173,7 +173,7 @@ Errors are underlined inline where the field exposes its layout, and counted in 
 
 **Underlines.** A wavy line under each issue, colour by `type` (e.g. red for spelling, blue for grammar). In Chrome, drawn by the extension over the page. In native apps, drawn by the Swift helper in a transparent overlay window, using the Accessibility API to get the on-screen bounds of each text range. Underlines follow scrolling and window moves, and disappear when the field loses focus.
 
-**Floating badge.** A small pill at the corner of the focused field showing the error count. Used in every app; it is the only indicator where inline bounds aren't available (Electron apps). Clicking it opens a panel listing all issues for that field. Picking an issue from the panel scrolls the field (and the page, if needed) so the issue is visible, then opens its card; focus and the caret stay where they were. While a check runs the badge is a spinner; after 10 s a small label beside it shows the time spent on that version ("10s" … "59s", then "1m 0s", "1m 1s"), repainted every second and also in the tooltip ("Checking… 23s"). It starts when a version is sent, keeps running through partial (`pending`) results and stops on the final result, an error, "too long", blur or an unreachable core.
+**Floating badge.** A small pill at the corner of the focused field showing the error count. Used in every app; it is the only indicator where inline bounds aren't available (Electron apps). Clicking it opens a panel listing all issues for that field. Picking an issue from the panel scrolls the field (and the page, if needed) so the issue is visible, then opens its card; focus and the caret stay where they were. While a check runs the badge is a spinner; hovering it opens a small popup beside it with the time spent on that version ("Checking… 2.4s" under 10 s, then "23s", then "1m 1s"), repainted live while the pointer stays on it. Nothing shows without a hover, and the spinner has no native tooltip. It starts when a version is sent, keeps running through partial (`pending`) results and stops on the final result, an error, "too long", blur or an unreachable core.
 
 **Suggestion card.** Opens on clicking an underline or a panel item:
 
@@ -270,7 +270,7 @@ Build the brain first, prove it in Chrome, then take on the hard native part.
 
 - [ ] Bun `--compile` vs Node SEA for the core binary? (Kickoff decision: Bun, to confirm at milestone 6.)
 
-- [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
+- [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1. Only qwen3:8b has been run locally (19/20, misses the subjunctive, flags the correct "s'est lavé les mains"). Cloud runs on the same fixtures (#5, see decisions 2026-11-07): qwen3.8-flash 20/20 with no extras, qwen3.7-flash 20/20, llama-3.3-70b 19/20, mistral-small-3.2 16/20.
 
 - [x] How to handle very long fields (e.g. a long email)? Answered by #4: email quotes and signatures are skipped, fields over 20,000 characters show "too long" and aren't sent, and long first checks run in batches with partial results (Checking pipeline, step 5). Checking only the paragraphs near the caret (and over-cap fields paragraph by paragraph) is #6; sending diffs is #7.
 

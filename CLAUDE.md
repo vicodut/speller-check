@@ -36,6 +36,12 @@ Each app has its own CLAUDE.md with its conventions. Follow it when working ther
 - Commit locally once `bun run check` passes, using Conventional Commits (`feat(core): …`). Push only when I ask.
 - When a decision changes, update `docs/spec.md` and add a dated line to `docs/decisions.md`.
 
+## Pull requests
+Open a PR only when I ask. Every PR body includes:
+- **A Mermaid diagram** (```` ```mermaid ````) of what the change does: flow, sequence, or component relations, whichever fits best. Keep it small and focused on the change, not the whole system.
+- **Screenshots** when the PR touches anything the user sees (settings page, Chrome extension UI, Swift overlay or card). Show the change itself, one or more images, before/after when it replaces existing UI. No screenshots for non-UI PRs.
+- Never show real user text in screenshots. Use sample text.
+
 ## Never
 - Log or persist user text, prompts or model responses. Logs carry event names, lengths, timings and error codes only.
 - Read secure or password fields.
