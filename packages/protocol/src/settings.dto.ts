@@ -91,3 +91,27 @@ export const ProfilesView = z.strictObject({
   lockedByEnv: z.boolean(),
 });
 export type ProfilesView = z.infer<typeof ProfilesView>;
+
+/**
+ * The local runtime as the page shows it. `inUse`: the model in use is on Ollama.
+ * `startedByApp`: the core started it, so it stops it on a switch to cloud or on quit.
+ */
+export const OllamaState = z.enum([
+  "running",
+  "starting",
+  "not_running",
+  "not_installed",
+  "failed",
+]);
+export type OllamaState = z.infer<typeof OllamaState>;
+
+export const RuntimeView = z.strictObject({
+  ollama: z.strictObject({
+    state: OllamaState,
+    version: z.string().nullable(),
+    models: z.array(z.string()),
+    inUse: z.boolean(),
+    startedByApp: z.boolean(),
+  }),
+});
+export type RuntimeView = z.infer<typeof RuntimeView>;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { FeatureSettingsView, ProfilesView } from "@gc/protocol";
+import type { FeatureSettingsView, ProfilesView, RuntimeView } from "@gc/protocol";
 import {
   initialState,
   keyChange,
@@ -27,7 +27,10 @@ const local = {
 const profiles: ProfilesView = { profiles: [local], activeProfileId: "p1", lockedByEnv: false };
 const draft = { name: "Cloud", baseUrl: "https://x.ai/v1", model: "m", reasoningEffort: null };
 
-const ready = settingsPageReducer(initialState, { type: "loaded", view, profiles });
+const runtime: RuntimeView = {
+  ollama: { state: "starting", version: null, models: [], inUse: true, startedByApp: true },
+};
+const ready = settingsPageReducer(initialState, { type: "loaded", view, profiles, runtime });
 
 describe("settingsPageReducer", () => {
   test("starts loading, then shows the settings and profiles", () => {
@@ -36,6 +39,7 @@ describe("settingsPageReducer", () => {
       phase: "ready",
       view,
       profiles,
+      runtime,
       form: null,
       busy: false,
       notice: null,
@@ -68,7 +72,7 @@ describe("settingsPageReducer", () => {
     const adding = settingsPageReducer(ready, { type: "add", input: draft });
     const busy = settingsPageReducer(adding, { type: "working" });
     expect(busy).toMatchObject({ busy: true, notice: null });
-    const done = settingsPageReducer(busy, { type: "loaded", view, profiles });
+    const done = settingsPageReducer(busy, { type: "loaded", view, profiles, runtime });
     expect(done).toMatchObject({ busy: false, form: null });
   });
 
@@ -96,5 +100,13 @@ describe("settingsPageReducer", () => {
     expect(keyChange({ typed: " sk-1 ", remove: false, saved: true })).toBe("sk-1");
     expect(keyChange({ typed: "", remove: true, saved: true })).toBeNull();
     expect(keyChange({ typed: "", remove: false, saved: true })).toBeUndefined();
+  });
+
+  test("a runtime refresh replaces only the runtime", () => {
+    const running = {
+      ollama: { ...runtime.ollama, state: "running" as const, version: "0.40.13" },
+    };
+    const next = settingsPageReducer(ready, { type: "runtime", runtime: running });
+    expect(next).toEqual({ ...ready, runtime: running } as SettingsPageState);
   });
 });

@@ -1,4 +1,4 @@
-import type { ApiError, SettingsView } from "@gc/protocol";
+import type { ApiError, RuntimeView, SettingsView } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
@@ -6,12 +6,20 @@ import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
 import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
 
+/** The local runtime (Ollama), as `core serve` runs it. */
+export type RuntimePort = {
+  view(): Promise<RuntimeView>;
+  ensureRunning(): Promise<void>;
+};
+
 /** What the HTTP side needs from the rest of the core, wired in main.ts. */
 export type HttpDeps = {
   /** The settings in effect, with sources; never holds an API key. */
   settingsView(): SettingsView;
   /** Saved profiles; absent in tests that don't use them. */
   readonly profiles?: ProfilesPort | undefined;
+  /** The local runtime; absent in tests that don't use it. */
+  readonly runtime?: RuntimePort | undefined;
   /** The built settings page; absent in tests that only use the API. */
   readonly settingsPage?: SettingsPageFiles | undefined;
 };
@@ -70,11 +78,27 @@ export class HttpApi {
       if (request.method !== "GET") return this.reject("method_not_allowed", 405);
       return json(this.deps.settingsView());
     }
+    const runtime = this.deps.runtime;
+    if (runtime && pathname.startsWith("/api/runtime"))
+      return this.routeRuntime(request, pathname, runtime);
     const profiles = this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles);
     if (!profiles) return this.reject("not_found", 404);
     const result = await profiles;
     if (result.ok) return json(result.value);
     return this.reject(result.error.code, STATUS[result.error.code] ?? 500);
+  }
+
+  /** `GET /api/runtime`; `POST /api/runtime/ollama/start` starts it, then answers the same view. */
+  private async routeRuntime(
+    request: Request,
+    pathname: string,
+    runtime: RuntimePort,
+  ): Promise<Response> {
+    const start = pathname === "/api/runtime/ollama/start";
+    if (pathname !== "/api/runtime" && !start) return this.reject("not_found", 404);
+    if (request.method !== (start ? "POST" : "GET")) return this.reject("method_not_allowed", 405);
+    if (start) await runtime.ensureRunning();
+    return json(await runtime.view());
   }
 
   private async page(request: Request, pathname: string): Promise<Response> {

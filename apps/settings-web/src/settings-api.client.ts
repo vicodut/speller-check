@@ -1,4 +1,4 @@
-import { ApiError, type ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
+import { ApiError, type ProfileSave, ProfilesView, RuntimeView, SettingsView } from "@gc/protocol";
 import type { z } from "zod";
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -64,3 +64,11 @@ export const deleteProfile = (token: string, id: string, base = "") =>
 
 export const activateProfile = (token: string, id: string, base = "") =>
   call(ProfilesView, { token, path: `${profilePath(id)}/activate`, method: "POST", base });
+
+/** Ollama's state, version and pulled models. */
+export const fetchRuntime = (token: string, base = "") =>
+  call(RuntimeView, { token, path: "/api/runtime", base });
+
+/** Starts Ollama if it isn't running; answers once it does (or gave up). */
+export const startOllama = (token: string, base = "") =>
+  call(RuntimeView, { token, path: "/api/runtime/ollama/start", method: "POST", base });

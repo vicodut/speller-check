@@ -1,5 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { OllamaClient, OllamaProcessLauncher, OllamaRuntime } from "../features/runtime";
 import {
   isLocalUrl,
   loadServeSettings,
@@ -17,9 +18,22 @@ import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
 /** The built settings page in this repo; packaging (milestone 6) will point elsewhere. */
 const SETTINGS_PAGE_DIR = join(import.meta.dir, "..", "..", "..", "settings-web", "dist");
 
-/** A model change: swap the providers, then tell every client which model is in use now. */
-const onModelChange =
-  (core: Core, server: WebSocketServer, logger: Logger) => (model: ModelConfig) => {
+/**
+ * A model change: start Ollama if the new model is on it (or stop the one this app started),
+ * then swap the providers and tell every client. Starting Ollama can take seconds, so only the
+ * latest change is applied: an older one finishing late never wins.
+ */
+const onModelChange = (
+  core: Core,
+  server: WebSocketServer,
+  runtime: OllamaRuntime,
+  logger: Logger,
+) => {
+  let latest = 0;
+  return async (model: ModelConfig) => {
+    const mine = ++latest;
+    await runtime.use(model);
+    if (mine !== latest) return;
     core.switchModel(model);
     server.broadcast({
       type: "settings.changed",
@@ -28,6 +42,7 @@ const onModelChange =
     });
     logger.info({ event: "settings.switched" });
   };
+};
 
 const untilSignal = (): Promise<void> =>
   new Promise((resolve) => {
@@ -61,23 +76,27 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_FAILURE;
   }
   logger.info({ event: "settings.loaded", sources: settingSources(service.value.view().check) });
-  const core = createCore(settings.value, await service.value.current(), logger);
+  const model = await service.value.current();
+  const core = createCore(settings.value, model, logger);
+  const runtime = new OllamaRuntime(new OllamaClient(), new OllamaProcessLauncher(), logger);
   const server = createServer(
     core,
     {
       port: settings.value.port,
       token: token.value,
       settings: service.value,
+      runtime,
       settingsPageDir: SETTINGS_PAGE_DIR,
     },
     logger,
   );
   if (!server.start().ok) return EXIT_FAILURE;
-  service.value.onChange(onModelChange(core, server, logger));
-  // Not awaited: clients can connect while the model loads; their first check then finds it
-  // loaded, or waits for it and retries once after a timeout.
-  void core.warmUp();
+  service.value.onChange(onModelChange(core, server, runtime, logger));
+  // Not awaited: clients can connect while Ollama starts and the model loads; their first check
+  // then finds it loaded, or waits for it and retries once after a timeout.
+  void runtime.use(model).then(() => core.warmUp());
   await untilSignal();
   server.stop();
+  runtime.stop();
   return 0;
 };
