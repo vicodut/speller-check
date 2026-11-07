@@ -1,4 +1,4 @@
-import type { ProfileInput, ProfilesView } from "@gc/protocol";
+import type { ProfileSave, ProfilesView } from "@gc/protocol";
 import { useCallback, useEffect, useReducer } from "react";
 import { FeatureSettings } from "./feature-settings";
 import { ProfileForm } from "./profile-form";
@@ -19,7 +19,9 @@ const ERROR_TEXT: Record<string, string> = {
   auth_failed: "The core rejected the token. Run `core settings` again to get a fresh link.",
   unreachable: "Can't reach the grammar checker core. Is it running?",
   bad_response: "The core answered with something this page doesn't understand.",
-  body_invalid: "Check the profile: it needs a name, an http(s) base URL and a model.",
+  body_invalid:
+    "Check the profile: it needs a name, an http(s) base URL and a model. An API key can't hold spaces or quotes.",
+  keychain_failed: "The core couldn't use the macOS Keychain, so nothing was saved.",
   profile_active: "That profile is in use. Switch to another one before deleting it.",
   profile_builtin: "The Local profile can't be deleted; you can edit it.",
   profile_not_found: "That profile no longer exists. Reload the page.",
@@ -56,7 +58,7 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
     },
     [token],
   );
-  const onSave = (id: string | null, input: ProfileInput) =>
+  const onSave = (id: string | null, input: ProfileSave) =>
     void act((t) => saveProfile(t, id, input));
   const onActivate = (id: string) => void act((t) => activateProfile(t, id));
   const onDelete = (id: string) => void act((t) => deleteProfile(t, id));

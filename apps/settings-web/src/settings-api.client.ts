@@ -1,4 +1,4 @@
-import { ApiError, type ProfileInput, ProfilesView, SettingsView } from "@gc/protocol";
+import { ApiError, type ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
 import type { z } from "zod";
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -49,8 +49,8 @@ export const fetchProfiles = (token: string, base = "") =>
 
 const profilePath = (id: string) => `/api/profiles/${encodeURIComponent(id)}`;
 
-/** Adds a profile (`id` null) or replaces one. */
-export const saveProfile = (token: string, id: string | null, input: ProfileInput, base = "") =>
+/** Adds a profile (`id` null) or replaces one; `input.apiKey` sets, removes or keeps its key. */
+export const saveProfile = (token: string, id: string | null, input: ProfileSave, base = "") =>
   call(ProfilesView, {
     token,
     path: id === null ? "/api/profiles" : profilePath(id),

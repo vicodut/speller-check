@@ -1,3 +1,4 @@
+export { type KeyStore, SecurityKeychain } from "./keychain.repository";
 export { isLocalUrl } from "./profiles.util";
 export {
   defaultDictionaryPath,

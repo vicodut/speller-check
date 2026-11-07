@@ -10,6 +10,14 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
+const host = (url: string) => {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+};
+
 /** The saved profiles: pick the one in use, edit, delete, or add one from a preset. */
 export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: Props) => (
   <section aria-label="Profiles">
@@ -38,6 +46,7 @@ export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: 
                 {p.local ? "local" : "cloud"}
               </span>
               <span className="model">{p.model}</span>
+              {p.hasKey && <span className="has-key">key saved</span>}
             </label>
             <button type="button" onClick={() => dispatch({ type: "edit", id: p.id })}>
               Edit
@@ -47,6 +56,7 @@ export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: 
                 Delete
               </button>
             )}
+            {!p.local && <p className="sent-to">Your text is sent to {host(p.baseUrl)}</p>}
           </li>
         );
       })}

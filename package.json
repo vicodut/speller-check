@@ -15,6 +15,7 @@
     "test": "bun test",
     "check": "bun run typecheck && bun run lint && bun run test",
     "test:models": "bun run --cwd apps/core test:models",
+    "test:keychain": "bun run --cwd apps/core test:keychain",
     "build:chrome": "bun run --cwd apps/chrome build",
     "build:settings": "bun run --cwd apps/settings-web build",
     "settings": "bun run --cwd apps/core cli settings"

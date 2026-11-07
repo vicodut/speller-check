@@ -1,6 +1,10 @@
-import type { ProfileInput, ReasoningEffort } from "@gc/protocol";
+import type { ProfileInput, ProfileSave, ReasoningEffort } from "@gc/protocol";
 import { type FormEvent, useId } from "react";
-import type { ProfileForm as Form, SettingsPageEvent } from "./settings-page.reducer";
+import {
+  type ProfileForm as Form,
+  keyChange,
+  type SettingsPageEvent,
+} from "./settings-page.reducer";
 
 const EFFORTS: readonly ReasoningEffort[] = ["none", "low", "medium", "high"];
 
@@ -8,7 +12,7 @@ type Props = {
   form: Form;
   busy: boolean;
   dispatch: (event: SettingsPageEvent) => void;
-  onSave: (id: string | null, input: ProfileInput) => void;
+  onSave: (id: string | null, input: ProfileSave) => void;
 };
 
 type FieldProps = { label: string; id: string; children: React.ReactNode };
@@ -20,7 +24,36 @@ const Field = ({ label, id, children }: FieldProps) => (
   </div>
 );
 
-/** Add or edit one profile. No API key field yet: keys go to the Keychain (#34). */
+/** The key is write-only: the page never gets it back, only whether one is saved. */
+const KeyInput = ({ form, id, dispatch }: Pick<Props, "form" | "dispatch"> & { id: string }) => (
+  <Field label="API key" id={id}>
+    <div className="key">
+      <input
+        id={id}
+        type="password"
+        autoComplete="off"
+        spellCheck={false}
+        placeholder={
+          form.key.saved ? "Saved in Keychain: type to replace" : "Not needed for local models"
+        }
+        value={form.key.typed}
+        onChange={(e) => dispatch({ type: "key", typed: e.target.value })}
+      />
+      {form.key.saved && (
+        <label className="remove-key">
+          <input
+            type="checkbox"
+            checked={form.key.remove}
+            onChange={(e) => dispatch({ type: "removeKey", remove: e.target.checked })}
+          />
+          Remove
+        </label>
+      )}
+    </div>
+  </Field>
+);
+
+/** Add or edit one profile. The key goes to the macOS Keychain, never to the settings file. */
 export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
   const { draft } = form;
   const id = useId();
@@ -28,7 +61,8 @@ export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
     dispatch({ type: "draft", field, value });
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    onSave(form.id, draft);
+    const apiKey = keyChange(form.key);
+    onSave(form.id, apiKey === undefined ? draft : { ...draft, apiKey });
   };
   return (
     <form className="profile-form" onSubmit={submit} aria-label="Profile">
@@ -74,6 +108,7 @@ export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
           ))}
         </select>
       </Field>
+      <KeyInput form={form} id={`${id}-key`} dispatch={dispatch} />
       <div className="actions">
         <button type="submit" disabled={busy}>
           Save

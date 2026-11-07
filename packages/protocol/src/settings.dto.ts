@@ -48,6 +48,26 @@ export const ProfileInput = z.strictObject({
 export type ProfileInput = z.infer<typeof ProfileInput>;
 
 /**
+ * An API key as typed on the settings page: printable ASCII without quotes, backslashes or
+ * spaces (every provider key fits).
+ */
+export const ApiKey = z
+  .string()
+  .min(1)
+  .max(500)
+  .regex(/^[!#-[\]-~]+$/);
+
+/**
+ * Adding or replacing a profile. `apiKey`: a string sets or replaces its key, null removes it,
+ * absent keeps it. The key goes to the Keychain, never to the settings file or a response.
+ */
+export const ProfileSave = z.strictObject({
+  ...ProfileInput.shape,
+  apiKey: ApiKey.nullable().optional(),
+});
+export type ProfileSave = z.infer<typeof ProfileSave>;
+
+/**
  * A saved profile as the page shows it. `local`: its endpoint is on this Mac. `builtIn`: the
  * first-run "Local" profile, which can be edited but never deleted.
  */
@@ -56,6 +76,8 @@ export const ProfileView = z.strictObject({
   ...ProfileInput.shape,
   local: z.boolean(),
   builtIn: z.boolean(),
+  /** Whether a key is saved in the Keychain. The key itself never leaves the core. */
+  hasKey: z.boolean(),
 });
 export type ProfileView = z.infer<typeof ProfileView>;
 
