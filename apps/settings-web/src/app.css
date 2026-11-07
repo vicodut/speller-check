@@ -263,3 +263,52 @@ button:disabled {
     margin-top: 0.5rem;
   }
 }
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+.dot.ok {
+  background: var(--saved);
+}
+.dot.busy {
+  background: var(--env);
+}
+.dot.off {
+  background: var(--muted);
+}
+.ollama p {
+  margin: 0 0 0.6rem;
+}
+.ollama .hint {
+  color: var(--muted);
+}
+.ollama a {
+  color: var(--accent);
+}
+.models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.models li {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.models li.current {
+  border-color: var(--saved);
+  color: var(--saved);
+}
+.models li.none {
+  color: var(--muted);
+  border-style: dashed;
+}

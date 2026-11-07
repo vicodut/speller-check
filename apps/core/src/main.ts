@@ -7,7 +7,7 @@ import {
 } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { ModelConfig, SettingsService } from "./features/settings";
-import { SettingsPageFiles, WebSocketServer } from "./features/transport";
+import { type RuntimePort, SettingsPageFiles, WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
@@ -93,6 +93,7 @@ export const createServer = (
     readonly port: number;
     readonly token: string;
     readonly settings: SettingsService;
+    readonly runtime: RuntimePort;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;
   },
@@ -103,6 +104,7 @@ export const createServer = (
     {
       settingsView: () => options.settings.view(),
       profiles: options.settings,
+      runtime: options.runtime,
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),

@@ -1,4 +1,4 @@
-import type { ProfileInput, ProfilesView, SettingsView } from "@gc/protocol";
+import type { ProfileInput, ProfilesView, RuntimeView, SettingsView } from "@gc/protocol";
 
 /**
  * The key part of the form. `typed`: a new key, sent once on save and never shown back.
@@ -30,6 +30,8 @@ type Ready = {
   readonly phase: "ready";
   readonly view: SettingsView;
   readonly profiles: ProfilesView;
+  /** Null when the core couldn't report it; the page works without it. */
+  readonly runtime: RuntimeView | null;
   readonly form: ProfileForm | null;
   /** A profile action is in flight: buttons are disabled. */
   readonly busy: boolean;
@@ -44,7 +46,13 @@ export type SettingsPageState =
   | { readonly phase: "error"; readonly error: string };
 
 export type SettingsPageEvent =
-  | { readonly type: "loaded"; readonly view: SettingsView; readonly profiles: ProfilesView }
+  | {
+      readonly type: "loaded";
+      readonly view: SettingsView;
+      readonly profiles: ProfilesView;
+      readonly runtime: RuntimeView | null;
+    }
+  | { readonly type: "runtime"; readonly runtime: RuntimeView }
   | { readonly type: "failed"; readonly error: string }
   | { readonly type: "reload" }
   | { readonly type: "add"; readonly input: ProfileInput }
@@ -97,6 +105,8 @@ const onReady = (state: Ready, event: SettingsPageEvent): Ready => {
         : state;
     case "cancel":
       return { ...state, form: null, notice: null };
+    case "runtime":
+      return { ...state, runtime: event.runtime };
     case "working":
       return { ...state, busy: true, notice: null };
     case "actionFailed":
@@ -116,6 +126,7 @@ export const settingsPageReducer = (
         phase: "ready",
         view: event.view,
         profiles: event.profiles,
+        runtime: event.runtime,
         form: null,
         busy: false,
         notice: null,

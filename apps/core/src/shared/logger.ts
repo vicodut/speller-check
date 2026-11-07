@@ -51,6 +51,12 @@ export type LogEvent =
   | "settings.loaded"
   | "settings.switched"
   | "http.rejected"
+  | "ollama.found"
+  | "ollama.starting"
+  | "ollama.started"
+  | "ollama.start_failed"
+  | "ollama.not_installed"
+  | "ollama.stopped"
   | "cli.failed";
 
 /**

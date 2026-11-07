@@ -38,11 +38,13 @@ export {
 export {
   ApiError,
   FeatureSettingsView,
+  OllamaState,
   ProfileInput,
   ProfileSave,
   ProfilesView,
   ProfileView,
   ReasoningEffort,
+  RuntimeView,
   SettingSource,
   SettingsView,
 } from "./settings.dto";
