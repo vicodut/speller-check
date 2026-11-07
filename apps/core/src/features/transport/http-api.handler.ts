@@ -3,6 +3,7 @@ import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
 import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
+import { type ProbePort, routeProbe } from "./probe-routes.handler";
 import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
 
@@ -18,6 +19,8 @@ export type HttpDeps = {
   settingsView(): SettingsView;
   /** Saved profiles; absent in tests that don't use them. */
   readonly profiles?: ProfilesPort | undefined;
+  /** Model list and Test for the profile form; absent in tests that don't use them. */
+  readonly probe?: ProbePort | undefined;
   /** The local runtime; absent in tests that don't use it. */
   readonly runtime?: RuntimePort | undefined;
   /** The built settings page; absent in tests that only use the API. */
@@ -81,9 +84,11 @@ export class HttpApi {
     const runtime = this.deps.runtime;
     if (runtime && pathname.startsWith("/api/runtime"))
       return this.routeRuntime(request, pathname, runtime);
-    const profiles = this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles);
-    if (!profiles) return this.reject("not_found", 404);
-    const result = await profiles;
+    const routed =
+      (this.deps.probe && routeProbe(request, pathname, this.deps.probe)) ||
+      (this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles));
+    if (!routed) return this.reject("not_found", 404);
+    const result = await routed;
     if (result.ok) return json(result.value);
     return this.reject(result.error.code, STATUS[result.error.code] ?? 500);
   }

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
+import { ProfileProbeProvider } from "../providers";
 import { isLocalUrl, type ModelConfig, SettingsFileRepository, SettingsService } from "../settings";
 import { WebSocketServer } from "./websocket.server";
 
@@ -38,6 +39,13 @@ const startServer = (settings: SettingsService) => {
     {
       settingsView: () => settings.view(),
       profiles: settings,
+      // Short timeouts so a test can make a probe time out quickly.
+      probe: new ProfileProbeProvider(
+        (id, url) => settings.savedKeyFor(id, url),
+        new Logger(() => {}),
+        fetch,
+        { models: 1000, test: 300 },
+      ),
       createSession: () => ({ update: () => {}, close: () => {}, dispose: () => {} }),
       addDictionaryTerm: async () => ok(undefined),
       createRephraser: () => ({

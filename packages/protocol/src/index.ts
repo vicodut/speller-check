@@ -27,6 +27,14 @@ export {
   ModelRephraseSegment,
 } from "./model-rephrase.schema";
 export {
+  ModelsProbe,
+  ModelsResult,
+  ProbeError,
+  ProbeFailure,
+  TestProbe,
+  TestResult,
+} from "./profile-probe.dto";
+export {
   RephraseLanguage,
   RephraseSegment,
   RephraseSentence,
@@ -37,6 +45,7 @@ export {
 } from "./rephrase.schema";
 export {
   ApiError,
+  ApiKey,
   FeatureSettingsView,
   OllamaState,
   ProfileInput,

@@ -1,4 +1,11 @@
 import type { ProfileInput, ProfilesView, RuntimeView, SettingsView } from "@gc/protocol";
+import {
+  afterEdit,
+  IDLE_PROBE,
+  type ProbeEvent,
+  type ProbeState,
+  probeReducer,
+} from "./profile-probe.reducer";
 
 /**
  * The key part of the form. `typed`: a new key, sent once on save and never shown back.
@@ -15,6 +22,8 @@ export type ProfileForm = {
   readonly id: string | null;
   readonly draft: ProfileInput;
   readonly key: KeyField;
+  /** The endpoint's model list and the last Test result. */
+  readonly probe: ProbeState;
 };
 
 /** What a save sends for the key: a string sets it, null removes it, undefined keeps it. */
@@ -60,6 +69,7 @@ export type SettingsPageEvent =
   | { readonly type: "draft"; readonly field: keyof ProfileInput; readonly value: string | null }
   | { readonly type: "key"; readonly typed: string }
   | { readonly type: "removeKey"; readonly remove: boolean }
+  | { readonly type: "probe"; readonly event: ProbeEvent }
   | { readonly type: "cancel" }
   | { readonly type: "working" }
   | { readonly type: "actionFailed"; readonly error: string };
@@ -74,35 +84,46 @@ const editForm = (state: Ready, id: string): ProfileForm | null => {
     id,
     draft: { name, baseUrl, model, reasoningEffort },
     key: { ...NO_KEY, saved: hasKey },
+    probe: IDLE_PROBE,
   };
+};
+
+/** Edits inside the open form: the draft, the key, and its model list and Test result. */
+const onForm = (form: ProfileForm, event: SettingsPageEvent): ProfileForm => {
+  switch (event.type) {
+    case "draft": {
+      const draft = { ...form.draft, [event.field]: event.value };
+      return { ...form, draft, probe: afterEdit(form.probe, event.field) };
+    }
+    case "key":
+    case "removeKey": {
+      const key =
+        event.type === "key"
+          ? { ...form.key, typed: event.typed, remove: false }
+          : { ...form.key, typed: "", remove: event.remove };
+      return { ...form, key, probe: afterEdit(form.probe, "key") };
+    }
+    case "probe":
+      return { ...form, probe: probeReducer(form.probe, event.event) };
+    default:
+      return form;
+  }
 };
 
 /** Events on a loaded page; ignored in other phases. */
 const onReady = (state: Ready, event: SettingsPageEvent): Ready => {
   switch (event.type) {
-    case "add":
-      return { ...state, form: { id: null, draft: event.input, key: NO_KEY }, notice: null };
+    case "add": {
+      const form = { id: null, draft: event.input, key: NO_KEY, probe: IDLE_PROBE };
+      return { ...state, form, notice: null };
+    }
     case "edit":
       return { ...state, form: editForm(state, event.id), notice: null };
-    case "draft": {
-      if (!state.form) return state;
-      const draft = { ...state.form.draft, [event.field]: event.value };
-      return { ...state, form: { ...state.form, draft } };
-    }
+    case "draft":
     case "key":
-      return state.form
-        ? {
-            ...state,
-            form: { ...state.form, key: { ...state.form.key, typed: event.typed, remove: false } },
-          }
-        : state;
     case "removeKey":
-      return state.form
-        ? {
-            ...state,
-            form: { ...state.form, key: { ...state.form.key, typed: "", remove: event.remove } },
-          }
-        : state;
+    case "probe":
+      return state.form ? { ...state, form: onForm(state.form, event) } : state;
     case "cancel":
       return { ...state, form: null, notice: null };
     case "runtime":

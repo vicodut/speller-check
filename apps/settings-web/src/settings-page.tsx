@@ -4,6 +4,7 @@ import { FeatureSettings } from "./feature-settings";
 import { OllamaPanel } from "./ollama-panel";
 import { ProfileForm } from "./profile-form";
 import { ProfileList } from "./profile-list";
+import { useProfileProbe } from "./profile-probe.hook";
 import {
   type ApiResult,
   activateProfile,
@@ -68,6 +69,8 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
     return () => clearTimeout(timer);
   }, [runtime, token]);
 
+  const probe = useProfileProbe(token, state.phase === "ready" ? state.form : null, dispatch);
+
   const onStartOllama = async () => {
     if (!token) return;
     dispatch({ type: "working" });
@@ -126,7 +129,13 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
             />
           )}
           {state.form && (
-            <ProfileForm form={state.form} busy={state.busy} dispatch={dispatch} onSave={onSave} />
+            <ProfileForm
+              form={state.form}
+              busy={state.busy}
+              dispatch={dispatch}
+              onSave={onSave}
+              {...probe}
+            />
           )}
           <FeatureSettings title="Check" view={state.view.check} />
           <FeatureSettings title="Rephrase" view={state.view.rephrase} />

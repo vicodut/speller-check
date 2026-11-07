@@ -72,3 +72,12 @@ export const isLocalUrl = (url: string): boolean => {
     return false;
   }
 };
+
+/** Whether two URLs share scheme, host and port: a saved key only ever goes to its own host. */
+export const sameOrigin = (a: string, b: string): boolean => {
+  try {
+    return new URL(a).origin === new URL(b).origin;
+  } catch {
+    return false;
+  }
+};
