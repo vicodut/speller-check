@@ -1,5 +1,5 @@
 import { homedir } from "node:os";
-import { loadSettings } from "../features/settings";
+import { buildSettingsView, loadSettings, settingSources } from "../features/settings";
 import { InstallTokenRepository } from "../features/transport";
 import { createCore, createServer } from "../main";
 import type { Logger } from "../shared/logger";
@@ -23,8 +23,14 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     logger.error({ event: "cli.failed", code: token.error.code });
     return EXIT_FAILURE;
   }
+  const view = buildSettingsView(process.env, settings.value);
+  logger.info({ event: "settings.loaded", sources: settingSources(view.check) });
   const core = createCore(settings.value, logger);
-  const server = createServer(core, { port: settings.value.port, token: token.value }, logger);
+  const server = createServer(
+    core,
+    { port: settings.value.port, token: token.value, view },
+    logger,
+  );
   if (!server.start().ok) return EXIT_FAILURE;
   // Not awaited: clients can connect while the model loads; their first check then finds it
   // loaded, or waits for it and retries once after a timeout.

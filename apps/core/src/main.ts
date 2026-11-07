@@ -1,3 +1,4 @@
+import type { SettingsView } from "@gc/protocol";
 import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import { OpenAiCompatibleProvider, TimeoutRetryProvider } from "./features/providers";
@@ -50,12 +51,13 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
 
 export const createServer = (
   core: Core,
-  options: { readonly port: number; readonly token: string },
+  options: { readonly port: number; readonly token: string; readonly view: SettingsView },
   logger: Logger,
 ): WebSocketServer =>
   new WebSocketServer(
-    options,
+    { port: options.port, token: options.token },
     {
+      settingsView: () => options.view,
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),
       createRephraser: (publish) => new RephraseJobs(core.rephraseService, publish),

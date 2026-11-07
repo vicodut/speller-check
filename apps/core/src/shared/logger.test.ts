@@ -31,4 +31,20 @@ describe("Logger", () => {
     logger.info(sneaky);
     expect(lines[0]).not.toContain("I has went");
   });
+
+  test("writes setting sources, only for known settings and known sources", () => {
+    const { lines, logger } = capture();
+    const sources = {
+      baseUrl: "env",
+      model: "unset",
+      apiKey: "sk-or-secret",
+      leak: "env",
+    } as unknown as LogFields["sources"];
+    logger.info({ event: "settings.loaded", ...(sources ? { sources } : {}) });
+    expect(JSON.parse(lines[0] ?? "")).toEqual({
+      level: "info",
+      event: "settings.loaded",
+      sources: { baseUrl: "env", model: "unset" },
+    });
+  });
 });

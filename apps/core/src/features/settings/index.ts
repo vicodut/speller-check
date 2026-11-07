@@ -5,4 +5,5 @@ export {
   loadSettings,
   loadTransportSettings,
 } from "./settings.loader";
-export type { ReasoningEffort, Settings, TransportSettings } from "./settings.schema";
+export type { Settings, TransportSettings } from "./settings.schema";
+export { buildSettingsView, settingSources } from "./settings-view.builder";

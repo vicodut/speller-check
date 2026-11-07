@@ -19,6 +19,9 @@ export const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000
   let publish: ((message: CoreMessage) => void) | undefined;
   let publishRephrase: ((message: CoreMessage) => void) | undefined;
   const deps: ServerDeps = {
+    settingsView: () => {
+      throw new Error("the WebSocket handler never reads settings");
+    },
     createSession: (p) => {
       publish = p;
       return {
