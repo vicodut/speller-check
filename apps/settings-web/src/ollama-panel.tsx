@@ -1,4 +1,5 @@
 import type { RuntimeView } from "@gc/protocol";
+import { OllamaPull } from "./ollama-pull";
 
 type Props = {
   ollama: RuntimeView["ollama"];
@@ -6,13 +7,15 @@ type Props = {
   model: string | null;
   busy: boolean;
   onStart: () => void;
+  onPull: (model: string) => void;
+  onCancelPull: () => void;
 };
 
 /** Ollama lists `qwen3` as `qwen3:latest`. */
 const sameModel = (a: string, b: string) =>
   (a.includes(":") ? a : `${a}:latest`) === (b.includes(":") ? b : `${b}:latest`);
 
-const Status = ({ ollama, busy, onStart }: Omit<Props, "model">) => {
+const Status = ({ ollama, busy, onStart }: Pick<Props, "ollama" | "busy" | "onStart">) => {
   switch (ollama.state) {
     case "running":
       return (
@@ -55,9 +58,11 @@ const Status = ({ ollama, busy, onStart }: Omit<Props, "model">) => {
 };
 
 /** The local runtime behind the active profile: its state and the models it has. */
-export const OllamaPanel = ({ ollama, model, busy, onStart }: Props) => {
+export const OllamaPanel = ({ ollama, model, busy, onStart, onPull, onCancelPull }: Props) => {
   const missing =
-    ollama.state === "running" && model && !ollama.models.some((m) => sameModel(m, model));
+    ollama.state === "running" && model && !ollama.models.some((m) => sameModel(m, model))
+      ? model
+      : null;
   return (
     <section aria-label="Ollama" className="ollama">
       <h2>Ollama</h2>
@@ -72,10 +77,14 @@ export const OllamaPanel = ({ ollama, model, busy, onStart }: Props) => {
           {ollama.models.length === 0 && <li className="none">No models pulled yet</li>}
         </ul>
       )}
-      {missing && (
-        <p className="notice">
-          {model} isn't pulled. Run <code>ollama pull {model}</code> in a terminal.
-        </p>
+      {ollama.state === "running" && (
+        <OllamaPull
+          pull={ollama.pull}
+          missing={missing}
+          busy={busy}
+          onPull={onPull}
+          onCancel={onCancelPull}
+        />
       )}
     </section>
   );

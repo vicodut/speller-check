@@ -28,7 +28,14 @@ const profiles: ProfilesView = { profiles: [local], activeProfileId: "p1", locke
 const draft = { name: "Cloud", baseUrl: "https://x.ai/v1", model: "m", reasoningEffort: null };
 
 const runtime: RuntimeView = {
-  ollama: { state: "starting", version: null, models: [], inUse: true, startedByApp: true },
+  ollama: {
+    state: "starting",
+    version: null,
+    models: [],
+    inUse: true,
+    startedByApp: true,
+    pull: null,
+  },
 };
 const ready = settingsPageReducer(initialState, { type: "loaded", view, profiles, runtime });
 
@@ -108,5 +115,20 @@ describe("settingsPageReducer", () => {
     };
     const next = settingsPageReducer(ready, { type: "runtime", runtime: running });
     expect(next).toEqual({ ...ready, runtime: running } as SettingsPageState);
+  });
+
+  test("a pull or cancel answering shows its runtime and keeps the open form", () => {
+    const pulling: RuntimeView = {
+      ollama: {
+        ...runtime.ollama,
+        state: "running",
+        pull: { model: "smollm2:135m", step: "starting", completed: 0, total: 0, error: null },
+      },
+    };
+    const editing = settingsPageReducer(ready, { type: "edit", id: "p1" });
+    const working = settingsPageReducer(editing, { type: "working" });
+    const next = settingsPageReducer(working, { type: "runtimeChanged", runtime: pulling });
+    expect(next).toMatchObject({ runtime: pulling, busy: false, notice: null });
+    expect(next).toHaveProperty("form.id", "p1");
   });
 });

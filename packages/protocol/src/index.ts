@@ -26,6 +26,7 @@ export {
   ModelRephraseResponse,
   ModelRephraseSegment,
 } from "./model-rephrase.schema";
+export { OllamaModelName, OllamaPullView, PullRequest, PullStep } from "./ollama-pull.dto";
 export {
   ModelsProbe,
   ModelsResult,

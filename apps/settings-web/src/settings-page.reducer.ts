@@ -62,6 +62,8 @@ export type SettingsPageEvent =
       readonly runtime: RuntimeView | null;
     }
   | { readonly type: "runtime"; readonly runtime: RuntimeView }
+  /** A runtime action (pull, cancel) answered: shows its view and ends the busy state. */
+  | { readonly type: "runtimeChanged"; readonly runtime: RuntimeView }
   | { readonly type: "failed"; readonly error: string }
   | { readonly type: "reload" }
   | { readonly type: "add"; readonly input: ProfileInput }
@@ -128,6 +130,8 @@ const onReady = (state: Ready, event: SettingsPageEvent): Ready => {
       return { ...state, form: null, notice: null };
     case "runtime":
       return { ...state, runtime: event.runtime };
+    case "runtimeChanged":
+      return { ...state, runtime: event.runtime, busy: false, notice: null };
     case "working":
       return { ...state, busy: true, notice: null };
     case "actionFailed":

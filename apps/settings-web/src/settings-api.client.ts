@@ -90,3 +90,13 @@ export const listModels = (token: string, probe: ModelsProbe, base = "") =>
 /** Sends one short request with a profile (saved or not): ok with its time, or an error code. */
 export const testProfile = (token: string, probe: TestProbe, base = "") =>
   call(TestResult, { token, path: "/api/probe/test", method: "POST", body: probe, base });
+
+const PULL_PATH = "/api/runtime/ollama/pull";
+
+/** Starts pulling a model through Ollama; answers at once, with the pull's first progress. */
+export const pullModel = (token: string, model: string, base = "") =>
+  call(RuntimeView, { token, path: PULL_PATH, method: "POST", body: { model }, base });
+
+/** Cancels the running pull; Ollama keeps what it downloaded, so a later pull resumes. */
+export const cancelPull = (token: string, base = "") =>
+  call(RuntimeView, { token, path: PULL_PATH, method: "DELETE", base });
