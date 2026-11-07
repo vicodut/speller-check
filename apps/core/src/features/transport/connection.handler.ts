@@ -7,7 +7,7 @@ import {
 } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
-import { tokensMatch } from "./connection-guard.service";
+import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
 import { ReceivedTexts } from "./received-texts.store";
 import type { RephrasePort, ServerDeps, SessionPort } from "./server-deps.types";
 
@@ -17,7 +17,7 @@ export type ConnectionSocket = {
   close(code: number, reason: string): void;
 };
 
-export type ConnectionOptions = { readonly token: string; readonly helloTimeoutMs: number };
+export type ConnectionOptions = { readonly token: TokenSource; readonly helloTimeoutMs: number };
 
 /** WebSocket close code 1008: policy violation. */
 const POLICY_VIOLATION = 1008;
@@ -75,7 +75,10 @@ export class ConnectionHandler {
   }
 
   private authenticate(message: ClientMessage | undefined): void {
-    if (message?.type !== "hello" || !tokensMatch(this.options.token, message.token)) {
+    if (
+      message?.type !== "hello" ||
+      !tokensMatch(currentToken(this.options.token), message.token)
+    ) {
       this.reject();
       return;
     }

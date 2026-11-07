@@ -60,7 +60,8 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     logger.error({ event: "cli.failed", code: settings.error.code });
     return EXIT_USAGE;
   }
-  const token = await new InstallTokenRepository(settings.value.tokenPath).loadOrCreate();
+  const tokenPath = settings.value.tokenPath;
+  const token = await new InstallTokenRepository(tokenPath).loadOrCreate();
   if (!token.ok) {
     logger.error({ event: "cli.failed", code: token.error.code });
     return EXIT_FAILURE;

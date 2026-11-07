@@ -4,7 +4,7 @@ import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { ConnectionHandler } from "./connection.handler";
-import { isAllowedOrigin } from "./connection-guard.service";
+import { isAllowedOrigin, type TokenSource } from "./connection-guard.service";
 import { HttpApi } from "./http-api.handler";
 import type { ServerDeps } from "./server-deps.types";
 
@@ -15,7 +15,8 @@ const DEFAULT_HELLO_TIMEOUT_MS = 5000;
 
 export type ServerOptions = {
   readonly port: number;
-  readonly token: string;
+  /** Checked on every hello and API call, so a getter lets a rotated token apply at once. */
+  readonly token: TokenSource;
   /** Overridable for tests only. */
   readonly helloTimeoutMs?: number;
 };

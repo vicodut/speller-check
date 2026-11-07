@@ -48,4 +48,24 @@ describe("InstallTokenRepository", () => {
       error: { code: "token_read_failed" },
     });
   });
+
+  test("rotate replaces the token with a new one, still 0600", async () => {
+    const path = join(dir, "rotated");
+    const repo = new InstallTokenRepository(path);
+    const before = await repo.loadOrCreate();
+    const after = await repo.rotate();
+    if (!before.ok || !after.ok) throw new Error("expected tokens");
+    expect(after.value).not.toBe(before.value);
+    expect(after.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(readFileSync(path, "utf8")).toBe(after.value);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+    expect(await repo.loadOrCreate()).toEqual(after);
+  });
+
+  test("rotate creates the token when there is none yet", async () => {
+    const path = join(dir, "fresh", "token");
+    const rotated = await new InstallTokenRepository(path).rotate();
+    expect(rotated.ok).toBe(true);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+  });
 });

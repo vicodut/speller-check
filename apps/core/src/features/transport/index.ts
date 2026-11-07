@@ -1,5 +1,7 @@
+export type { TokenSource } from "./connection-guard.service";
 export type { RuntimePort } from "./http-api.handler";
 export { InstallTokenRepository } from "./install-token.repository";
+export { InstallTokenWatcher } from "./install-token.watcher";
 export type { ServerDeps, SessionPort } from "./server-deps.types";
 export { SettingsPageFiles } from "./settings-page-files.repository";
 export { type ServerOptions, WebSocketServer } from "./websocket.server";
