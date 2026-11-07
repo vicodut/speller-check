@@ -2,7 +2,7 @@ import type { AppError } from "../../../shared/errors";
 import type { Logger } from "../../../shared/logger";
 import { ok, type Result } from "../../../shared/result";
 import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
-import type { Provider } from "../../providers";
+import { type Provider, pinProvider } from "../../providers";
 import type { CheckCache } from "./check-cache.service";
 import { locateIssue } from "./issue-locator.service";
 import { shiftIssue } from "./issue-offsets.service";
@@ -29,6 +29,8 @@ export const checkBatch = async (
   entries: readonly DictionaryEntry[],
 ): Promise<Result<null, AppError>> => {
   if (targets.length === 0) return ok(null);
+  // One model for the whole batch (retry included) and its cache key, even if settings change.
+  const provider = pinProvider(deps.provider);
   const context = neighbours(targets, all).map((s) => s.text);
   const batchText = [...targets.map((s) => s.text), ...context].join("\n");
   const messages = buildPrompt({
@@ -36,7 +38,7 @@ export const checkBatch = async (
     context,
     dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
   });
-  const modelIssues = await requestModelIssues(deps.provider, messages, deps.logger);
+  const modelIssues = await requestModelIssues(provider, messages, deps.logger);
   if (!modelIssues.ok) return modelIssues;
 
   const located = modelIssues.value.flatMap((issue) => {
@@ -47,7 +49,7 @@ export const checkBatch = async (
   for (const sentence of targets) {
     const own = located.filter((i) => i.start >= sentence.start && i.end <= sentence.end);
     deps.cache.set(
-      deps.provider.model,
+      provider.model,
       sentence.hash,
       own.map((i) => shiftIssue(i, -sentence.start)),
     );
