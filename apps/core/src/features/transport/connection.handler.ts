@@ -60,6 +60,11 @@ export class ConnectionHandler {
     await this.route(message, this.routes);
   }
 
+  /** Sends a core-wide message (e.g. `settings.changed`) once the client is authenticated. */
+  notify(message: CoreMessage): void {
+    if (this.routes && !this.closed) this.send(message);
+  }
+
   /** Called when the socket closes, whoever closed it. */
   dispose(): void {
     this.closed = true;

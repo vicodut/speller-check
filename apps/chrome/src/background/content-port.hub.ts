@@ -64,7 +64,10 @@ export class ContentPortHub {
       this.broadcast({ type: "core.ready" });
       return;
     }
-    if (message.type === "settings.changed") return;
+    if (message.type === "settings.changed") {
+      this.broadcast({ type: "core.model_changed", model: message.model, local: message.local });
+      return;
+    }
     if (message.fieldId === undefined) return;
     const owner = this.isRephraseReply(message)
       ? this.rephraseOwner(message.fieldId, message)

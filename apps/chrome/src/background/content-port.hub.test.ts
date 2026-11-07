@@ -119,6 +119,18 @@ describe("ContentPortHub", () => {
     expect(b.received).toEqual([{ type: "core.ready" }]);
   });
 
+  test("broadcasts a model change to every frame", () => {
+    const { hub, a, b } = setup();
+    hub.fromCore({ type: "settings.changed", model: "qwen/qwen3.8-flash", local: false });
+    const changed = {
+      type: "core.model_changed",
+      model: "qwen/qwen3.8-flash",
+      local: false,
+    } as const;
+    expect(a.received).toEqual([changed]);
+    expect(b.received).toEqual([changed]);
+  });
+
   test("sends the current status on attach and broadcasts changes", () => {
     const hub = new ContentPortHub(() => true);
     const early = new FakePort();

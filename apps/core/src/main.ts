@@ -1,4 +1,3 @@
-import type { SettingsView } from "@gc/protocol";
 import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import {
@@ -7,8 +6,8 @@ import {
   TimeoutRetryProvider,
 } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
-import type { Settings } from "./features/settings";
-import { SettingsPageFiles, type TokenSource, WebSocketServer } from "./features/transport";
+import type { ModelConfig, SettingsService } from "./features/settings";
+import { type RuntimePort, SettingsPageFiles, WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
@@ -17,6 +16,11 @@ export type Core = {
   readonly checkService: CheckService;
   readonly dictionary: JsonDictionaryRepository;
   readonly rephraseService: RephraseService;
+  /**
+   * Uses another model from the next call on: both providers are swapped, the sentence cache is
+   * cleared and the new model is warmed up. Calls in flight finish on the old model.
+   */
+  readonly switchModel: (model: ModelConfig) => void;
   /** Loads the model in the background so the first check doesn't wait for it. */
   readonly warmUp: () => Promise<void>;
 };
@@ -30,41 +34,56 @@ const REPHRASE_TIMEOUT_MS = 60_000;
  */
 const RETRY_TIMEOUT_MS = 150_000;
 
-/** Composition root: the only place that wires concrete classes together. */
-export const createCore = (settings: Settings, logger: Logger): Core => {
-  const config = {
-    baseUrl: settings.baseUrl,
-    model: settings.model,
-    apiKey: settings.apiKey,
-    reasoningEffort: settings.reasoningEffort,
-  };
-  // "OpenAI-compatible" is the HTTP format (/v1/chat/completions), not the OpenAI cloud: local
-  // servers (Ollama, LM Studio, llama.cpp) speak it too, so this one adapter covers every model.
-  const check = new SwitchableProvider(
-    new TimeoutRetryProvider(
-      new OpenAiCompatibleProvider(config, logger),
-      RETRY_TIMEOUT_MS,
+/**
+ * One feature's provider stack for a model. "OpenAI-compatible" is the HTTP format
+ * (/v1/chat/completions), not the OpenAI cloud: local servers (Ollama, LM Studio, llama.cpp)
+ * speak it too, so this one adapter covers every model.
+ */
+const providerFor = (model: ModelConfig, logger: Logger, timeoutMs?: number) =>
+  new TimeoutRetryProvider(
+    new OpenAiCompatibleProvider(
+      {
+        baseUrl: model.baseUrl,
+        model: model.model,
+        apiKey: model.apiKey,
+        reasoningEffort: model.reasoningEffort,
+        ...(timeoutMs === undefined ? {} : { timeoutMs }),
+      },
       logger,
     ),
+    RETRY_TIMEOUT_MS,
+    logger,
   );
-  const dictionary = new JsonDictionaryRepository(settings.dictionaryPath);
-  const checkService = new CheckService(check, new CheckCache(), dictionary, logger);
+
+/** Composition root: the only place that wires concrete classes together. */
+export const createCore = (
+  files: { readonly dictionaryPath: string },
+  model: ModelConfig,
+  logger: Logger,
+): Core => {
+  const check = new SwitchableProvider(providerFor(model, logger));
+  const cache = new CheckCache();
+  const dictionary = new JsonDictionaryRepository(files.dictionaryPath);
+  const checkService = new CheckService(check, cache, dictionary, logger);
   // Same endpoint and model as the check, so text goes nowhere new; a tone's reply is longer
   // than a check's, hence its own timeout.
-  const rephrase = new SwitchableProvider(
-    new TimeoutRetryProvider(
-      new OpenAiCompatibleProvider({ ...config, timeoutMs: REPHRASE_TIMEOUT_MS }, logger),
-      RETRY_TIMEOUT_MS,
-      logger,
-    ),
-  );
+  const rephrase = new SwitchableProvider(providerFor(model, logger, REPHRASE_TIMEOUT_MS));
   const rephraseService = new RephraseService(rephrase, logger, new RephraseCache());
+  const warmUp = () => check.warmUp();
+  const switchModel = (next: ModelConfig) => {
+    check.swap(providerFor(next, logger));
+    rephrase.swap(providerFor(next, logger, REPHRASE_TIMEOUT_MS));
+    // Keyed by model already; cleared so a switch back re-checks with fresh eyes too.
+    cache.clear();
+    void warmUp();
+  };
   return {
     providers: { check, rephrase },
     checkService,
     dictionary,
     rephraseService,
-    warmUp: () => check.warmUp(),
+    switchModel,
+    warmUp,
   };
 };
 
@@ -72,9 +91,9 @@ export const createServer = (
   core: Core,
   options: {
     readonly port: number;
-    /** Read on every hello and API call, so `core token --rotate` applies without a restart. */
-    readonly token: TokenSource;
-    readonly view: SettingsView;
+    readonly token: string;
+    readonly settings: SettingsService;
+    readonly runtime: RuntimePort;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;
   },
@@ -83,7 +102,9 @@ export const createServer = (
   new WebSocketServer(
     { port: options.port, token: options.token },
     {
-      settingsView: () => options.view,
+      settingsView: () => options.settings.view(),
+      profiles: options.settings,
+      runtime: options.runtime,
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),

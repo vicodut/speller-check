@@ -18,12 +18,30 @@ export const TransportSettings = z.object({
 });
 export type TransportSettings = z.infer<typeof TransportSettings>;
 
-export const Settings = TransportSettings.extend({
+/** One model setup: where to send requests and how. The env vars or the active profile give it. */
+export const ModelConfig = z.object({
   /** OpenAI-compatible base URL, including the version prefix (e.g. http://127.0.0.1:11434/v1). */
   baseUrl: z.url().transform((url) => url.replace(/\/+$/, "")),
   model: z.string().min(1),
   apiKey: z.string().min(1).optional(),
-  dictionaryPath: z.string().min(1),
   reasoningEffort: ReasoningEffort.optional(),
 });
+export type ModelConfig = z.infer<typeof ModelConfig>;
+
+/** `core check` and the benchmark: the model comes from env vars only. */
+export const Settings = TransportSettings.extend({
+  ...ModelConfig.shape,
+  dictionaryPath: z.string().min(1),
+});
 export type Settings = z.infer<typeof Settings>;
+
+/**
+ * `core serve`: the model comes from the saved profiles, unless `GC_*` env vars give one
+ * (`envModel`), which then overrides them all.
+ */
+export const ServeSettings = TransportSettings.extend({
+  dictionaryPath: z.string().min(1),
+  settingsPath: z.string().min(1),
+  envModel: ModelConfig.nullable(),
+});
+export type ServeSettings = z.infer<typeof ServeSettings>;

@@ -1,9 +1,14 @@
+export { type KeyStore, SecurityKeychain } from "./keychain.repository";
+export { isLocalUrl } from "./profiles.util";
 export {
   defaultDictionaryPath,
   defaultTokenPath,
   type Env,
+  loadServeSettings,
   loadSettings,
   loadTransportSettings,
 } from "./settings.loader";
-export type { Settings, TransportSettings } from "./settings.schema";
+export type { ModelConfig, ServeSettings, Settings, TransportSettings } from "./settings.schema";
+export { SettingsService } from "./settings.service";
+export { SettingsFileRepository } from "./settings-file.repository";
 export { buildSettingsView, settingSources } from "./settings-view.builder";

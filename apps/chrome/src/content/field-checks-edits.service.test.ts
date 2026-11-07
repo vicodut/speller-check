@@ -81,6 +81,15 @@ describe("FieldChecks text edits", () => {
     expect(types(sent)).toEqual(["text.changed", "text.edit", "field.closed"]);
   });
 
+  test("after a model change, the next send is full", () => {
+    const { checks, sent, report } = setup();
+    report(text, "focus");
+    report(`${text}.`);
+    checks.modelChanged();
+    report(`${text}..`);
+    expect(types(sent)).toEqual(["text.changed", "text.edit", "text.changed"]);
+  });
+
   test("after field.closed, core.ready or going over the cap, the next send is full", () => {
     const { checks, sent, field, report } = setup();
     report(text, "focus");

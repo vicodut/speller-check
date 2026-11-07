@@ -10,6 +10,8 @@
   --env-bg: #fff7c2;
   --unset-bg: #f0f0f3;
   --danger: #ce2c31;
+  --saved: #2b9a66;
+  --saved-bg: #e6f6eb;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -23,6 +25,8 @@
     --env-bg: #302008;
     --unset-bg: #212225;
     --danger: #ff9592;
+    --saved: #3dd68c;
+    --saved-bg: #132d21;
   }
 }
 * {
@@ -119,7 +123,138 @@ button:hover {
 code {
   font-family: ui-monospace, SFMono-Regular, monospace;
 }
+.source.saved,
+.kind.local {
+  background: var(--saved-bg);
+  color: var(--saved);
+}
+.kind {
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--env-bg);
+  color: var(--env);
+}
+p.notice {
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  color: var(--danger);
+}
+.profiles {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+}
+.profiles li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-top: 1px solid var(--line);
+}
+.profiles li {
+  flex-wrap: wrap;
+}
+.sent-to {
+  flex-basis: 100%;
+  margin: 0 0 0 1.6rem;
+  color: var(--env);
+  font-size: 12px;
+}
+.has-key {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.key {
+  display: flex;
+  flex: 1;
+  gap: 0.6rem;
+  align-items: center;
+}
+.remove-key {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.profiles li:first-child {
+  border-top: 0;
+}
+.profiles label {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.profiles .model {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.add,
+.field {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+.add span,
+.field label {
+  color: var(--muted);
+}
+.profile-form {
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+.profile-form h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.field label {
+  width: 9rem;
+  flex-shrink: 0;
+}
+input,
+select {
+  font: inherit;
+  flex: 1;
+  min-width: 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+}
+input[type="radio"],
+input[type="checkbox"] {
+  flex: none;
+}
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 @media (max-width: 520px) {
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   dl {
     grid-template-columns: 1fr max-content;
   }
@@ -127,4 +262,53 @@ code {
     grid-column: 1 / -1;
     margin-top: 0.5rem;
   }
+}
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.3rem;
+  vertical-align: middle;
+}
+.dot.ok {
+  background: var(--saved);
+}
+.dot.busy {
+  background: var(--env);
+}
+.dot.off {
+  background: var(--muted);
+}
+.ollama p {
+  margin: 0 0 0.6rem;
+}
+.ollama .hint {
+  color: var(--muted);
+}
+.ollama a {
+  color: var(--accent);
+}
+.models {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.models li {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 12px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.models li.current {
+  border-color: var(--saved);
+  color: var(--saved);
+}
+.models li.none {
+  color: var(--muted);
+  border-style: dashed;
 }

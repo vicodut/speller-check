@@ -28,6 +28,17 @@ export type ContentMessage = z.infer<typeof ContentMessage>;
 export const CoreReadyMessage = z.object({ type: z.literal("core.ready") });
 export type CoreReadyMessage = z.infer<typeof CoreReadyMessage>;
 
+/**
+ * Sent to every port when the core switched model (a settings change): remembered results came
+ * from the old model, so frames forget them and check their focused field again.
+ */
+export const CoreModelChangedMessage = z.object({
+  type: z.literal("core.model_changed"),
+  model: z.string().min(1),
+  local: z.boolean(),
+});
+export type CoreModelChangedMessage = z.infer<typeof CoreModelChangedMessage>;
+
 export const ConnectionStatus = z.enum(["connecting", "ready", "auth_failed", "unreachable"]);
 export type ConnectionStatus = z.infer<typeof ConnectionStatus>;
 
@@ -45,6 +56,7 @@ export const BackgroundMessage = z.discriminatedUnion("type", [
   RephraseDoneMessage,
   ErrorMessage,
   CoreReadyMessage,
+  CoreModelChangedMessage,
   CoreStatusMessage,
 ]);
 export type BackgroundMessage = z.infer<typeof BackgroundMessage>;
