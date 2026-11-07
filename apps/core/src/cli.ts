@@ -1,23 +1,26 @@
 import { runCheck } from "./cli/check.command";
 import { EXIT_USAGE, type ExitCode } from "./cli/exit-code";
 import { runServe } from "./cli/serve.command";
+import { runSettings } from "./cli/settings.command";
 import { runToken } from "./cli/token.command";
 import { Logger } from "./shared/logger";
 
 const USAGE = `Usage:
   core check < text   print issues for stdin as JSON
-  core serve          run the WebSocket server on 127.0.0.1 until SIGINT/SIGTERM
+  core serve          run the server on 127.0.0.1 (WebSocket + settings page) until SIGINT/SIGTERM
+  core settings       open the settings page of the running core in the browser
   core token          print the install token (created on first use)
 
 check and serve require GC_BASE_URL and GC_MODEL
   (GC_API_KEY, GC_DICTIONARY_PATH, GC_REASONING_EFFORT optional).
-serve and token read GC_PORT (default 7341) and GC_TOKEN_PATH (optional).
+serve, settings and token read GC_PORT (default 7341) and GC_TOKEN_PATH (optional).
 Logs go to stderr.
 `;
 
 const commands: Record<string, (logger: Logger) => Promise<ExitCode>> = {
   check: runCheck,
   serve: runServe,
+  settings: runSettings,
   token: runToken,
 };
 

@@ -11,6 +11,9 @@
       "path": "apps/chrome"
     },
     {
+      "path": "apps/settings-web"
+    },
+    {
       "path": "scripts"
     }
   ]

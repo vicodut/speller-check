@@ -4,7 +4,7 @@ import { JsonDictionaryRepository } from "./features/dictionary";
 import { OpenAiCompatibleProvider, TimeoutRetryProvider } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { Settings } from "./features/settings";
-import { WebSocketServer } from "./features/transport";
+import { SettingsPageFiles, WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
@@ -51,13 +51,20 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
 
 export const createServer = (
   core: Core,
-  options: { readonly port: number; readonly token: string; readonly view: SettingsView },
+  options: {
+    readonly port: number;
+    readonly token: string;
+    readonly view: SettingsView;
+    /** Folder of the built settings page (`apps/settings-web/dist`). */
+    readonly settingsPageDir: string;
+  },
   logger: Logger,
 ): WebSocketServer =>
   new WebSocketServer(
     { port: options.port, token: options.token },
     {
       settingsView: () => options.view,
+      settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),
       createRephraser: (publish) => new RephraseJobs(core.rephraseService, publish),
