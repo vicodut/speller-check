@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { FeatureSettingsView } from "@gc/protocol";
-import { activateProfile, fetchSettings, saveProfile } from "./settings-api.client";
+import { activateProfile, fetchSettings, rotateToken, saveProfile } from "./settings-api.client";
 
 const feature: FeatureSettingsView = {
   baseUrl: { value: "http://127.0.0.1:11434/v1", source: "env", envVar: "GC_BASE_URL" },
@@ -12,6 +12,7 @@ const view = { check: feature, rephrase: feature };
 
 const profiles = { profiles: [], activeProfileId: null, lockedByEnv: true };
 const seen: string[] = [];
+const NEW_TOKEN = "n".repeat(43);
 
 /** Answers like the core's settings API: the view for the right token, else its error body. */
 const server = Bun.serve({
@@ -20,6 +21,10 @@ const server = Bun.serve({
   fetch: (request) => {
     const path = new URL(request.url).pathname;
     if (path === "/broken/api/settings") return Response.json({ check: "nope" });
+    if (path === "/api/token/rotate") {
+      if (request.method !== "POST") return Response.json({ error: "method_not_allowed" });
+      return Response.json({ token: NEW_TOKEN });
+    }
     if (path.startsWith("/api/profiles")) {
       seen.push(`${request.method} ${path} ${request.headers.get("content-type") ?? "-"}`);
       if (path === "/api/profiles/ghost/activate")
@@ -80,5 +85,11 @@ describe("profile calls", () => {
       ok: false,
       error: "profile_not_found",
     });
+  });
+});
+
+describe("rotateToken", () => {
+  test("posts to the rotate route and returns the new token", async () => {
+    expect(await rotateToken("good", base)).toEqual({ ok: true, value: { token: NEW_TOKEN } });
   });
 });

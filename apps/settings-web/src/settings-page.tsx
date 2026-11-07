@@ -1,5 +1,6 @@
 import type { ProfileSave, ProfilesView } from "@gc/protocol";
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { ExtensionToken } from "./extension-token";
 import { FeatureSettings } from "./feature-settings";
 import { OllamaPanel } from "./ollama-panel";
 import { useOllamaRuntime } from "./ollama-runtime.hook";
@@ -13,6 +14,7 @@ import {
   fetchProfiles,
   fetchRuntime,
   fetchSettings,
+  rotateToken,
   saveProfile,
   startOllama,
 } from "./settings-api.client";
@@ -34,6 +36,7 @@ const ERROR_TEXT: Record<string, string> = {
   settings_write_failed: "The core couldn't save the settings file.",
   pull_in_progress: "Another model is being pulled. Wait for it, or cancel it.",
   ollama_unreachable: "Ollama isn't answering, so nothing can be pulled.",
+  token_read_failed: "The core couldn't write a new token, so the old one still works.",
 };
 const errorText = (code: string) => ERROR_TEXT[code] ?? `Something went wrong (${code}).`;
 
@@ -51,8 +54,15 @@ const loadAll = async (token: string): Promise<SettingsPageEvent> => {
 };
 
 /** The model connection: the saved profiles, the one in use, and where each value comes from. */
-export const SettingsPage = ({ token }: { token: string | null }) => {
+type Props = {
+  token: string | null;
+  /** Keeps a rotated token for the next visit. */
+  onTokenChange: (token: string) => void;
+};
+
+export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
   const [state, dispatch] = useReducer(settingsPageReducer, initialState);
+  const [token, setToken] = useState(initialToken);
 
   useEffect(() => {
     if (state.phase !== "loading") return;
@@ -70,6 +80,21 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
     dispatch({ type: "working" });
     const runtime = await startOllama(token);
     dispatch(runtime.ok ? await loadAll(token) : { type: "actionFailed", error: runtime.error });
+  };
+
+  /** The old token stops working as soon as the core answers, so the page switches at once. */
+  const onRotateToken = async (): Promise<boolean> => {
+    if (!token) return false;
+    dispatch({ type: "working" });
+    const rotated = await rotateToken(token);
+    if (!rotated.ok) {
+      dispatch({ type: "actionFailed", error: rotated.error });
+      return false;
+    }
+    setToken(rotated.value.token);
+    onTokenChange(rotated.value.token);
+    dispatch(await loadAll(rotated.value.token));
+    return true;
   };
 
   /** Runs a profile change, then reloads both views (activating changes the settings in effect). */
@@ -135,6 +160,7 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
           )}
           <FeatureSettings title="Check" view={state.view.check} />
           <FeatureSettings title="Rephrase" view={state.view.rephrase} />
+          {token && <ExtensionToken token={token} busy={state.busy} onRotate={onRotateToken} />}
         </>
       )}
     </main>

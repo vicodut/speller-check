@@ -1,12 +1,18 @@
-import type { ApiError, SettingsView } from "@gc/protocol";
-import type { ErrorCode } from "../../shared/errors";
+import type { ApiError, SettingsView, TokenView } from "@gc/protocol";
+import type { AppError, ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
+import type { Result } from "../../shared/result";
 import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
 import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
 import { type ProbePort, routeProbe } from "./probe-routes.handler";
 import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import { type RuntimePort, routeRuntime } from "./runtime-routes.handler";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
+
+/** The install token, as `core serve` keeps it: rotating also ends every authenticated connection. */
+export type TokenPort = {
+  rotate(): Promise<Result<string, AppError>>;
+};
 
 /** What the HTTP side needs from the rest of the core, wired in main.ts. */
 export type HttpDeps = {
@@ -18,6 +24,8 @@ export type HttpDeps = {
   readonly probe?: ProbePort | undefined;
   /** The local runtime; absent in tests that don't use it. */
   readonly runtime?: RuntimePort | undefined;
+  /** Rotates the install token; absent in tests that don't use it. */
+  readonly tokens?: TokenPort | undefined;
   /** The built settings page; absent in tests that only use the API. */
   readonly settingsPage?: SettingsPageFiles | undefined;
 };
@@ -78,6 +86,8 @@ export class HttpApi {
       if (request.method !== "GET") return this.reject("method_not_allowed", 405);
       return json(this.deps.settingsView());
     }
+    if (pathname === "/api/token/rotate" && this.deps.tokens)
+      return this.rotateToken(request, this.deps.tokens);
     const routed =
       (this.deps.runtime && routeRuntime(request, pathname, this.deps.runtime)) ||
       (this.deps.probe && routeProbe(request, pathname, this.deps.probe)) ||
@@ -86,6 +96,16 @@ export class HttpApi {
     const result = await routed;
     if (result.ok) return json(result.value);
     return this.reject(result.error.code, STATUS[result.error.code] ?? 500);
+  }
+
+  /** `POST /api/token/rotate`: answers the new token; the one this request used stops working. */
+  private async rotateToken(request: Request, tokens: TokenPort): Promise<Response> {
+    if (request.method !== "POST") return this.reject("method_not_allowed", 405);
+    const rotated = await tokens.rotate();
+    if (!rotated.ok) return this.reject(rotated.error.code, 500);
+    this.logger.info({ event: "token.rotated" });
+    const body: TokenView = { token: rotated.value };
+    return json(body);
   }
 
   private async page(request: Request, pathname: string): Promise<Response> {

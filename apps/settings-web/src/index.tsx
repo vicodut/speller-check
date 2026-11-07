@@ -13,16 +13,18 @@ const stored = (): string | null => {
   }
 };
 
-const { token, clearHash } = takeToken(location.hash, stored());
-if (token) {
+const store = (token: string): void => {
   try {
     localStorage.setItem(STORAGE_KEY, token);
   } catch {
     // Not stored: this tab still works, a reload needs `core settings` again.
   }
-}
+};
+
+const { token, clearHash } = takeToken(location.hash, stored());
+if (token) store(token);
 // Out of the address bar (and most history) right away.
 if (clearHash) history.replaceState(null, "", location.pathname + location.search);
 
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<SettingsPage token={token} />);
+if (root) createRoot(root).render(<SettingsPage token={token} onTokenChange={store} />);

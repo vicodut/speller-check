@@ -57,5 +57,6 @@ export {
   RuntimeView,
   SettingSource,
   SettingsView,
+  TokenView,
 } from "./settings.dto";
 export { isTextTooLong, MAX_TEXT_LENGTH } from "./text-limits";

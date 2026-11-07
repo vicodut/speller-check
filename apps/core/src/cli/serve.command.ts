@@ -10,7 +10,11 @@ import {
   SettingsService,
   settingSources,
 } from "../features/settings";
-import { InstallTokenRepository, type WebSocketServer } from "../features/transport";
+import {
+  InstallTokenRepository,
+  InstallTokenWatcher,
+  type WebSocketServer,
+} from "../features/transport";
 import { type Core, createCore, createServer } from "../main";
 import type { Logger } from "../shared/logger";
 import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
@@ -61,7 +65,8 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_USAGE;
   }
   const tokenPath = settings.value.tokenPath;
-  const token = await new InstallTokenRepository(tokenPath).loadOrCreate();
+  const tokens = new InstallTokenRepository(tokenPath);
+  const token = await tokens.loadOrCreate();
   if (!token.ok) {
     logger.error({ event: "cli.failed", code: token.error.code });
     return EXIT_FAILURE;
@@ -79,12 +84,15 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   logger.info({ event: "settings.loaded", sources: settingSources(service.value.view().check) });
   const model = await service.value.current();
   const core = createCore(settings.value, model, logger);
+  const watcher = new InstallTokenWatcher(tokenPath, token.value);
   const runtime = new OllamaRuntime(new OllamaClient(), new OllamaProcessLauncher(), logger);
   const server = createServer(
     core,
     {
       port: settings.value.port,
-      token: token.value,
+      // Re-read when the file changes, so `core token --rotate` applies without a restart.
+      token: () => watcher.current(),
+      rotateToken: () => tokens.rotate(),
       settings: service.value,
       runtime,
       settingsPageDir: SETTINGS_PAGE_DIR,

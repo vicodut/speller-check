@@ -71,6 +71,11 @@ export class WebSocketServer {
     for (const handler of this.handlers) handler.notify(message);
   }
 
+  /** Ends every authenticated connection (after a token rotation): each must hello again. */
+  revokeAll(): void {
+    for (const handler of this.handlers) handler.revoke();
+  }
+
   stop(): void {
     this.server?.stop(true);
     this.server = undefined;

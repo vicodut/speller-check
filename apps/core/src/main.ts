@@ -8,8 +8,15 @@ import {
 } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { ModelConfig, SettingsService } from "./features/settings";
-import { type RuntimePort, SettingsPageFiles, WebSocketServer } from "./features/transport";
+import {
+  type RuntimePort,
+  SettingsPageFiles,
+  type TokenSource,
+  WebSocketServer,
+} from "./features/transport";
+import type { AppError } from "./shared/errors";
 import type { Logger } from "./shared/logger";
+import type { Result } from "./shared/result";
 
 export type Core = {
   /** Each feature's provider; swapping one applies to its next call (settings changes). */
@@ -88,19 +95,29 @@ export const createCore = (
   };
 };
 
+/**
+ * The WebSocket server and settings page. `token` is read on every hello and API call;
+ * `rotateToken` writes a new one, after which every connected client must hello again.
+ */
 export const createServer = (
   core: Core,
   options: {
     readonly port: number;
-    readonly token: string;
+    readonly token: TokenSource;
+    readonly rotateToken: () => Promise<Result<string, AppError>>;
     readonly settings: SettingsService;
     readonly runtime: RuntimePort;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;
   },
   logger: Logger,
-): WebSocketServer =>
-  new WebSocketServer(
+): WebSocketServer => {
+  const rotate = async () => {
+    const rotated = await options.rotateToken();
+    if (rotated.ok) server.revokeAll();
+    return rotated;
+  };
+  const server = new WebSocketServer(
     { port: options.port, token: options.token },
     {
       settingsView: () => options.settings.view(),
@@ -110,6 +127,7 @@ export const createServer = (
         logger,
       ),
       runtime: options.runtime,
+      tokens: { rotate },
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
       addDictionaryTerm: (term) => core.dictionary.add(term),
@@ -117,3 +135,5 @@ export const createServer = (
     },
     logger,
   );
+  return server;
+};

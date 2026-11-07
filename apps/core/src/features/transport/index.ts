@@ -1,4 +1,5 @@
 export type { TokenSource } from "./connection-guard.service";
+export type { TokenPort } from "./http-api.handler";
 export { InstallTokenRepository } from "./install-token.repository";
 export { InstallTokenWatcher } from "./install-token.watcher";
 export type { ProbePort } from "./probe-routes.handler";

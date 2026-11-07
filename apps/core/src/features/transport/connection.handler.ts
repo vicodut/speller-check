@@ -65,6 +65,11 @@ export class ConnectionHandler {
     if (this.routes && !this.closed) this.send(message);
   }
 
+  /** The install token changed: an authenticated client is told `auth_failed` and closed. */
+  revoke(): void {
+    if (this.routes) this.reject();
+  }
+
   /** Called when the socket closes, whoever closed it. */
   dispose(): void {
     this.closed = true;
