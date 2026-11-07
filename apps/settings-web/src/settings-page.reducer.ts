@@ -1,7 +1,30 @@
 import type { ProfileInput, ProfilesView, SettingsView } from "@gc/protocol";
 
+/**
+ * The key part of the form. `typed`: a new key, sent once on save and never shown back.
+ * `saved`: the profile already has one. `remove`: delete the saved one.
+ */
+export type KeyField = {
+  readonly typed: string;
+  readonly remove: boolean;
+  readonly saved: boolean;
+};
+
 /** The add/edit form: `id` null when adding. */
-export type ProfileForm = { readonly id: string | null; readonly draft: ProfileInput };
+export type ProfileForm = {
+  readonly id: string | null;
+  readonly draft: ProfileInput;
+  readonly key: KeyField;
+};
+
+/** What a save sends for the key: a string sets it, null removes it, undefined keeps it. */
+export const keyChange = (key: KeyField): string | null | undefined => {
+  const typed = key.typed.trim();
+  if (typed) return typed;
+  return key.remove ? null : undefined;
+};
+
+const NO_KEY: KeyField = { typed: "", remove: false, saved: false };
 
 type Ready = {
   readonly phase: "ready";
@@ -27,6 +50,8 @@ export type SettingsPageEvent =
   | { readonly type: "add"; readonly input: ProfileInput }
   | { readonly type: "edit"; readonly id: string }
   | { readonly type: "draft"; readonly field: keyof ProfileInput; readonly value: string | null }
+  | { readonly type: "key"; readonly typed: string }
+  | { readonly type: "removeKey"; readonly remove: boolean }
   | { readonly type: "cancel" }
   | { readonly type: "working" }
   | { readonly type: "actionFailed"; readonly error: string };
@@ -36,15 +61,19 @@ export const initialState: SettingsPageState = { phase: "loading" };
 const editForm = (state: Ready, id: string): ProfileForm | null => {
   const profile = state.profiles.profiles.find((p) => p.id === id);
   if (!profile) return null;
-  const { name, baseUrl, model, reasoningEffort } = profile;
-  return { id, draft: { name, baseUrl, model, reasoningEffort } };
+  const { name, baseUrl, model, reasoningEffort, hasKey } = profile;
+  return {
+    id,
+    draft: { name, baseUrl, model, reasoningEffort },
+    key: { ...NO_KEY, saved: hasKey },
+  };
 };
 
 /** Events on a loaded page; ignored in other phases. */
 const onReady = (state: Ready, event: SettingsPageEvent): Ready => {
   switch (event.type) {
     case "add":
-      return { ...state, form: { id: null, draft: event.input }, notice: null };
+      return { ...state, form: { id: null, draft: event.input, key: NO_KEY }, notice: null };
     case "edit":
       return { ...state, form: editForm(state, event.id), notice: null };
     case "draft": {
@@ -52,6 +81,20 @@ const onReady = (state: Ready, event: SettingsPageEvent): Ready => {
       const draft = { ...state.form.draft, [event.field]: event.value };
       return { ...state, form: { ...state.form, draft } };
     }
+    case "key":
+      return state.form
+        ? {
+            ...state,
+            form: { ...state.form, key: { ...state.form.key, typed: event.typed, remove: false } },
+          }
+        : state;
+    case "removeKey":
+      return state.form
+        ? {
+            ...state,
+            form: { ...state.form, key: { ...state.form.key, typed: "", remove: event.remove } },
+          }
+        : state;
     case "cancel":
       return { ...state, form: null, notice: null };
     case "working":

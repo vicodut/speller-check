@@ -1,6 +1,7 @@
-import type { ProfileInput, ProfilesView, SettingsView } from "@gc/protocol";
+import type { ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import { err, ok, type Result } from "../../shared/result";
+import type { KeyStore } from "./keychain.repository";
 import {
   activateProfile,
   activeProfile,
@@ -26,10 +27,18 @@ const toConfig = (p: Profile): ModelConfig => ({
   ...(p.reasoningEffort ? { reasoningEffort: p.reasoningEffort } : {}),
 });
 
+/** Which profiles have a key in the Keychain; the keys themselves aren't kept. */
+const keyedIds = async (keys: KeyStore, file: SettingsFile): Promise<Set<string>> => {
+  const found = await Promise.all(
+    file.profiles.map(async (p) => [p.id, await keys.get(p.id)] as const),
+  );
+  return new Set(found.flatMap(([id, key]) => (key.ok && key.value ? [id] : [])));
+};
+
 /**
- * The model settings the core runs with: the saved profiles, or a locked "Environment" model
- * when `GC_*` env vars give one. Every change is saved first; a change to the model in use
- * then tells the listeners (which swap providers and notify clients).
+ * The model settings the core runs with: the saved profiles (keys in the Keychain), or a locked
+ * "Environment" model when `GC_*` env vars give one. Every change is saved first; a change to the
+ * model in use then tells the listeners (which swap providers and notify clients).
  */
 export class SettingsService {
   private readonly listeners: ModelListener[] = [];
@@ -37,6 +46,8 @@ export class SettingsService {
   private constructor(
     private file: SettingsFile,
     private readonly store: Store,
+    private readonly keys: KeyStore,
+    private readonly keyed: Set<string>,
     private readonly env: Env,
     private readonly envModel: ModelConfig | null,
     private readonly newId: () => string,
@@ -45,6 +56,7 @@ export class SettingsService {
   /** Loads the saved profiles, creating and saving the first-run "Local" one if there are none. */
   static async open(
     store: Store,
+    keys: KeyStore,
     env: Env,
     envModel: ModelConfig | null,
     newId: () => string = () => crypto.randomUUID(),
@@ -56,18 +68,23 @@ export class SettingsService {
       const saved = await store.save(file);
       if (!saved.ok) return saved;
     }
-    return ok(new SettingsService(file, store, env, envModel, newId));
+    const keyed = await keyedIds(keys, file);
+    return ok(new SettingsService(file, store, keys, keyed, env, envModel, newId));
   }
 
-  /** The model in use now: the env one if given, else the active profile's. */
-  current(): ModelConfig {
-    return this.envModel ?? toConfig(activeProfile(this.file));
+  /** The model in use now: the env one if given, else the active profile's with its key. */
+  async current(): Promise<ModelConfig> {
+    if (this.envModel) return this.envModel;
+    const profile = activeProfile(this.file);
+    const key = this.keyed.has(profile.id) ? await this.keys.get(profile.id) : null;
+    const apiKey = key?.ok ? key.value : null;
+    return { ...toConfig(profile), ...(apiKey ? { apiKey } : {}) };
   }
 
   view(): SettingsView {
-    return this.envModel
-      ? buildSettingsView(this.env, this.envModel)
-      : profileSettingsView(activeProfile(this.file));
+    if (this.envModel) return buildSettingsView(this.env, this.envModel);
+    const profile = activeProfile(this.file);
+    return profileSettingsView(profile, this.keyed.has(profile.id));
   }
 
   profiles(): ProfilesView {
@@ -76,6 +93,7 @@ export class SettingsService {
         ...p,
         local: isLocalUrl(p.baseUrl),
         builtIn: p.id === this.file.builtInProfileId,
+        hasKey: this.keyed.has(p.id),
       })),
       activeProfileId: this.envModel ? null : this.file.activeProfileId,
       lockedByEnv: this.envModel !== null,
@@ -86,34 +104,77 @@ export class SettingsService {
     this.listeners.push(listener);
   }
 
-  create(input: ProfileInput): Promise<Result<ProfilesView, AppError>> {
-    return this.commit(ok(addProfile(this.file, input, this.newId())));
+  /** The key is stored first: a profile is never saved claiming a key the Keychain refused. */
+  async create({ apiKey, ...input }: ProfileSave): Promise<Result<ProfilesView, AppError>> {
+    const id = this.newId();
+    const key = await this.applyKey(id, apiKey);
+    if (!key.ok) return key;
+    const result = await this.commit(ok(addProfile(this.file, input, id)), null);
+    if (!result.ok && apiKey) await this.applyKey(id, null);
+    return result;
   }
 
-  update(id: string, input: ProfileInput): Promise<Result<ProfilesView, AppError>> {
-    return this.commit(updateProfile(this.file, id, input));
+  async update(
+    id: string,
+    { apiKey, ...input }: ProfileSave,
+  ): Promise<Result<ProfilesView, AppError>> {
+    const next = updateProfile(this.file, id, input);
+    if (!next.ok) return next;
+    const key = await this.applyKey(id, apiKey);
+    if (!key.ok) return key;
+    return this.commit(next, apiKey === undefined ? null : id);
   }
 
-  remove(id: string): Promise<Result<ProfilesView, AppError>> {
-    return this.commit(removeProfile(this.file, id));
+  /** Deleting a profile deletes its Keychain item too. */
+  async remove(id: string): Promise<Result<ProfilesView, AppError>> {
+    const result = await this.commit(removeProfile(this.file, id), null);
+    if (result.ok && this.keyed.has(id)) {
+      await this.applyKey(id, null);
+      return ok(this.profiles());
+    }
+    return result;
   }
 
   /** Refused while env vars give the model: the page must not claim a profile is in use. */
   activate(id: string): Promise<Result<ProfilesView, AppError>> {
     if (this.envModel) return Promise.resolve(err(appError("settings_locked")));
-    return this.commit(activateProfile(this.file, id));
+    return this.commit(activateProfile(this.file, id), null);
   }
 
+  /** A string sets or replaces the key, null removes it, undefined leaves it. */
+  private async applyKey(
+    id: string,
+    apiKey: string | null | undefined,
+  ): Promise<Result<void, AppError>> {
+    if (apiKey === undefined) return ok(undefined);
+    const result = apiKey === null ? await this.keys.remove(id) : await this.keys.set(id, apiKey);
+    if (result.ok) {
+      if (apiKey === null) this.keyed.delete(id);
+      else this.keyed.add(id);
+    }
+    return result;
+  }
+
+  /** `keyChanged`: the profile whose key just changed; the model changes if it's the active one. */
   private async commit(
     next: Result<SettingsFile, AppError>,
+    keyChanged: string | null,
   ): Promise<Result<ProfilesView, AppError>> {
     if (!next.ok) return next;
-    const before = JSON.stringify(this.current());
+    const before = JSON.stringify(this.inUse());
     const saved = await this.store.save(next.value);
     if (!saved.ok) return saved;
     this.file = next.value;
-    const after = this.current();
-    if (JSON.stringify(after) !== before) for (const listener of this.listeners) listener(after);
+    const keyInUse = !this.envModel && keyChanged === this.file.activeProfileId;
+    if (JSON.stringify(this.inUse()) !== before || keyInUse) {
+      const config = await this.current();
+      for (const listener of this.listeners) listener(config);
+    }
     return ok(this.profiles());
+  }
+
+  /** The model in use without its key, to tell whether a change touched it. */
+  private inUse(): ModelConfig {
+    return this.envModel ?? toConfig(activeProfile(this.file));
   }
 }

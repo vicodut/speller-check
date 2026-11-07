@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { FeatureSettingsView, ProfilesView } from "@gc/protocol";
-import { initialState, type SettingsPageState, settingsPageReducer } from "./settings-page.reducer";
+import {
+  initialState,
+  keyChange,
+  type SettingsPageState,
+  settingsPageReducer,
+} from "./settings-page.reducer";
 
 const feature: FeatureSettingsView = {
   baseUrl: { value: "http://127.0.0.1:11434/v1", source: "saved" },
@@ -17,6 +22,7 @@ const local = {
   reasoningEffort: "none" as const,
   local: true,
   builtIn: true,
+  hasKey: false,
 };
 const profiles: ProfilesView = { profiles: [local], activeProfileId: "p1", lockedByEnv: false };
 const draft = { name: "Cloud", baseUrl: "https://x.ai/v1", model: "m", reasoningEffort: null };
@@ -75,5 +81,20 @@ describe("settingsPageReducer", () => {
   test("events that need loaded data are ignored while loading", () => {
     const loading: SettingsPageState = initialState;
     expect(settingsPageReducer(loading, { type: "edit", id: "p1" })).toBe(loading);
+  });
+
+  test("a typed key is kept apart from the draft; removing a saved key is a separate choice", () => {
+    const editing = settingsPageReducer(ready, { type: "edit", id: "p1" });
+    expect(editing).toMatchObject({ form: { key: { typed: "", remove: false, saved: false } } });
+    const typed = settingsPageReducer(editing, { type: "key", typed: "sk-1" });
+    expect(typed).toMatchObject({ form: { key: { typed: "sk-1" } } });
+    const removing = settingsPageReducer(typed, { type: "removeKey", remove: true });
+    expect(removing).toMatchObject({ form: { key: { typed: "", remove: true } } });
+  });
+
+  test("keyChange: typed sets, remove removes, nothing keeps", () => {
+    expect(keyChange({ typed: " sk-1 ", remove: false, saved: true })).toBe("sk-1");
+    expect(keyChange({ typed: "", remove: true, saved: true })).toBeNull();
+    expect(keyChange({ typed: "", remove: false, saved: true })).toBeUndefined();
   });
 });

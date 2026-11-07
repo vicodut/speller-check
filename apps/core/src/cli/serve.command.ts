@@ -4,6 +4,7 @@ import {
   isLocalUrl,
   loadServeSettings,
   type ModelConfig,
+  SecurityKeychain,
   SettingsFileRepository,
   SettingsService,
   settingSources,
@@ -51,6 +52,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   }
   const service = await SettingsService.open(
     new SettingsFileRepository(settings.value.settingsPath),
+    new SecurityKeychain(),
     process.env,
     settings.value.envModel,
   );
@@ -59,7 +61,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_FAILURE;
   }
   logger.info({ event: "settings.loaded", sources: settingSources(service.value.view().check) });
-  const core = createCore(settings.value, service.value.current(), logger);
+  const core = createCore(settings.value, await service.value.current(), logger);
   const server = createServer(
     core,
     {

@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "cli": "bun src/cli.ts",
-    "test:models": "bun test/models/run-fixtures.ts"
+    "test:models": "bun test/models/run-fixtures.ts",
+    "test:keychain": "bun test/keychain/security-keychain.check.ts"
   },
   "dependencies": {
     "@gc/protocol": "workspace:*",

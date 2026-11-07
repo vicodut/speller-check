@@ -1,53 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import { appError } from "../../shared/errors";
-import { err, ok, type Result } from "../../shared/result";
+import { err } from "../../shared/result";
 import { firstRunFile } from "./profiles.util";
-import type { ModelConfig } from "./settings.schema";
-import { SettingsService } from "./settings.service";
-import type { SettingsFile } from "./settings-file.schema";
-
-/** An in-memory settings file; `failSave` makes the next save fail. */
-const memoryStore = (initial: SettingsFile | null = null) => {
-  const store = {
-    file: initial,
-    saves: 0,
-    failSave: false,
-    load: async (): Promise<Result<SettingsFile | null, never>> => ok(store.file),
-    save: async (file: SettingsFile) => {
-      if (store.failSave) return err(appError("settings_write_failed"));
-      store.saves++;
-      store.file = file;
-      return ok(undefined);
-    },
-  };
-  return store;
-};
-
-const ids = () => {
-  let n = 0;
-  return () => `p${++n}`;
-};
-
-const cloud = {
-  name: "Cloud",
-  baseUrl: "https://openrouter.ai/api/v1",
-  model: "qwen/qwen3.8-flash",
-  reasoningEffort: null,
-};
-
-const open = async (store = memoryStore(), envModel: ModelConfig | null = null, env = {}) => {
-  const opened = await SettingsService.open(store, env, envModel, ids());
-  if (!opened.ok) throw new Error("open failed");
-  const changes: ModelConfig[] = [];
-  opened.value.onChange((config) => changes.push(config));
-  return { service: opened.value, store, changes };
-};
+import { cloud, memoryStore, open } from "./settings-service.fixture";
 
 describe("SettingsService", () => {
   test("first run saves a Local profile and uses it", async () => {
     const { service, store } = await open();
     expect(store.saves).toBe(1);
-    expect(service.current()).toEqual({
+    expect(await service.current()).toEqual({
       baseUrl: "http://127.0.0.1:11434/v1",
       model: "qwen3:8b",
       reasoningEffort: "none",
@@ -124,7 +85,7 @@ describe("SettingsService", () => {
     const envModel = { baseUrl: "https://openrouter.ai/api/v1", model: "env-model" };
     const env = { GC_BASE_URL: envModel.baseUrl, GC_MODEL: envModel.model };
     const { service, changes } = await open(memoryStore(), envModel, env);
-    expect(service.current()).toEqual(envModel);
+    expect(await service.current()).toEqual(envModel);
     expect(service.view().check.model).toEqual({
       value: "env-model",
       source: "env",

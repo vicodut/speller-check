@@ -25,6 +25,7 @@ export type ErrorCode =
   | "settings_locked"
   | "settings_read_failed"
   | "settings_write_failed"
+  | "keychain_failed"
   | "body_invalid"
   | "rephrase_no_sentence"
   | "rephrase_no_valid_version"
