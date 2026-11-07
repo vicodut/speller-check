@@ -65,6 +65,7 @@ export type LogEvent =
   | "ollama.pull_done"
   | "ollama.pull_failed"
   | "ollama.pull_cancelled"
+  | "token.rotated"
   | "cli.failed";
 
 /**

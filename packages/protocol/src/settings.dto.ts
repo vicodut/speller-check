@@ -118,3 +118,7 @@ export const RuntimeView = z.strictObject({
   }),
 });
 export type RuntimeView = z.infer<typeof RuntimeView>;
+
+/** `POST /api/token/rotate`: the new install token, for the page to keep and the user to paste. */
+export const TokenView = z.strictObject({ token: z.string().regex(/^[A-Za-z0-9_-]{32,}$/) });
+export type TokenView = z.infer<typeof TokenView>;

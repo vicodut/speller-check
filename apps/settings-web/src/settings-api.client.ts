@@ -8,6 +8,7 @@ import {
   SettingsView,
   type TestProbe,
   TestResult,
+  TokenView,
 } from "@gc/protocol";
 import type { z } from "zod";
 
@@ -100,3 +101,7 @@ export const pullModel = (token: string, model: string, base = "") =>
 /** Cancels the running pull; Ollama keeps what it downloaded, so a later pull resumes. */
 export const cancelPull = (token: string, base = "") =>
   call(RuntimeView, { token, path: PULL_PATH, method: "DELETE", base });
+
+/** Replaces the install token; `token` stops working once this answers. */
+export const rotateToken = (token: string, base = "") =>
+  call(TokenView, { token, path: "/api/token/rotate", method: "POST", base });
