@@ -2,9 +2,9 @@ import type { ErrorCode } from "./errors";
 
 /** Settings whose source can be logged, and the sources a log line may name. */
 const SOURCED_SETTINGS = ["baseUrl", "model", "apiKey", "reasoningEffort"] as const;
-const SOURCES = new Set(["env", "default", "unset"]);
+const SOURCES = new Set(["env", "saved", "default", "unset"]);
 type SourcedSetting = (typeof SOURCED_SETTINGS)[number];
-type Source = "env" | "default" | "unset";
+type Source = "env" | "saved" | "default" | "unset";
 
 export type LogEvent =
   | "check.start"
@@ -49,6 +49,7 @@ export type LogEvent =
   | "rephrase.tone_failed"
   | "rephrase.tone_cached"
   | "settings.loaded"
+  | "settings.switched"
   | "http.rejected"
   | "cli.failed";
 

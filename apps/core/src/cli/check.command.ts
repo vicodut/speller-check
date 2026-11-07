@@ -12,7 +12,9 @@ export const runCheck = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_USAGE;
   }
   const text = await Bun.stdin.text();
-  const result = await createCore(settings.value, logger).checkService.check({ text });
+  const result = await createCore(settings.value, settings.value, logger).checkService.check({
+    text,
+  });
   if (!result.ok) {
     logger.error({ event: "cli.failed", code: result.error.code });
     return EXIT_FAILURE;

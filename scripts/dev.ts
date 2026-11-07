@@ -1,4 +1,5 @@
-// Dev launcher: starts Ollama when the core points at it and it isn't running, checks the model
+// Dev launcher: starts Ollama when the model in use (GC_* env vars, else the active saved profile)
+// points at it and it isn't running, checks the model
 // is pulled, builds the settings page, then runs `core serve`. Ctrl-C stops the core, and Ollama
 // if this script started it.
 // Prints status lines only, never text.
@@ -13,16 +14,31 @@ const READY_TIMEOUT_MS = 30_000;
 
 const say = (line: string) => process.stdout.write(`[dev] ${line}\n`);
 
-/** Env for the core: Ollama + qwen3:8b with thinking off unless the caller chose otherwise. */
-const coreEnv = (): Record<string, string | undefined> => {
-  const env: Record<string, string | undefined> = { ...process.env };
-  env.GC_BASE_URL ||= `http://127.0.0.1:${OLLAMA_PORT}/v1`;
-  if (!env.GC_MODEL) {
-    env.GC_MODEL = DEFAULT_MODEL;
-    // qwen3 thinks for minutes on CPU; only defaulted together with the model it's tuned for.
-    env.GC_REASONING_EFFORT ||= "none";
+type ModelInUse = { baseUrl: string; model: string };
+
+const settingsPath = (env: NodeJS.ProcessEnv): string =>
+  env.GC_SETTINGS_PATH ||
+  join(homedir(), "Library", "Application Support", "GrammarChecker", "settings.json");
+
+/**
+ * The model the core will start with: the GC_* env vars when set (they override profiles),
+ * else the active saved profile, else the first-run Local profile (Ollama + qwen3:8b).
+ */
+const modelInUse = async (env: NodeJS.ProcessEnv): Promise<ModelInUse> => {
+  if (env.GC_BASE_URL || env.GC_MODEL) {
+    return { baseUrl: env.GC_BASE_URL ?? "", model: env.GC_MODEL ?? "" };
   }
-  return env;
+  try {
+    const file = (await Bun.file(settingsPath(env)).json()) as {
+      activeProfileId?: string;
+      profiles?: { id?: string; baseUrl?: string; model?: string }[];
+    };
+    const active = file.profiles?.find((p) => p.id === file.activeProfileId);
+    if (active?.baseUrl && active.model) return { baseUrl: active.baseUrl, model: active.model };
+  } catch {
+    // No settings file yet: the core creates the Local profile on first run.
+  }
+  return { baseUrl: `http://127.0.0.1:${OLLAMA_PORT}/v1`, model: DEFAULT_MODEL };
 };
 
 const isLocalOllama = (baseUrl: string): boolean => {
@@ -83,15 +99,14 @@ const ensureOllama = async (
 };
 
 const run = async (): Promise<number> => {
-  const env = coreEnv();
-  const baseUrl = env.GC_BASE_URL ?? "";
+  const { baseUrl, model } = await modelInUse(process.env);
   let ollama: Subprocess | null = null;
   if (isLocalOllama(baseUrl)) {
     const ready = await ensureOllama(new URL(baseUrl).origin);
     if (!ready) return 1;
     ollama = ready.started;
-    if (!ready.models.includes(env.GC_MODEL ?? "")) {
-      say(`model ${env.GC_MODEL} isn't pulled. Run: ollama pull ${env.GC_MODEL}`);
+    if (!ready.models.includes(model)) {
+      say(`model ${model} isn't pulled. Run: ollama pull ${model}`);
       ollama?.kill();
       return 1;
     }
@@ -99,9 +114,9 @@ const run = async (): Promise<number> => {
   // The core serves the built settings page at /settings; a build takes well under a second.
   const page = Bun.spawnSync(["bun", "run", "--cwd", "apps/settings-web", "build"]);
   if (page.exitCode !== 0) say("settings page didn't build; /settings will answer 404");
-  say(`core: ${env.GC_MODEL} at ${baseUrl}. Settings: bun run settings. Ctrl-C stops everything.`);
+  say(`core: ${model} at ${baseUrl}. Settings: bun run settings. Ctrl-C stops everything.`);
   const core = Bun.spawn(["bun", "run", "--cwd", "apps/core", "cli", "serve"], {
-    env,
+    env: process.env,
     stdio: ["inherit", "inherit", "inherit"],
   });
   const stop = () => core.kill("SIGTERM");
