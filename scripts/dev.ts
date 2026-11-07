@@ -1,7 +1,7 @@
-// Dev launcher: starts Ollama when the model in use (GC_* env vars, else the active saved profile)
-// points at it and it isn't running, checks the model
-// is pulled, builds the settings page, then runs `core serve`. Ctrl-C stops the core, and Ollama
-// if this script started it.
+// Dev launcher: starts Ollama if it's installed and not running (so switching to a local profile
+// in the settings page works mid-session), checks the model in use is pulled when it's on Ollama,
+// builds the settings page, then runs `core serve`. Ctrl-C stops the core, and Ollama if this
+// script started it. Until the core manages the local runtime itself (#39, #41).
 // Prints status lines only, never text.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -98,19 +98,33 @@ const ensureOllama = async (
   return { started, models };
 };
 
+/**
+ * Ollama for the session. Required (and the model pulled) when the model in use is on it;
+ * otherwise started anyway if installed, so a later switch to a local profile finds it.
+ * Undefined means "stop": a required Ollama couldn't be used.
+ */
+const startOllama = async (
+  baseUrl: string,
+  model: string,
+): Promise<Subprocess | null | undefined> => {
+  if (!isLocalOllama(baseUrl)) {
+    if (!findOllama()) return null;
+    return (await ensureOllama(`http://127.0.0.1:${OLLAMA_PORT}`))?.started ?? null;
+  }
+  const ready = await ensureOllama(new URL(baseUrl).origin);
+  if (!ready) return undefined;
+  if (!ready.models.includes(model)) {
+    say(`model ${model} isn't pulled. Run: ollama pull ${model}`);
+    ready.started?.kill();
+    return undefined;
+  }
+  return ready.started;
+};
+
 const run = async (): Promise<number> => {
   const { baseUrl, model } = await modelInUse(process.env);
-  let ollama: Subprocess | null = null;
-  if (isLocalOllama(baseUrl)) {
-    const ready = await ensureOllama(new URL(baseUrl).origin);
-    if (!ready) return 1;
-    ollama = ready.started;
-    if (!ready.models.includes(model)) {
-      say(`model ${model} isn't pulled. Run: ollama pull ${model}`);
-      ollama?.kill();
-      return 1;
-    }
-  }
+  const ollama = await startOllama(baseUrl, model);
+  if (ollama === undefined) return 1;
   // The core serves the built settings page at /settings; a build takes well under a second.
   const page = Bun.spawnSync(["bun", "run", "--cwd", "apps/settings-web", "build"]);
   if (page.exitCode !== 0) say("settings page didn't build; /settings will answer 404");
