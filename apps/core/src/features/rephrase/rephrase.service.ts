@@ -2,7 +2,7 @@ import type { ModelRephraseResponse, RephraseTone, RephraseToneResult } from "@g
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
-import type { ChatMessage, Provider } from "../providers";
+import { type ChatMessage, type Provider, pinProvider } from "../providers";
 import { type Passage, selectPassage } from "./services/passage-selector.service";
 import { hashPassage, type RephraseCache, type ToneReply } from "./services/rephrase-cache.service";
 import {
@@ -75,19 +75,22 @@ export class RephraseService {
     tone: RephraseTone,
     signal: AbortSignal | undefined,
   ): Promise<Result<ToneReply, AppError>> {
-    const model = this.provider.model;
+    // One model for the tone (retry included) and its cache key, even if settings change.
+    const provider = pinProvider(this.provider);
+    const model = provider.model;
     const cached = this.cache.get(model, hash, tone);
     if (cached) {
       this.logger.info({ event: "rephrase.tone_cached", len: cached.segments.length });
       return ok(cached);
     }
-    const reply = await this.tone(passage, tone, signal);
+    const reply = await this.tone(provider, passage, tone, signal);
     if (reply.ok && !signal?.aborted) this.cache.set(model, hash, tone, reply.value);
     return reply;
   }
 
   /** One tone: a model call (one retry on invalid JSON), then validation against the split. */
   private async tone(
+    provider: Provider,
     passage: Passage,
     tone: RephraseTone,
     signal: AbortSignal | undefined,
@@ -97,7 +100,7 @@ export class RephraseService {
       passage.sentences.map((s) => s.text),
       tone,
     );
-    const reply = await this.request(messages, signal);
+    const reply = await this.request(provider, messages, signal);
     const ms = performance.now() - startedAt;
     if (!reply.ok) {
       this.logger.error({ event: "rephrase.tone_failed", ms, code: reply.error.code });
@@ -114,16 +117,17 @@ export class RephraseService {
 
   /** Calls the model, retrying once if the reply isn't valid JSON in the expected envelope. */
   private async request(
+    provider: Provider,
     messages: readonly ChatMessage[],
     signal: AbortSignal | undefined,
   ): Promise<Result<ModelRephraseResponse, AppError>> {
-    const first = await this.provider.complete(messages, { signal });
+    const first = await provider.complete(messages, { signal });
     if (!first.ok) return first;
     const parsed = parseRephraseResponse(first.value);
     if (parsed.ok || signal?.aborted) return parsed;
 
     this.logger.info({ event: "parse.retry", code: parsed.error.code });
-    const second = await this.provider.complete([...messages, REPHRASE_RETRY_MESSAGE], { signal });
+    const second = await provider.complete([...messages, REPHRASE_RETRY_MESSAGE], { signal });
     return second.ok ? parseRephraseResponse(second.value) : second;
   }
 

@@ -1,12 +1,18 @@
 import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
-import { OpenAiCompatibleProvider, TimeoutRetryProvider } from "./features/providers";
+import {
+  OpenAiCompatibleProvider,
+  SwitchableProvider,
+  TimeoutRetryProvider,
+} from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { Settings } from "./features/settings";
 import { WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
+  /** Each feature's provider; swapping one applies to its next call (settings changes). */
+  readonly providers: { readonly check: SwitchableProvider; readonly rephrase: SwitchableProvider };
   readonly checkService: CheckService;
   readonly dictionary: JsonDictionaryRepository;
   readonly rephraseService: RephraseService;
@@ -33,19 +39,32 @@ export const createCore = (settings: Settings, logger: Logger): Core => {
   };
   // "OpenAI-compatible" is the HTTP format (/v1/chat/completions), not the OpenAI cloud: local
   // servers (Ollama, LM Studio, llama.cpp) speak it too, so this one adapter covers every model.
-  const base = new OpenAiCompatibleProvider(config, logger);
-  const provider = new TimeoutRetryProvider(base, RETRY_TIMEOUT_MS, logger);
+  const check = new SwitchableProvider(
+    new TimeoutRetryProvider(
+      new OpenAiCompatibleProvider(config, logger),
+      RETRY_TIMEOUT_MS,
+      logger,
+    ),
+  );
   const dictionary = new JsonDictionaryRepository(settings.dictionaryPath);
-  const checkService = new CheckService(provider, new CheckCache(), dictionary, logger);
+  const checkService = new CheckService(check, new CheckCache(), dictionary, logger);
   // Same endpoint and model as the check, so text goes nowhere new; a tone's reply is longer
   // than a check's, hence its own timeout.
-  const rephraseProvider = new TimeoutRetryProvider(
-    new OpenAiCompatibleProvider({ ...config, timeoutMs: REPHRASE_TIMEOUT_MS }, logger),
-    RETRY_TIMEOUT_MS,
-    logger,
+  const rephrase = new SwitchableProvider(
+    new TimeoutRetryProvider(
+      new OpenAiCompatibleProvider({ ...config, timeoutMs: REPHRASE_TIMEOUT_MS }, logger),
+      RETRY_TIMEOUT_MS,
+      logger,
+    ),
   );
-  const rephraseService = new RephraseService(rephraseProvider, logger, new RephraseCache());
-  return { checkService, dictionary, rephraseService, warmUp: () => base.warmUp() };
+  const rephraseService = new RephraseService(rephrase, logger, new RephraseCache());
+  return {
+    providers: { check, rephrase },
+    checkService,
+    dictionary,
+    rephraseService,
+    warmUp: () => check.warmUp(),
+  };
 };
 
 export const createServer = (
