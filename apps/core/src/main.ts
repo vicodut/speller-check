@@ -8,7 +8,7 @@ import {
 } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import type { Settings } from "./features/settings";
-import { SettingsPageFiles, WebSocketServer } from "./features/transport";
+import { SettingsPageFiles, type TokenSource, WebSocketServer } from "./features/transport";
 import type { Logger } from "./shared/logger";
 
 export type Core = {
@@ -72,7 +72,8 @@ export const createServer = (
   core: Core,
   options: {
     readonly port: number;
-    readonly token: string;
+    /** Read on every hello and API call, so `core token --rotate` applies without a restart. */
+    readonly token: TokenSource;
     readonly view: SettingsView;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;

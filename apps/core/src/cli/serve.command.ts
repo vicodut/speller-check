@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { buildSettingsView, loadSettings, settingSources } from "../features/settings";
-import { InstallTokenRepository } from "../features/transport";
+import { InstallTokenRepository, InstallTokenWatcher } from "../features/transport";
 import { createCore, createServer } from "../main";
 import type { Logger } from "../shared/logger";
 import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
@@ -22,17 +22,25 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     logger.error({ event: "cli.failed", code: settings.error.code });
     return EXIT_USAGE;
   }
-  const token = await new InstallTokenRepository(settings.value.tokenPath).loadOrCreate();
+  const tokenPath = settings.value.tokenPath;
+  const token = await new InstallTokenRepository(tokenPath).loadOrCreate();
   if (!token.ok) {
     logger.error({ event: "cli.failed", code: token.error.code });
     return EXIT_FAILURE;
   }
+  // Re-read when the file changes: `core token --rotate` cuts off the old token at once.
+  const watcher = new InstallTokenWatcher(tokenPath, token.value);
   const view = buildSettingsView(process.env, settings.value);
   logger.info({ event: "settings.loaded", sources: settingSources(view.check) });
   const core = createCore(settings.value, logger);
   const server = createServer(
     core,
-    { port: settings.value.port, token: token.value, view, settingsPageDir: SETTINGS_PAGE_DIR },
+    {
+      port: settings.value.port,
+      token: () => watcher.current(),
+      view,
+      settingsPageDir: SETTINGS_PAGE_DIR,
+    },
     logger,
   );
   if (!server.start().ok) return EXIT_FAILURE;

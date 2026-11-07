@@ -1,7 +1,7 @@
 import type { ApiError, SettingsView } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
-import { tokensMatch } from "./connection-guard.service";
+import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
 import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
 
@@ -28,7 +28,7 @@ const json = (body: unknown, status = 200): Response =>
  */
 export class HttpApi {
   constructor(
-    private readonly token: string,
+    private readonly token: TokenSource,
     private readonly deps: HttpDeps,
     private readonly logger: Logger,
   ) {}
@@ -45,8 +45,8 @@ export class HttpApi {
     if (!pathname.startsWith(API_PREFIX)) return this.page(request, pathname);
     if (!isSameOrigin(request.headers.get("origin"), port))
       return this.reject("origin_forbidden", 403);
-    if (!tokensMatch(this.token, bearerToken(request.headers.get("authorization"))))
-      return this.reject("auth_failed", 401);
+    const given = bearerToken(request.headers.get("authorization"));
+    if (!tokensMatch(currentToken(this.token), given)) return this.reject("auth_failed", 401);
     return this.route(request);
   }
 

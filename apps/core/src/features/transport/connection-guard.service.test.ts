@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isAllowedOrigin, tokensMatch } from "./connection-guard.service";
+import { currentToken, isAllowedOrigin, tokensMatch } from "./connection-guard.service";
 
 describe("tokensMatch", () => {
   test("accepts the same token", () => {
@@ -13,6 +13,25 @@ describe("tokensMatch", () => {
     ["empty", ""],
   ])("rejects a %s token", (_name, given) => {
     expect(tokensMatch("secret-token", given)).toBe(false);
+  });
+});
+
+describe("tokensMatch without a current token", () => {
+  test("never matches when the token is missing or unreadable (fails closed)", () => {
+    expect(tokensMatch(null, "")).toBe(false);
+    expect(tokensMatch(null, "secret-token")).toBe(false);
+    expect(tokensMatch("", "")).toBe(false);
+  });
+});
+
+describe("currentToken", () => {
+  test("reads a fixed token or asks a getter each time", () => {
+    let token: string | null = "a";
+    const getter = () => token;
+    expect(currentToken("fixed")).toBe("fixed");
+    expect(currentToken(getter)).toBe("a");
+    token = "b";
+    expect(currentToken(getter)).toBe("b");
   });
 });
 
