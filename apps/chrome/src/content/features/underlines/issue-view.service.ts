@@ -3,6 +3,7 @@ import { fieldText, isTextControl } from "../../shared/field-text";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import { colourForType } from "../../shared/issue-colour.util";
 import type { IssueView, IssueViewCallbacks, WatchedField } from "../../shared/issue-view";
+import { placeHost } from "../../shared/top-layer.util";
 import { applyFix, issuesAfterFix, matchesText } from "../write-back";
 import { CardController } from "./card-controller.service";
 import { createEditableMeasurer } from "./editable-measure.service";
@@ -160,6 +161,7 @@ export class IssueViewService implements IssueView {
 
   private redraw(): void {
     if (!this.session || !this.ui) return;
+    placeHost(this.ui.overlay.host, this.session.field);
     const issues = this.visible(this.session);
     this.callbacks.visibleChanged(this.session.field, issues);
     const measurer = this.measurer(this.session.field, this.ui.overlay.scratch);
