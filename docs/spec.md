@@ -270,7 +270,7 @@ Build the brain first, prove it in Chrome, then take on the hard native part.
 
 - [ ] Bun `--compile` vs Node SEA for the core binary? (Kickoff decision: Bun, to confirm at milestone 6.)
 
-- [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1.
+- [ ] Which local model is good enough for French grammar? Benchmark 3–4 candidates on a small test set at milestone 1. Only qwen3:8b has been run locally (19/20, misses the subjunctive, flags the correct "s'est lavé les mains"). Cloud runs on the same fixtures (#5, see decisions 2026-11-07): qwen3.8-flash 20/20 with no extras, qwen3.7-flash 20/20, llama-3.3-70b 19/20, mistral-small-3.2 16/20.
 
 - [x] How to handle very long fields (e.g. a long email)? Answered by #4: email quotes and signatures are skipped, fields over 20,000 characters show "too long" and aren't sent, and long first checks run in batches with partial results (Checking pipeline, step 5). Checking only the paragraphs near the caret (and over-cap fields paragraph by paragraph) is #6; sending diffs is #7.
 
