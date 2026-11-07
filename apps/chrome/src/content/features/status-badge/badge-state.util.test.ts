@@ -59,9 +59,10 @@ describe("resultState", () => {
 });
 
 describe("elapsedText", () => {
-  test("is empty for the first 10 s", () => {
-    expect(elapsedText(1_000, 1_000)).toBe("");
-    expect(elapsedText(1_000, 10_999)).toBe("");
+  test("shows tenths of a second under 10 s", () => {
+    expect(elapsedText(1_000, 1_000)).toBe("0.0s");
+    expect(elapsedText(1_000, 3_449)).toBe("2.4s");
+    expect(elapsedText(1_000, 10_999)).toBe("9.9s");
   });
 
   test("counts whole seconds from 10 s", () => {
@@ -75,37 +76,18 @@ describe("elapsedText", () => {
     expect(elapsedText(0, 61_000)).toBe("1m 1s");
     expect(elapsedText(0, 185_000)).toBe("3m 5s");
   });
+
+  test("a clock that went backwards shows zero", () => {
+    expect(elapsedText(5_000, 4_000)).toBe("0.0s");
+  });
 });
 
 describe("badgeLabel checking", () => {
-  test("shows the elapsed time from 10 s, in the label and the tooltip", () => {
-    const state = { kind: "checking", since: 0 } as const;
-    expect(badgeLabel(state, 9_000)).toEqual({
+  test("has no text and no native tooltip (the hover popup shows the time)", () => {
+    expect(badgeLabel({ kind: "checking", since: 0 })).toEqual({
       text: "",
-      title: "Checking…",
+      title: "",
       variant: "checking",
-      elapsed: "",
     });
-    expect(badgeLabel(state, 23_000)).toMatchObject({ title: "Checking… 23s", elapsed: "23s" });
-    expect(badgeLabel(state, 61_000).elapsed).toBe("1m 1s");
-  });
-
-  test("without a clock it shows no time", () => {
-    expect(badgeLabel({ kind: "checking", since: 0 }).elapsed).toBe("");
-  });
-
-  test("other states have no elapsed time", () => {
-    expect(badgeLabel({ kind: "too_long" }, 99_000).elapsed).toBeUndefined();
-  });
-});
-
-describe("withRephraseReady", () => {
-  test("marks the tooltip but never changes the count", () => {
-    const label = badgeLabel({ kind: "count", issues: issues(3) });
-    const ready = withRephraseReady(label, true);
-    expect(ready.text).toBe("3");
-    expect(ready.variant).toBe("issues");
-    expect(ready.title).toEndWith("Rephrase ready");
-    expect(withRephraseReady(label, false)).toEqual(label);
   });
 });

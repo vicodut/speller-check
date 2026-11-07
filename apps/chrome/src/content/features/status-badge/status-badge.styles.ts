@@ -39,7 +39,6 @@ export const BADGE_CSS = `
   border: 2px solid rgba(62, 99, 221, 0.25);
   border-top-color: #3e63dd;
   box-shadow: none;
-  pointer-events: none;
   animation: gc-spin 0.8s linear infinite;
 }
 .gc-clean { background: #30a46c; cursor: pointer; }
