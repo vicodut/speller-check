@@ -84,6 +84,11 @@ export const startSession = (doc: Document): StopSession => {
       watcher.resendFocused();
       return;
     }
+    if (message.type === "core.model_changed") {
+      checks.modelChanged();
+      watcher.resendFocused();
+      return;
+    }
     if (message.type === "issues") {
       // Only the current version is drawn; a blurred field's result is only remembered.
       checks.issues(message, watcher.currentField(message.fieldId, message.version));

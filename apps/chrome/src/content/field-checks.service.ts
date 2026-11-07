@@ -138,6 +138,15 @@ export class FieldChecks implements FieldWatcherCallbacks {
     this.edits.reset();
   }
 
+  /**
+   * The core switched model: remembered results came from the old one, and the next send of a
+   * field is its full text so the new model checks all of it.
+   */
+  modelChanged(): void {
+    this.memory.forgetResults();
+    this.edits.reset();
+  }
+
   /** A word was added to the dictionary: any remembered issue may now be wrong. */
   dictionaryChanged(): void {
     this.memory.forgetResults();

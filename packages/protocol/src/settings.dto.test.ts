@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { SettingsView } from "./settings.dto";
+import { ProfileInput, SettingsView } from "./settings.dto";
 
 const feature = {
   baseUrl: { value: "https://openrouter.ai/api/v1", source: "env", envVar: "GC_BASE_URL" },
@@ -21,5 +21,24 @@ describe("SettingsView", () => {
   test("refuses an unknown source", () => {
     const odd = { ...feature, model: { value: "m", source: "guess" } };
     expect(SettingsView.safeParse({ check: odd, rephrase: feature }).success).toBe(false);
+  });
+});
+
+describe("ProfileInput", () => {
+  const input = {
+    name: "Cloud",
+    baseUrl: "https://openrouter.ai/api/v1",
+    model: "qwen/qwen3.8-flash",
+    reasoningEffort: null,
+  };
+
+  test("accepts a complete profile", () => {
+    expect(ProfileInput.safeParse(input).success).toBe(true);
+  });
+
+  test("refuses a key, a blank name, or a non-http URL", () => {
+    expect(ProfileInput.safeParse({ ...input, apiKey: "sk" }).success).toBe(false);
+    expect(ProfileInput.safeParse({ ...input, name: "  " }).success).toBe(false);
+    expect(ProfileInput.safeParse({ ...input, baseUrl: "file:///etc/passwd" }).success).toBe(false);
   });
 });

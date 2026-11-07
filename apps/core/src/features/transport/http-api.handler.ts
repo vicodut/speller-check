@@ -3,17 +3,31 @@ import type { ErrorCode } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { tokensMatch } from "./connection-guard.service";
 import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
+import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
 
 /** What the HTTP side needs from the rest of the core, wired in main.ts. */
 export type HttpDeps = {
   /** The settings in effect, with sources; never holds an API key. */
   settingsView(): SettingsView;
+  /** Saved profiles; absent in tests that don't use them. */
+  readonly profiles?: ProfilesPort | undefined;
   /** The built settings page; absent in tests that only use the API. */
   readonly settingsPage?: SettingsPageFiles | undefined;
 };
 
 const API_PREFIX = "/api/";
+
+/** HTTP status for each error an API route can answer with; anything else is a 500. */
+const STATUS: Partial<Record<ErrorCode, number>> = {
+  body_invalid: 400,
+  not_found: 404,
+  profile_not_found: 404,
+  method_not_allowed: 405,
+  profile_active: 409,
+  profile_builtin: 409,
+  settings_locked: 409,
+};
 
 const json = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
@@ -50,11 +64,17 @@ export class HttpApi {
     return this.route(request);
   }
 
-  private route(request: Request): Response {
+  private async route(request: Request): Promise<Response> {
     const { pathname } = new URL(request.url);
-    if (pathname !== "/api/settings") return this.reject("not_found", 404);
-    if (request.method !== "GET") return this.reject("method_not_allowed", 405);
-    return json(this.deps.settingsView());
+    if (pathname === "/api/settings") {
+      if (request.method !== "GET") return this.reject("method_not_allowed", 405);
+      return json(this.deps.settingsView());
+    }
+    const profiles = this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles);
+    if (!profiles) return this.reject("not_found", 404);
+    const result = await profiles;
+    if (result.ok) return json(result.value);
+    return this.reject(result.error.code, STATUS[result.error.code] ?? 500);
   }
 
   private async page(request: Request, pathname: string): Promise<Response> {

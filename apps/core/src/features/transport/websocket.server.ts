@@ -1,3 +1,4 @@
+import type { CoreMessage } from "@gc/protocol";
 import type { Server, ServerWebSocket } from "bun";
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
@@ -29,6 +30,7 @@ type Socket = ServerWebSocket<SocketData>;
 export class WebSocketServer {
   private server: Server<SocketData> | undefined;
   private readonly http: HttpApi;
+  private readonly handlers = new Set<ConnectionHandler>();
 
   constructor(
     private readonly options: ServerOptions,
@@ -63,6 +65,11 @@ export class WebSocketServer {
     return ok({ port });
   }
 
+  /** Sends a message to every authenticated client (others never see it). */
+  broadcast(message: CoreMessage): void {
+    for (const handler of this.handlers) handler.notify(message);
+  }
+
   stop(): void {
     this.server?.stop(true);
     this.server = undefined;
@@ -91,9 +98,11 @@ export class WebSocketServer {
       },
       this.logger,
     );
+    this.handlers.add(ws.data.handler);
   }
 
   private close(ws: Socket): void {
+    if (ws.data.handler) this.handlers.delete(ws.data.handler);
     ws.data.handler?.dispose();
     ws.data.handler = undefined;
     this.logger.info({ event: "connection.closed" });

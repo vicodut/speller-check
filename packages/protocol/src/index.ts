@@ -38,6 +38,9 @@ export {
 export {
   ApiError,
   FeatureSettingsView,
+  ProfileInput,
+  ProfilesView,
+  ProfileView,
   ReasoningEffort,
   SettingSource,
   SettingsView,
