@@ -1,7 +1,5 @@
+import { ReasoningEffort } from "@gc/protocol";
 import { z } from "zod";
-
-export const ReasoningEffort = z.enum(["none", "low", "medium", "high"]);
-export type ReasoningEffort = z.infer<typeof ReasoningEffort>;
 
 export const DEFAULT_PORT = 7341;
 
@@ -26,7 +24,6 @@ export const Settings = TransportSettings.extend({
   model: z.string().min(1),
   apiKey: z.string().min(1).optional(),
   dictionaryPath: z.string().min(1),
-  /** Sent as `reasoning_effort` when set; `none` turns off thinking on models like qwen3. */
   reasoningEffort: ReasoningEffort.optional(),
 });
 export type Settings = z.infer<typeof Settings>;

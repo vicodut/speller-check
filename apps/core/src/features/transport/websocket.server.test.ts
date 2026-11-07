@@ -13,6 +13,9 @@ let disposed = 0;
 const server = new WebSocketServer(
   { port: 0, token: TOKEN, helloTimeoutMs: 200 },
   {
+    settingsView: () => {
+      throw new Error("not used by these tests");
+    },
     createSession: (publish) => ({
       update: (request) => {
         updates.push(request);

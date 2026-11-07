@@ -4,6 +4,7 @@ import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { ConnectionHandler } from "./connection.handler";
 import { isAllowedOrigin } from "./connection-guard.service";
+import { HttpApi } from "./http-api.handler";
 import type { ServerDeps } from "./server-deps.types";
 
 /** Hard-coded on purpose: the core must never be reachable from another machine. */
@@ -21,22 +22,31 @@ export type ServerOptions = {
 type SocketData = { handler: ConnectionHandler | undefined };
 type Socket = ServerWebSocket<SocketData>;
 
-/** Local WebSocket transport: origin check, then hello/token auth, then message routing. */
+/**
+ * Local transport on 127.0.0.1: the WebSocket (origin check, then hello/token auth, then message
+ * routing) and, on the same port, the HTTP settings API.
+ */
 export class WebSocketServer {
   private server: Server<SocketData> | undefined;
+  private readonly http: HttpApi;
 
   constructor(
     private readonly options: ServerOptions,
     private readonly deps: ServerDeps,
     private readonly logger: Logger,
-  ) {}
+  ) {
+    this.http = new HttpApi(options.token, deps, logger);
+  }
 
   start(): Result<{ port: number }, AppError> {
     try {
       this.server = Bun.serve<SocketData>({
         hostname: HOSTNAME,
         port: this.options.port,
-        fetch: (request, server) => this.upgrade(request, server),
+        fetch: (request, server) =>
+          this.http.handles(request)
+            ? this.http.handle(request, server.port ?? this.options.port)
+            : this.upgrade(request, server),
         websocket: {
           maxPayloadLength: MAX_PAYLOAD_BYTES,
           open: (ws) => this.open(ws),

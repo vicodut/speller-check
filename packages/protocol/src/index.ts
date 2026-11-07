@@ -35,4 +35,11 @@ export {
   RephraseTones,
   RephraseVersion,
 } from "./rephrase.schema";
+export {
+  ApiError,
+  FeatureSettingsView,
+  ReasoningEffort,
+  SettingSource,
+  SettingsView,
+} from "./settings.dto";
 export { isTextTooLong, MAX_TEXT_LENGTH } from "./text-limits";

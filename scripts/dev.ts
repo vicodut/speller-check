@@ -1,5 +1,6 @@
 // Dev launcher: starts Ollama when the core points at it and it isn't running, checks the model
-// is pulled, then runs `core serve`. Ctrl-C stops the core, and Ollama if this script started it.
+// is pulled, builds the settings page, then runs `core serve`. Ctrl-C stops the core, and Ollama
+// if this script started it.
 // Prints status lines only, never text.
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -95,7 +96,10 @@ const run = async (): Promise<number> => {
       return 1;
     }
   }
-  say(`core: ${env.GC_MODEL} at ${baseUrl}. Ctrl-C stops everything.`);
+  // The core serves the built settings page at /settings; a build takes well under a second.
+  const page = Bun.spawnSync(["bun", "run", "--cwd", "apps/settings-web", "build"]);
+  if (page.exitCode !== 0) say("settings page didn't build; /settings will answer 404");
+  say(`core: ${env.GC_MODEL} at ${baseUrl}. Settings: bun run settings. Ctrl-C stops everything.`);
   const core = Bun.spawn(["bun", "run", "--cwd", "apps/core", "cli", "serve"], {
     env,
     stdio: ["inherit", "inherit", "inherit"],

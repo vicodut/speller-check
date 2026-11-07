@@ -1,5 +1,11 @@
 import type { ErrorCode } from "./errors";
 
+/** Settings whose source can be logged, and the sources a log line may name. */
+const SOURCED_SETTINGS = ["baseUrl", "model", "apiKey", "reasoningEffort"] as const;
+const SOURCES = new Set(["env", "default", "unset"]);
+type SourcedSetting = (typeof SOURCED_SETTINGS)[number];
+type Source = "env" | "default" | "unset";
+
 export type LogEvent =
   | "check.start"
   | "check.done"
@@ -42,14 +48,20 @@ export type LogEvent =
   | "rephrase.tone_done"
   | "rephrase.tone_failed"
   | "rephrase.tone_cached"
+  | "settings.loaded"
+  | "http.rejected"
   | "cli.failed";
 
-/** The only fields a log line can carry: names, durations, lengths/counts and error codes. */
+/**
+ * The only fields a log line can carry: names, durations, lengths/counts, error codes, and
+ * where each setting comes from (never its value).
+ */
 export type LogFields = {
   readonly event: LogEvent;
   readonly ms?: number;
   readonly len?: number;
   readonly code?: ErrorCode;
+  readonly sources?: Readonly<Partial<Record<SourcedSetting, Source>>>;
 };
 
 export type LogSink = (line: string) => void;
@@ -71,10 +83,24 @@ export class Logger {
 
   private write(level: "info" | "error", fields: LogFields): void {
     // Copy known fields only, so a cast object can't smuggle free text into the log.
-    const line: Record<string, string | number> = { level, event: fields.event };
+    const line: Record<string, string | number | Record<string, string>> = {
+      level,
+      event: fields.event,
+    };
     if (typeof fields.ms === "number") line.ms = Math.round(fields.ms);
     if (typeof fields.len === "number") line.len = fields.len;
     if (typeof fields.code === "string") line.code = fields.code;
+    if (fields.sources) line.sources = knownSources(fields.sources);
     this.sink(JSON.stringify(line));
   }
 }
+
+/** Known setting names with a known source word; anything else (a value, a stray key) is dropped. */
+const knownSources = (sources: Readonly<Record<string, unknown>>): Record<string, string> => {
+  const kept: Record<string, string> = {};
+  for (const name of SOURCED_SETTINGS) {
+    const source = sources[name];
+    if (typeof source === "string" && SOURCES.has(source)) kept[name] = source;
+  }
+  return kept;
+};

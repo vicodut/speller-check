@@ -31,6 +31,19 @@
         "zod": "4.6.7",
       },
     },
+    "apps/settings-web": {
+      "name": "@gc/settings-web",
+      "dependencies": {
+        "@gc/protocol": "workspace:*",
+        "react": "19.3.1",
+        "react-dom": "19.3.1",
+        "zod": "4.6.7",
+      },
+      "devDependencies": {
+        "@types/react": "19.3.0",
+        "@types/react-dom": "19.3.0",
+      },
+    },
     "packages/protocol": {
       "name": "@gc/protocol",
       "dependencies": {
@@ -66,6 +79,8 @@
     "@gc/core": ["@gc/core@workspace:apps/core"],
 
     "@gc/protocol": ["@gc/protocol@workspace:packages/protocol"],
+
+    "@gc/settings-web": ["@gc/settings-web@workspace:apps/settings-web"],
 
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 

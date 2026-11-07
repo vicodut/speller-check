@@ -1,0 +1,130 @@
+:root {
+  color-scheme: light dark;
+  --bg: #fcfcfd;
+  --panel: #ffffff;
+  --text: #1c2024;
+  --muted: #60646c;
+  --line: #e0e1e6;
+  --accent: #3e63dd;
+  --env: #ab6400;
+  --env-bg: #fff7c2;
+  --unset-bg: #f0f0f3;
+  --danger: #ce2c31;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111113;
+    --panel: #18191b;
+    --text: #edeef0;
+    --muted: #b0b4ba;
+    --line: #2e3135;
+    --accent: #9eb1ff;
+    --env: #ffca16;
+    --env-bg: #302008;
+    --unset-bg: #212225;
+    --danger: #ff9592;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    14px / 1.45 system-ui,
+    -apple-system,
+    sans-serif;
+}
+main {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+}
+h1 {
+  font-size: 1.4rem;
+  margin: 0 0 0.25rem;
+}
+.lead {
+  color: var(--muted);
+  margin: 0 0 1.5rem;
+}
+section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+h2 {
+  font-size: 1rem;
+  margin: 0 0 0.75rem;
+}
+dl {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  gap: 0.5rem 1rem;
+  margin: 0;
+}
+dt {
+  color: var(--muted);
+}
+dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 13px;
+}
+dd.none {
+  color: var(--muted);
+  font-family: inherit;
+  font-style: italic;
+}
+.source {
+  justify-self: end;
+  font-size: 12px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.source.env {
+  background: var(--env-bg);
+  color: var(--env);
+}
+.source.default,
+.source.unset {
+  background: var(--unset-bg);
+  color: var(--muted);
+}
+.notice {
+  border-color: var(--danger);
+}
+.notice p {
+  margin: 0 0 0.75rem;
+}
+button {
+  font: inherit;
+  padding: 0.35rem 0.9rem;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+}
+button:hover {
+  border-color: var(--accent);
+}
+code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+@media (max-width: 520px) {
+  dl {
+    grid-template-columns: 1fr max-content;
+  }
+  dt {
+    grid-column: 1 / -1;
+    margin-top: 0.5rem;
+  }
+}
