@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { appError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
+import { err } from "../../shared/result";
 import type { OllamaStatus } from "./ollama.client";
 import type { OllamaLauncher } from "./ollama-process.runner";
 import { OllamaRuntime } from "./ollama-runtime.service";
@@ -9,6 +11,8 @@ const LOCALHOST = { baseUrl: "http://localhost:11434/v1", model: "qwen3:8b" };
 const LM_STUDIO = { baseUrl: "http://127.0.0.1:1234/v1", model: "m" };
 const CLOUD = { baseUrl: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash" };
 const UP: OllamaStatus = { version: "0.40.13", models: ["qwen3:8b"] };
+/** Pulls are covered by ollama-pull.service.test.ts; here one only needs to exist. */
+const pull = async () => err(appError("ollama_unreachable"));
 
 /** Ollama is up when `up` is true; starting it brings it up after `answersAfter` polls. */
 const setup = (opts: { up?: boolean; installed?: boolean; answersAfter?: number } = {}) => {
@@ -23,6 +27,7 @@ const setup = (opts: { up?: boolean; installed?: boolean; answersAfter?: number 
       }
       return world.up ? UP : null;
     },
+    pull,
   };
   const launcher: OllamaLauncher = {
     find: () => (opts.installed === false ? null : "/bin/ollama"),
@@ -56,6 +61,7 @@ describe("OllamaRuntime", () => {
         models: ["qwen3:8b"],
         inUse: true,
         startedByApp: true,
+        pull: null,
       },
     });
     expect(world.logs).toEqual(["ollama.starting", "ollama.started"]);
@@ -104,7 +110,7 @@ describe("OllamaRuntime", () => {
 
     const silent = setup({ answersAfter: Number.POSITIVE_INFINITY });
     const quick = new OllamaRuntime(
-      { status: async () => null },
+      { status: async () => null, pull },
       {
         find: () => "/bin/ollama",
         start: () => ({ kill: () => silent.world.kills++, exited: new Promise(() => {}) }),
@@ -131,5 +137,40 @@ describe("OllamaRuntime", () => {
     expect((await runtime.view()).ollama.state).toBe("starting");
     await using;
     expect((await runtime.view()).ollama.state).toBe("running");
+  });
+
+  test("reports a pull in its view until it is cancelled", async () => {
+    let aborted = false;
+    const runtime = new OllamaRuntime(
+      {
+        status: async () => UP,
+        pull: async (_model, signal, onLine) => {
+          onLine({ status: "pulling a", digest: "sha256:a", total: 10, completed: 3 });
+          await new Promise((resolve) => signal.addEventListener("abort", resolve));
+          aborted = true;
+          return err(appError("ollama_pull_cancelled"));
+        },
+      },
+      {
+        find: () => "/bin/ollama",
+        start: () => ({ kill: () => {}, exited: new Promise(() => {}) }),
+      },
+      new Logger(() => {}),
+      { pollMs: 0, timeoutMs: 1_000 },
+    );
+    expect((await runtime.pull("smollm2:135m")).ok).toBe(true);
+    expect((await runtime.view()).ollama.pull).toEqual({
+      model: "smollm2:135m",
+      step: "downloading",
+      completed: 3,
+      total: 10,
+      error: null,
+    });
+    runtime.stop(); // not started by the app: nothing to stop, the pull goes on
+    expect((await runtime.view()).ollama.pull).not.toBeNull();
+    runtime.cancelPull();
+    await Bun.sleep(0);
+    expect(aborted).toBe(true);
+    expect((await runtime.view()).ollama.pull).toBeNull();
   });
 });

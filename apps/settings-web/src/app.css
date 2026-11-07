@@ -360,3 +360,24 @@ button.link:hover {
 .test-result.testing {
   color: var(--muted);
 }
+.pull,
+.pull-offer {
+  margin-top: 0.8rem;
+}
+.pull-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.3rem;
+}
+.pull progress {
+  flex: 1;
+  height: 8px;
+  accent-color: var(--accent);
+}
+.pull .hint {
+  font-variant-numeric: tabular-nums;
+}
+.ollama .notice {
+  margin: 0.8rem 0 0;
+}

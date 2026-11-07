@@ -61,6 +61,10 @@ export type LogEvent =
   | "ollama.start_failed"
   | "ollama.not_installed"
   | "ollama.stopped"
+  | "ollama.pull_started"
+  | "ollama.pull_done"
+  | "ollama.pull_failed"
+  | "ollama.pull_cancelled"
   | "cli.failed";
 
 /**

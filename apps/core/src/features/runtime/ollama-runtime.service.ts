@@ -1,7 +1,10 @@
 import type { OllamaState, RuntimeView } from "@gc/protocol";
+import type { AppError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
+import type { Result } from "../../shared/result";
 import type { OllamaClient } from "./ollama.client";
 import type { OllamaLauncher, RunningProcess } from "./ollama-process.runner";
+import { OllamaPuller } from "./ollama-pull.service";
 
 /** Only the base URL matters: whether the model is served by Ollama on this Mac. */
 type ModelEndpoint = { readonly baseUrl: string };
@@ -26,7 +29,7 @@ type Phase = "idle" | "starting" | "not_installed" | "failed";
 /**
  * Keeps Ollama running while the model in use is on it: starts `ollama serve` if it isn't
  * answering, and stops it again on a switch away (or on quit), but only if this app started it.
- * An Ollama the user runs is used as is and never stopped.
+ * An Ollama the user runs is used as is and never stopped. Also pulls models, one at a time.
  */
 export class OllamaRuntime {
   private process: RunningProcess | null = null;
@@ -34,13 +37,16 @@ export class OllamaRuntime {
   private phase: Phase = "idle";
   /** The model in use is on Ollama. */
   private wanted = false;
+  private readonly puller: OllamaPuller;
 
   constructor(
-    private readonly client: Pick<OllamaClient, "status">,
+    private readonly client: Pick<OllamaClient, "status" | "pull">,
     private readonly launcher: OllamaLauncher,
     private readonly logger: Logger,
     private readonly options: Options = { pollMs: 500, timeoutMs: 30_000 },
-  ) {}
+  ) {
+    this.puller = new OllamaPuller(client, logger);
+  }
 
   /** Called with each model put in use (at launch and on every switch). */
   async use(model: ModelEndpoint): Promise<void> {
@@ -60,9 +66,19 @@ export class OllamaRuntime {
     return this.starting;
   }
 
-  /** Stops the Ollama this app started, if any (switch to cloud, or quit). */
+  /** Pulls a model in the background; `pull_in_progress` or `ollama_unreachable` if it can't. */
+  pull(model: string): Promise<Result<void, AppError>> {
+    return this.puller.start(model);
+  }
+
+  cancelPull(): void {
+    this.puller.cancel();
+  }
+
+  /** Stops the Ollama this app started, if any (switch to cloud, or quit), cancelling a pull. */
   stop(): void {
     if (!this.process) return;
+    this.puller.cancel();
     this.process.kill();
     this.process = null;
     this.phase = "idle";
@@ -83,6 +99,7 @@ export class OllamaRuntime {
         models: [...(status?.models ?? [])],
         inUse: this.wanted,
         startedByApp: this.process !== null,
+        pull: this.puller.view(),
       },
     };
   }

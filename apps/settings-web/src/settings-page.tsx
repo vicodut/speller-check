@@ -2,6 +2,7 @@ import type { ProfileSave, ProfilesView } from "@gc/protocol";
 import { useCallback, useEffect, useReducer } from "react";
 import { FeatureSettings } from "./feature-settings";
 import { OllamaPanel } from "./ollama-panel";
+import { useOllamaRuntime } from "./ollama-runtime.hook";
 import { ProfileForm } from "./profile-form";
 import { ProfileList } from "./profile-list";
 import { useProfileProbe } from "./profile-probe.hook";
@@ -31,6 +32,8 @@ const ERROR_TEXT: Record<string, string> = {
   profile_not_found: "That profile no longer exists. Reload the page.",
   settings_locked: "GC_* environment variables set the model, so profiles can't be switched.",
   settings_write_failed: "The core couldn't save the settings file.",
+  pull_in_progress: "Another model is being pulled. Wait for it, or cancel it.",
+  ollama_unreachable: "Ollama isn't answering, so nothing can be pulled.",
 };
 const errorText = (code: string) => ERROR_TEXT[code] ?? `Something went wrong (${code}).`;
 
@@ -57,17 +60,8 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
     void loadAll(token).then(dispatch);
   }, [state.phase, token]);
 
-  // While Ollama starts (after a switch to a local profile), refresh its state every second.
-  // Keyed on the runtime object: each refresh is a new one, so polling goes on while it starts.
   const runtime = state.phase === "ready" ? state.runtime : null;
-  useEffect(() => {
-    if (runtime?.ollama.state !== "starting" || !token) return;
-    const timer = setTimeout(async () => {
-      const runtime = await fetchRuntime(token);
-      if (runtime.ok) dispatch({ type: "runtime", runtime: runtime.value });
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [runtime, token]);
+  const { onPull, onCancelPull } = useOllamaRuntime(runtime, token, dispatch);
 
   const probe = useProfileProbe(token, state.phase === "ready" ? state.form : null, dispatch);
 
@@ -126,6 +120,8 @@ export const SettingsPage = ({ token }: { token: string | null }) => {
               model={state.view.check.model.value}
               busy={state.busy}
               onStart={() => void onStartOllama()}
+              onPull={onPull}
+              onCancelPull={onCancelPull}
             />
           )}
           {state.form && (
