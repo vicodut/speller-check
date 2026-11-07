@@ -1,5 +1,7 @@
 import type { ProfileInput, ProfileSave, ReasoningEffort } from "@gc/protocol";
 import { type FormEvent, useId } from "react";
+import { ModelField } from "./model-field";
+import { ProfileTest } from "./profile-test";
 import {
   type ProfileForm as Form,
   keyChange,
@@ -13,6 +15,8 @@ type Props = {
   busy: boolean;
   dispatch: (event: SettingsPageEvent) => void;
   onSave: (id: string | null, input: ProfileSave) => void;
+  onListModels: () => void;
+  onTest: () => void;
 };
 
 type FieldProps = { label: string; id: string; children: React.ReactNode };
@@ -54,7 +58,7 @@ const KeyInput = ({ form, id, dispatch }: Pick<Props, "form" | "dispatch"> & { i
 );
 
 /** Add or edit one profile. The key goes to the macOS Keychain, never to the settings file. */
-export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
+export const ProfileForm = ({ form, busy, dispatch, onSave, onListModels, onTest }: Props) => {
   const { draft } = form;
   const id = useId();
   const set = (field: keyof ProfileInput) => (value: string) =>
@@ -84,14 +88,13 @@ export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
           required
         />
       </Field>
-      <Field label="Model" id={`${id}-model`}>
-        <input
-          id={`${id}-model`}
-          value={draft.model}
-          onChange={(e) => set("model")(e.target.value)}
-          required
-        />
-      </Field>
+      <ModelField
+        id={`${id}-model`}
+        value={draft.model}
+        models={form.probe.models}
+        onChange={set("model")}
+        onReload={onListModels}
+      />
       <Field label="Reasoning effort" id={`${id}-effort`}>
         <select
           id={`${id}-effort`}
@@ -116,6 +119,7 @@ export const ProfileForm = ({ form, busy, dispatch, onSave }: Props) => {
         <button type="button" onClick={() => dispatch({ type: "cancel" })}>
           Cancel
         </button>
+        <ProfileTest test={form.probe.test} onTest={onTest} />
       </div>
     </form>
   );

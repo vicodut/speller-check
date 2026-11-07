@@ -2,6 +2,7 @@ import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import {
   OpenAiCompatibleProvider,
+  ProfileProbeProvider,
   SwitchableProvider,
   TimeoutRetryProvider,
 } from "./features/providers";
@@ -104,6 +105,10 @@ export const createServer = (
     {
       settingsView: () => options.settings.view(),
       profiles: options.settings,
+      probe: new ProfileProbeProvider(
+        (profileId, baseUrl) => options.settings.savedKeyFor(profileId, baseUrl),
+        logger,
+      ),
       runtime: options.runtime,
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),

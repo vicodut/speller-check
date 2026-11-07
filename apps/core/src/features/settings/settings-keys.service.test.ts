@@ -52,4 +52,14 @@ describe("SettingsService API keys", () => {
     expect(service.profiles().profiles[0]?.hasKey).toBe(true);
     expect((await service.current()).apiKey).toBe("sk-old");
   });
+
+  test("a saved key is lent to a probe only on the profile's own host", async () => {
+    const { service } = await open();
+    await service.create({ ...cloud, apiKey: "sk-1" });
+    expect(await service.savedKeyFor("p2", "https://openrouter.ai/api/v2")).toBe("sk-1");
+    expect(await service.savedKeyFor("p2", "https://evil.example/api/v1")).toBeNull();
+    expect(await service.savedKeyFor("p1", "http://127.0.0.1:11434/v1")).toBeNull();
+    expect(await service.savedKeyFor(null, cloud.baseUrl)).toBeNull();
+    expect(await service.savedKeyFor("gone", cloud.baseUrl)).toBeNull();
+  });
 });

@@ -312,3 +312,51 @@ button:disabled {
   color: var(--muted);
   border-style: dashed;
 }
+/* Model list and Test (#35) */
+.model-field {
+  align-items: flex-start;
+}
+.model-field > label {
+  padding-top: 0.4rem;
+}
+.model-picker {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.model-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+  align-items: baseline;
+}
+.model-status.failed span {
+  color: var(--env);
+}
+button.link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: inherit;
+}
+button.link:hover {
+  text-decoration: underline;
+}
+.test-result {
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+}
+.test-result.passed {
+  color: var(--saved);
+}
+.test-result.failed {
+  color: var(--danger);
+}
+.test-result.testing {
+  color: var(--muted);
+}

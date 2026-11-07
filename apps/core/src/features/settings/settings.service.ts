@@ -10,6 +10,7 @@ import {
   isLocalUrl,
   markBuiltIn,
   removeProfile,
+  sameOrigin,
   updateProfile,
 } from "./profiles.util";
 import type { Env } from "./settings.loader";
@@ -98,6 +99,18 @@ export class SettingsService {
       activeProfileId: this.envModel ? null : this.file.activeProfileId,
       lockedByEnv: this.envModel !== null,
     };
+  }
+
+  /**
+   * The key saved for a profile, for a test or model list from the page. Only while `baseUrl`
+   * stays on the saved profile's host, so editing the URL never sends the key elsewhere.
+   */
+  async savedKeyFor(profileId: string | null, baseUrl: string): Promise<string | null> {
+    const profile = this.file.profiles.find((p) => p.id === profileId);
+    if (!profile || !this.keyed.has(profile.id) || !sameOrigin(profile.baseUrl, baseUrl))
+      return null;
+    const key = await this.keys.get(profile.id);
+    return key.ok ? key.value : null;
   }
 
   onChange(listener: ModelListener): void {

@@ -1,4 +1,14 @@
-import { ApiError, type ProfileSave, ProfilesView, RuntimeView, SettingsView } from "@gc/protocol";
+import {
+  ApiError,
+  type ModelsProbe,
+  ModelsResult,
+  type ProfileSave,
+  ProfilesView,
+  RuntimeView,
+  SettingsView,
+  type TestProbe,
+  TestResult,
+} from "@gc/protocol";
 import type { z } from "zod";
 
 export type ApiResult<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -72,3 +82,11 @@ export const fetchRuntime = (token: string, base = "") =>
 /** Starts Ollama if it isn't running; answers once it does (or gave up). */
 export const startOllama = (token: string, base = "") =>
   call(RuntimeView, { token, path: "/api/runtime/ollama/start", method: "POST", base });
+
+/** Lists a profile's models (saved or not) from its endpoint's `/models`. */
+export const listModels = (token: string, probe: ModelsProbe, base = "") =>
+  call(ModelsResult, { token, path: "/api/probe/models", method: "POST", body: probe, base });
+
+/** Sends one short request with a profile (saved or not): ok with its time, or an error code. */
+export const testProfile = (token: string, probe: TestProbe, base = "") =>
+  call(TestResult, { token, path: "/api/probe/test", method: "POST", body: probe, base });

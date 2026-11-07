@@ -5,6 +5,8 @@ export type ErrorCode =
   | "provider_http"
   | "provider_bad_response"
   | "provider_cancelled"
+  | "provider_key_rejected"
+  | "provider_unknown_model"
   | "model_invalid_json"
   | "dictionary_read_failed"
   | "dictionary_invalid"
