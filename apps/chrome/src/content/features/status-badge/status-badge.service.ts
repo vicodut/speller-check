@@ -1,6 +1,7 @@
 import type { Issue } from "@gc/protocol";
 import { createFrameScheduler } from "../../shared/frame-scheduler.util";
 import type { WatchedField } from "../../shared/issue-view";
+import { placeHost } from "../../shared/top-layer.util";
 import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
 import { BADGE_SIZE, badgePosition, panelPlacement } from "./badge-position.util";
 import { type BadgeState, badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
@@ -167,6 +168,7 @@ export class StatusBadge {
 
   private place(): void {
     if (!this.field) return;
+    placeHost(this.host, this.field);
     const position = badgePosition(fieldBox(this.field));
     this.badge.style.left = `${position.left}px`;
     this.badge.style.top = `${position.top}px`;
