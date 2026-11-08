@@ -48,9 +48,12 @@ export class OllamaRuntime {
     this.puller = new OllamaPuller(client, logger);
   }
 
-  /** Called with each model put in use (at launch and on every switch). */
-  async use(model: ModelEndpoint): Promise<void> {
-    this.wanted = isOllamaUrl(model.baseUrl);
+  /**
+   * Called with every model in use (each feature's, at launch and on every switch): Ollama runs
+   * while any of them is on it.
+   */
+  async use(...models: readonly ModelEndpoint[]): Promise<void> {
+    this.wanted = models.some((m) => isOllamaUrl(m.baseUrl));
     if (this.wanted) return this.ensureRunning();
     await this.starting;
     this.stop();

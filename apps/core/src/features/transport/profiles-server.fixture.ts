@@ -74,11 +74,12 @@ export const startProfilesServer = async (env = {}, envModel: ModelConfig | null
   );
   if (!opened.ok) throw new Error("settings did not open");
   const { server, base } = startServer(opened.value);
-  opened.value.onChange((model) =>
+  const featureModel = (m: ModelConfig) => ({ model: m.model, local: isLocalUrl(m.baseUrl) });
+  opened.value.onChange((models) =>
     server.broadcast({
       type: "settings.changed",
-      model: model.model,
-      local: isLocalUrl(model.baseUrl),
+      check: featureModel(models.check),
+      rephrase: featureModel(models.rephrase),
     }),
   );
   const api = (path: string, method = "GET", body?: unknown) =>

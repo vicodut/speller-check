@@ -1,3 +1,4 @@
+import type { Feature } from "@gc/protocol";
 // Test fixture: a SettingsService over an in-memory settings file and Keychain.
 import { appError } from "../../shared/errors";
 import { err, ok, type Result } from "../../shared/result";
@@ -61,7 +62,12 @@ export const open = async (
 ) => {
   const opened = await SettingsService.open(store, keys, env, envModel, ids());
   if (!opened.ok) throw new Error("open failed");
+  /** The Check model after each change, and which features each change switched. */
   const changes: ModelConfig[] = [];
-  opened.value.onChange((config) => changes.push(config));
-  return { service: opened.value, store, changes, keys };
+  const switched: Feature[][] = [];
+  opened.value.onChange((models, features) => {
+    changes.push(models.check);
+    switched.push([...features]);
+  });
+  return { service: opened.value, store, changes, switched, keys };
 };

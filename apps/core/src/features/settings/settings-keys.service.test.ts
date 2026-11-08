@@ -50,7 +50,7 @@ describe("SettingsService API keys", () => {
     keys.items.set("old", "sk-old");
     const { service } = await open(memoryStore(firstRunFile("old")), null, {}, keys);
     expect(service.profiles().profiles[0]?.hasKey).toBe(true);
-    expect((await service.current()).apiKey).toBe("sk-old");
+    expect((await service.current()).check.apiKey).toBe("sk-old");
   });
 
   test("a saved key is lent to a probe only on the profile's own host", async () => {

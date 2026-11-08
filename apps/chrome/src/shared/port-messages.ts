@@ -1,6 +1,7 @@
 import {
   DictionaryAddMessage,
   ErrorMessage,
+  FeatureModel,
   FieldClosedMessage,
   IssuesCoreMessage,
   RephraseDoneMessage,
@@ -34,8 +35,8 @@ export type CoreReadyMessage = z.infer<typeof CoreReadyMessage>;
  */
 export const CoreModelChangedMessage = z.object({
   type: z.literal("core.model_changed"),
-  model: z.string().min(1),
-  local: z.boolean(),
+  check: FeatureModel,
+  rephrase: FeatureModel,
 });
 export type CoreModelChangedMessage = z.infer<typeof CoreModelChangedMessage>;
 

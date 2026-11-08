@@ -1,4 +1,4 @@
-import { ProfileSave, type ProfilesView } from "@gc/protocol";
+import { FeatureProfiles, ProfileSave, type ProfilesView } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import { err, ok, type Result } from "../../shared/result";
 
@@ -9,26 +9,27 @@ export type ProfilesPort = {
   update(id: string, input: ProfileSave): Promise<Result<ProfilesView, AppError>>;
   remove(id: string): Promise<Result<ProfilesView, AppError>>;
   activate(id: string): Promise<Result<ProfilesView, AppError>>;
+  setFeatures(features: FeatureProfiles): Promise<Result<ProfilesView, AppError>>;
 };
 
 type Reply = Result<ProfilesView, AppError>;
 
-/** `/api/profiles/<id>` and `/api/profiles/<id>/activate`; ids are opaque, without slashes. */
+/** `/api/profiles/features`, `/api/profiles/<id>` and `/api/profiles/<id>/activate`; ids are opaque, without slashes. */
 const PROFILE_PATH = /^\/api\/profiles\/([^/]+)(\/activate)?$/;
 
-const readInput = async (request: Request): Promise<Result<ProfileSave, AppError>> => {
+/** Parses the JSON body with `schema`, then applies it; `body_invalid` when it doesn't match. */
+const withBody = async <T>(
+  request: Request,
+  schema: { safeParse(data: unknown): { success: true; data: T } | { success: false } },
+  apply: (input: T) => Promise<Reply>,
+): Promise<Reply> => {
   const body: unknown = await request.json().catch(() => undefined);
-  const parsed = ProfileSave.safeParse(body);
-  return parsed.success ? ok(parsed.data) : err(appError("body_invalid"));
+  const parsed = schema.safeParse(body);
+  return parsed.success ? apply(parsed.data) : err(appError("body_invalid"));
 };
 
-const withInput = async (
-  request: Request,
-  apply: (input: ProfileSave) => Promise<Reply>,
-): Promise<Reply> => {
-  const input = await readInput(request);
-  return input.ok ? apply(input.value) : input;
-};
+const withInput = (request: Request, apply: (input: ProfileSave) => Promise<Reply>) =>
+  withBody(request, ProfileSave, apply);
 
 /**
  * The profile routes. Null when the path isn't one of them; `method_not_allowed` when it is but
@@ -43,6 +44,12 @@ export const routeProfiles = (
   if (pathname === "/api/profiles") {
     if (method === "GET") return Promise.resolve(ok(port.profiles()));
     if (method === "POST") return withInput(request, (input) => port.create(input));
+    return Promise.resolve(err(appError("method_not_allowed")));
+  }
+  // Before the `<id>` routes, which would read "features" as an id.
+  if (pathname === "/api/profiles/features") {
+    if (method === "PUT")
+      return withBody(request, FeatureProfiles, (features) => port.setFeatures(features));
     return Promise.resolve(err(appError("method_not_allowed")));
   }
   const match = PROFILE_PATH.exec(pathname);

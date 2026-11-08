@@ -1,5 +1,6 @@
 import {
   ApiError,
+  type FeatureProfiles,
   type ModelsProbe,
   ModelsResult,
   type ProfileSave,
@@ -75,6 +76,37 @@ export const deleteProfile = (token: string, id: string, base = "") =>
 
 export const activateProfile = (token: string, id: string, base = "") =>
   call(ProfilesView, { token, path: `${profilePath(id)}/activate`, method: "POST", base });
+
+/** Maps Check and Rephrase to profiles (null: same as active). */
+export const setFeatureProfiles = (token: string, features: FeatureProfiles, base = "") =>
+  call(ProfilesView, {
+    token,
+    path: "/api/profiles/features",
+    method: "PUT",
+    body: features,
+    base,
+  });
+
+/**
+ * Deletes a profile in use by first moving its uses to Local: activate it if the profile was the
+ * active one, then remap the features that used it. Stops at the first refusal.
+ */
+export const deleteMovingToLocal = async (
+  token: string,
+  id: string,
+  plan: { activate: string | null; features: FeatureProfiles | null },
+  base = "",
+): Promise<ApiResult<ProfilesView>> => {
+  if (plan.activate) {
+    const activated = await activateProfile(token, plan.activate, base);
+    if (!activated.ok) return activated;
+  }
+  if (plan.features) {
+    const remapped = await setFeatureProfiles(token, plan.features, base);
+    if (!remapped.ok) return remapped;
+  }
+  return deleteProfile(token, id, base);
+};
 
 /** Ollama's state, version and pulled models. */
 export const fetchRuntime = (token: string, base = "") =>

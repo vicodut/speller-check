@@ -65,7 +65,8 @@ export class ContentPortHub {
       return;
     }
     if (message.type === "settings.changed") {
-      this.broadcast({ type: "core.model_changed", model: message.model, local: message.local });
+      const { check, rephrase } = message;
+      this.broadcast({ type: "core.model_changed", check, rephrase });
       return;
     }
     if (message.fieldId === undefined) return;

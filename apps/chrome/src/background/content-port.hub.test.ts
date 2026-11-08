@@ -121,12 +121,10 @@ describe("ContentPortHub", () => {
 
   test("broadcasts a model change to every frame", () => {
     const { hub, a, b } = setup();
-    hub.fromCore({ type: "settings.changed", model: "qwen/qwen3.8-flash", local: false });
-    const changed = {
-      type: "core.model_changed",
-      model: "qwen/qwen3.8-flash",
-      local: false,
-    } as const;
+    const check = { model: "qwen3:8b", local: true };
+    const rephrase = { model: "qwen/qwen3.8-flash", local: false };
+    hub.fromCore({ type: "settings.changed", check, rephrase });
+    const changed = { type: "core.model_changed", check, rephrase } as const;
     expect(a.received).toEqual([changed]);
     expect(b.received).toEqual([changed]);
   });
