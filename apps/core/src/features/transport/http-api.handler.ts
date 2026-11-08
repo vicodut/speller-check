@@ -40,6 +40,7 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   method_not_allowed: 405,
   profile_active: 409,
   profile_builtin: 409,
+  profile_in_use: 409,
   settings_locked: 409,
   pull_in_progress: 409,
   ollama_unreachable: 409,

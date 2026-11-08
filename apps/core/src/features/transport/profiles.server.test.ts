@@ -50,10 +50,11 @@ describe("profiles over HTTP", () => {
     expect(settings.check.model).toEqual({ value: "qwen/qwen3.8-flash", source: "saved" });
 
     await Bun.sleep(20);
+    const cloudModel = { model: "qwen/qwen3.8-flash", local: false };
     expect(watcher.received).toContainEqual({
       type: "settings.changed",
-      model: "qwen/qwen3.8-flash",
-      local: false,
+      check: cloudModel,
+      rephrase: cloudModel,
     });
     watcher.close();
 
@@ -76,6 +77,38 @@ describe("profiles over HTTP", () => {
     expect((await api(`/api/profiles/${spare}`, "DELETE")).status).toBe(200);
   });
 
+  test("mapping a feature saves it and tells clients each feature's model", async () => {
+    const watcher = await client();
+    const before = ProfilesView.parse(await (await api("/api/profiles")).json());
+    const local = before.profiles.find((p) => p.builtIn)?.id ?? "";
+    const mapped = await api("/api/profiles/features", "PUT", { check: local, rephrase: null });
+    expect(ProfilesView.parse(await mapped.json()).features).toEqual({
+      check: local,
+      rephrase: null,
+    });
+    const settings = SettingsView.parse(await (await api("/api/settings")).json());
+    expect(settings.check.model.value).toBe("qwen3:8b");
+    await Bun.sleep(20);
+    expect(watcher.received).toContainEqual({
+      type: "settings.changed",
+      check: { model: "qwen3:8b", local: true },
+      rephrase: {
+        model: before.profiles.find((p) => p.id === before.activeProfileId)?.model ?? "",
+        local: false,
+      },
+    });
+    watcher.close();
+    const saved = JSON.parse(await readFile(join(ctx.dir, "settings.json"), "utf8"));
+    expect(saved.features).toEqual({ check: local, rephrase: null });
+    expect((await api(`/api/profiles/${local}`, "DELETE")).status).toBe(409);
+    expect(
+      (await api("/api/profiles/features", "PUT", { check: "ghost", rephrase: null })).status,
+    ).toBe(404);
+    expect((await api("/api/profiles/features", "PUT", { check: local })).status).toBe(400);
+    expect((await api("/api/profiles/features")).status).toBe(405);
+    await api("/api/profiles/features", "PUT", { check: null, rephrase: null });
+  });
+
   test("bad input and unknown ids are refused", async () => {
     const invalid = await api("/api/profiles", "POST", { ...cloud, apiKey: 'has "quotes"' });
     expect(invalid.status).toBe(400);
@@ -93,7 +126,8 @@ describe("profiles over HTTP", () => {
     await new Promise((resolve) => {
       ws.onopen = resolve;
     });
-    ctx.server.broadcast({ type: "settings.changed", model: "m", local: true });
+    const local = { model: "m", local: true };
+    ctx.server.broadcast({ type: "settings.changed", check: local, rephrase: local });
     await Bun.sleep(20);
     expect(received).toEqual([]);
     ws.close();

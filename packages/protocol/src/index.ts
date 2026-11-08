@@ -13,6 +13,7 @@ export {
 export {
   CoreMessage,
   ErrorMessage,
+  FeatureModel,
   IssuesCoreMessage,
   ReadyMessage,
   RephraseDoneMessage,
@@ -47,6 +48,8 @@ export {
 export {
   ApiError,
   ApiKey,
+  Feature,
+  FeatureProfiles,
   FeatureSettingsView,
   OllamaState,
   ProfileInput,

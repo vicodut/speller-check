@@ -13,6 +13,9 @@ describe("profiles while GC_* env vars give the model", () => {
     const refused = await api(`/api/profiles/${id}/activate`, "POST");
     expect(refused.status).toBe(409);
     expect(await refused.json()).toEqual({ error: "settings_locked" });
+    const mapping = await api("/api/profiles/features", "PUT", { check: null, rephrase: null });
+    expect(mapping.status).toBe(409);
+    expect(await mapping.json()).toEqual({ error: "settings_locked" });
     const settings = SettingsView.parse(await (await api("/api/settings")).json());
     expect(settings.check.model).toEqual({ value: "env-model", source: "env", envVar: "GC_MODEL" });
     await stop();

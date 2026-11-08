@@ -1,3 +1,4 @@
+import type { Feature } from "@gc/protocol";
 import { CheckCache, CheckService, FieldSessions } from "./features/check";
 import { JsonDictionaryRepository } from "./features/dictionary";
 import {
@@ -25,11 +26,12 @@ export type Core = {
   readonly dictionary: JsonDictionaryRepository;
   readonly rephraseService: RephraseService;
   /**
-   * Uses another model from the next call on: both providers are swapped, the sentence cache is
-   * cleared and the new model is warmed up. Calls in flight finish on the old model.
+   * Gives one feature another model from its next call on: only that provider is swapped (and,
+   * for Check, the sentence cache cleared), then the model is warmed up. Calls in flight finish
+   * on the old model.
    */
-  readonly switchModel: (model: ModelConfig) => void;
-  /** Loads the model in the background so the first check doesn't wait for it. */
+  readonly switchModel: (feature: Feature, model: ModelConfig) => void;
+  /** Loads each feature's model in the background so the first call doesn't wait for it. */
   readonly warmUp: () => Promise<void>;
 };
 
@@ -66,24 +68,33 @@ const providerFor = (model: ModelConfig, logger: Logger, timeoutMs?: number) =>
 /** Composition root: the only place that wires concrete classes together. */
 export const createCore = (
   files: { readonly dictionaryPath: string },
-  model: ModelConfig,
+  models: Readonly<Record<Feature, ModelConfig>>,
   logger: Logger,
 ): Core => {
-  const check = new SwitchableProvider(providerFor(model, logger));
+  const check = new SwitchableProvider(providerFor(models.check, logger));
   const cache = new CheckCache();
   const dictionary = new JsonDictionaryRepository(files.dictionaryPath);
   const checkService = new CheckService(check, cache, dictionary, logger);
-  // Same endpoint and model as the check, so text goes nowhere new; a tone's reply is longer
-  // than a check's, hence its own timeout.
-  const rephrase = new SwitchableProvider(providerFor(model, logger, REPHRASE_TIMEOUT_MS));
+  // A tone's reply is longer than a check's, hence its own timeout.
+  const rephrase = new SwitchableProvider(
+    providerFor(models.rephrase, logger, REPHRASE_TIMEOUT_MS),
+  );
   const rephraseService = new RephraseService(rephrase, logger, new RephraseCache());
-  const warmUp = () => check.warmUp();
-  const switchModel = (next: ModelConfig) => {
-    check.swap(providerFor(next, logger));
+  // At launch, one warm-up per distinct model: the same model loads once for both features.
+  const sameModel = JSON.stringify(models.check) === JSON.stringify(models.rephrase);
+  const warmUp = async () => {
+    await Promise.all(sameModel ? [check.warmUp()] : [check.warmUp(), rephrase.warmUp()]);
+  };
+  const switchModel = (feature: Feature, next: ModelConfig) => {
+    if (feature === "check") {
+      check.swap(providerFor(next, logger));
+      // Keyed by model already; cleared so a switch back re-checks with fresh eyes too.
+      cache.clear();
+      void check.warmUp();
+      return;
+    }
     rephrase.swap(providerFor(next, logger, REPHRASE_TIMEOUT_MS));
-    // Keyed by model already; cleared so a switch back re-checks with fresh eyes too.
-    cache.clear();
-    void warmUp();
+    void rephrase.warmUp();
   };
   return {
     providers: { check, rephrase },

@@ -12,7 +12,11 @@ export const runCheck = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_USAGE;
   }
   const text = await Bun.stdin.text();
-  const result = await createCore(settings.value, settings.value, logger).checkService.check({
+  const result = await createCore(
+    settings.value,
+    { check: settings.value, rephrase: settings.value },
+    logger,
+  ).checkService.check({
     text,
   });
   if (!result.ok) {

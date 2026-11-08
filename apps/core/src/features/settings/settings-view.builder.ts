@@ -39,18 +39,15 @@ export const buildSettingsView = (env: Env, settings: ModelConfig): SettingsView
   return { check: feature, rephrase: feature };
 };
 
-/** The active saved profile as the page shows it: every value is `saved`; the key only as set or not. */
-export const profileSettingsView = (profile: Profile, hasKey: boolean): SettingsView => {
-  const feature: FeatureSettingsView = {
-    baseUrl: { value: profile.baseUrl, source: "saved" },
-    model: { value: profile.model, source: "saved" },
-    reasoningEffort: profile.reasoningEffort
-      ? { value: profile.reasoningEffort, source: "saved" }
-      : { value: null, source: "unset" },
-    apiKey: hasKey ? { set: true, source: "saved" } : { set: false, source: "unset" },
-  };
-  return { check: feature, rephrase: feature };
-};
+/** A feature's saved profile as the page shows it: every value is `saved`; the key only as set or not. */
+export const profileFeatureView = (profile: Profile, hasKey: boolean): FeatureSettingsView => ({
+  baseUrl: { value: profile.baseUrl, source: "saved" },
+  model: { value: profile.model, source: "saved" },
+  reasoningEffort: profile.reasoningEffort
+    ? { value: profile.reasoningEffort, source: "saved" }
+    : { value: null, source: "unset" },
+  apiKey: hasKey ? { set: true, source: "saved" } : { set: false, source: "unset" },
+});
 
 /** Each setting's source only, for the `settings.loaded` log line. */
 export const settingSources = (

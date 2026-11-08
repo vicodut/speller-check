@@ -74,7 +74,11 @@ describe("CoreMessage", () => {
       { type: "issues", fieldId: "f1", version: 1, issues: [] },
       { type: "error", code: "provider_timeout", fieldId: "f1" },
       { type: "error", code: "resync_needed", fieldId: "f1" },
-      { type: "settings.changed", model: "qwen3:8b", local: true },
+      {
+        type: "settings.changed",
+        check: { model: "qwen3:8b", local: true },
+        rephrase: { model: "qwen/qwen3.8-flash", local: false },
+      },
     ];
     for (const message of messages) expect(CoreMessage.safeParse(message).success).toBe(true);
   });

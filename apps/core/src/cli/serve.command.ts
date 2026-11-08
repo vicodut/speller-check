@@ -1,7 +1,9 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
+import type { Feature, FeatureModel } from "@gc/protocol";
 import { OllamaClient, OllamaProcessLauncher, OllamaRuntime } from "../features/runtime";
 import {
+  type FeatureModels,
   isLocalUrl,
   loadServeSettings,
   type ModelConfig,
@@ -23,7 +25,14 @@ import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
 const SETTINGS_PAGE_DIR = join(import.meta.dir, "..", "..", "..", "settings-web", "dist");
 
 /**
- * A model change: start Ollama if the new model is on it (or stop the one this app started),
+/** What clients are told about a feature's model: its name and whether text stays on this Mac. */
+const featureModel = (model: ModelConfig): FeatureModel => ({
+  model: model.model,
+  local: isLocalUrl(model.baseUrl),
+});
+
+/**
+ * A model change: start Ollama if a model in use is on it (or stop the one this app started),
  * then swap the providers and tell every client. Starting Ollama can take seconds, so only the
  * latest change is applied: an older one finishing late never wins.
  */
@@ -34,15 +43,15 @@ const onModelChange = (
   logger: Logger,
 ) => {
   let latest = 0;
-  return async (model: ModelConfig) => {
+  return async (models: FeatureModels, changed: readonly Feature[]) => {
     const mine = ++latest;
-    await runtime.use(model);
+    await runtime.use(models.check, models.rephrase);
     if (mine !== latest) return;
-    core.switchModel(model);
+    for (const feature of changed) core.switchModel(feature, models[feature]);
     server.broadcast({
       type: "settings.changed",
-      model: model.model,
-      local: isLocalUrl(model.baseUrl),
+      check: featureModel(models.check),
+      rephrase: featureModel(models.rephrase),
     });
     logger.info({ event: "settings.switched" });
   };
@@ -82,8 +91,8 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
     return EXIT_FAILURE;
   }
   logger.info({ event: "settings.loaded", sources: settingSources(service.value.view().check) });
-  const model = await service.value.current();
-  const core = createCore(settings.value, model, logger);
+  const models = await service.value.current();
+  const core = createCore(settings.value, models, logger);
   const watcher = new InstallTokenWatcher(tokenPath, token.value);
   const runtime = new OllamaRuntime(new OllamaClient(), new OllamaProcessLauncher(), logger);
   const server = createServer(
@@ -103,7 +112,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   service.value.onChange(onModelChange(core, server, runtime, logger));
   // Not awaited: clients can connect while Ollama starts and the model loads; their first check
   // then finds it loaded, or waits for it and retries once after a timeout.
-  void runtime.use(model).then(() => core.warmUp());
+  void runtime.use(models.check, models.rephrase).then(() => core.warmUp());
   await untilSignal();
   server.stop();
   runtime.stop();

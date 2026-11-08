@@ -56,11 +56,15 @@ export const ErrorMessage = z.object({
 });
 export type ErrorMessage = z.infer<typeof ErrorMessage>;
 
-/** The active model changed. `local` is false when text leaves the machine. */
+/** The model one feature uses. `local` is false when its text leaves the machine. */
+export const FeatureModel = z.object({ model: z.string().min(1), local: z.boolean() });
+export type FeatureModel = z.infer<typeof FeatureModel>;
+
+/** A feature's model changed: the model each feature (Check, Rephrase) uses now. */
 export const SettingsChangedMessage = z.object({
   type: z.literal("settings.changed"),
-  model: z.string().min(1),
-  local: z.boolean(),
+  check: FeatureModel,
+  rephrase: FeatureModel,
 });
 export type SettingsChangedMessage = z.infer<typeof SettingsChangedMessage>;
 

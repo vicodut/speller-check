@@ -8,7 +8,7 @@ describe("SettingsService", () => {
   test("first run saves a Local profile and uses it", async () => {
     const { service, store } = await open();
     expect(store.saves).toBe(1);
-    expect(await service.current()).toEqual({
+    expect((await service.current()).check).toEqual({
       baseUrl: "http://127.0.0.1:11434/v1",
       model: "qwen3:8b",
       reasoningEffort: "none",
@@ -85,7 +85,7 @@ describe("SettingsService", () => {
     const envModel = { baseUrl: "https://openrouter.ai/api/v1", model: "env-model" };
     const env = { GC_BASE_URL: envModel.baseUrl, GC_MODEL: envModel.model };
     const { service, changes } = await open(memoryStore(), envModel, env);
-    expect(await service.current()).toEqual(envModel);
+    expect((await service.current()).check).toEqual(envModel);
     expect(service.view().check.model).toEqual({
       value: "env-model",
       source: "env",

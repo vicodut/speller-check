@@ -1,6 +1,7 @@
 import type { ProfileInput } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import { err, ok, type Result } from "../../shared/result";
+import { profileUses } from "./feature-profiles.util";
 import type { Profile, SettingsFile } from "./settings-file.schema";
 
 /** First run: Ollama on this Mac with the benchmarked local model, thinking off (qwen3 on CPU). */
@@ -41,12 +42,16 @@ export const updateProfile = (
   return ok({ ...file, profiles: file.profiles.map((p) => (p.id === id ? { id, ...input } : p)) });
 };
 
-/** The active profile can't be removed (activate another one first), nor the built-in one. */
+/**
+ * The built-in profile can't be removed, nor one in use: the active one, or one a feature is
+ * mapped to (move it to another profile first).
+ */
 export const removeProfile = (file: SettingsFile, id: string): Result<SettingsFile, AppError> => {
   const found = known(file, id);
   if (!found.ok) return found;
   if (file.builtInProfileId === id) return err(appError("profile_builtin"));
   if (file.activeProfileId === id) return err(appError("profile_active"));
+  if (profileUses(file, id).length > 0) return err(appError("profile_in_use"));
   return ok({ ...file, profiles: file.profiles.filter((p) => p.id !== id) });
 };
 

@@ -1,21 +1,25 @@
-import type { ProfileSave, ProfilesView } from "@gc/protocol";
+import type { FeatureProfiles, ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
 import { useCallback, useEffect, useReducer, useState } from "react";
 import { ExtensionToken } from "./extension-token";
+import { FeatureProfilesPanel } from "./feature-profiles";
 import { FeatureSettings } from "./feature-settings";
 import { OllamaPanel } from "./ollama-panel";
 import { useOllamaRuntime } from "./ollama-runtime.hook";
 import { ProfileForm } from "./profile-form";
 import { ProfileList } from "./profile-list";
 import { useProfileProbe } from "./profile-probe.hook";
+import { moveToLocal, profileUses } from "./profile-uses.util";
 import {
   type ApiResult,
   activateProfile,
+  deleteMovingToLocal,
   deleteProfile,
   fetchProfiles,
   fetchRuntime,
   fetchSettings,
   rotateToken,
   saveProfile,
+  setFeatureProfiles,
   startOllama,
 } from "./settings-api.client";
 import { initialState, type SettingsPageEvent, settingsPageReducer } from "./settings-page.reducer";
@@ -31,6 +35,7 @@ const ERROR_TEXT: Record<string, string> = {
   keychain_failed: "The core couldn't use the macOS Keychain, so nothing was saved.",
   profile_active: "That profile is in use. Switch to another one before deleting it.",
   profile_builtin: "The Local profile can't be deleted; you can edit it.",
+  profile_in_use: "That profile is used by a feature. Move the feature to another profile first.",
   profile_not_found: "That profile no longer exists. Reload the page.",
   settings_locked: "GC_* environment variables set the model, so profiles can't be switched.",
   settings_write_failed: "The core couldn't save the settings file.",
@@ -39,6 +44,12 @@ const ERROR_TEXT: Record<string, string> = {
   token_read_failed: "The core couldn't write a new token, so the old one still works.",
 };
 const errorText = (code: string) => ERROR_TEXT[code] ?? `Something went wrong (${code}).`;
+
+/** The model the Ollama panel is about: the first feature's model served by Ollama. */
+const ollamaModel = (view: SettingsView): string | null => {
+  const onOllama = [view.check, view.rephrase].find((f) => f.baseUrl.value?.includes(":11434"));
+  return (onOllama ?? view.check).model.value;
+};
 
 /** The settings in effect and the saved profiles, read together. */
 const loadAll = async (token: string): Promise<SettingsPageEvent> => {
@@ -110,7 +121,14 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
   const onSave = (id: string | null, input: ProfileSave) =>
     void act((t) => saveProfile(t, id, input));
   const onActivate = (id: string) => void act((t) => activateProfile(t, id));
-  const onDelete = (id: string) => void act((t) => deleteProfile(t, id));
+  /** A profile in use is moved off to Local first; the list asked the user before calling this. */
+  const onDelete = (id: string) => {
+    if (state.phase !== "ready") return;
+    const plan = profileUses(state.profiles, id).length > 0 && moveToLocal(state.profiles, id);
+    void act((t) => (plan ? deleteMovingToLocal(t, id, plan) : deleteProfile(t, id)));
+  };
+  const onFeatures = (features: FeatureProfiles) =>
+    void act((t) => setFeatureProfiles(t, features));
 
   return (
     <main>
@@ -134,6 +152,7 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
             onActivate={onActivate}
             onDelete={onDelete}
           />
+          <FeatureProfilesPanel profiles={state.profiles} busy={state.busy} onChange={onFeatures} />
           {state.notice && (
             <p className="notice" role="alert">
               {errorText(state.notice)}
@@ -142,7 +161,7 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
           {state.runtime?.ollama.inUse && (
             <OllamaPanel
               ollama={state.runtime.ollama}
-              model={state.view.check.model.value}
+              model={ollamaModel(state.view)}
               busy={state.busy}
               onStart={() => void onStartOllama()}
               onPull={onPull}

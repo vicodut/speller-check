@@ -24,7 +24,12 @@ const local = {
   builtIn: true,
   hasKey: false,
 };
-const profiles: ProfilesView = { profiles: [local], activeProfileId: "p1", lockedByEnv: false };
+const profiles: ProfilesView = {
+  profiles: [local],
+  features: { check: null, rephrase: null },
+  activeProfileId: "p1",
+  lockedByEnv: false,
+};
 const draft = { name: "Cloud", baseUrl: "https://x.ai/v1", model: "m", reasoningEffort: null };
 
 const runtime: RuntimeView = {

@@ -10,7 +10,12 @@ const feature: FeatureSettingsView = {
 };
 const view = { check: feature, rephrase: feature };
 
-const profiles = { profiles: [], activeProfileId: null, lockedByEnv: true };
+const profiles = {
+  profiles: [],
+  features: { check: null, rephrase: null },
+  activeProfileId: null,
+  lockedByEnv: true,
+};
 const seen: string[] = [];
 const NEW_TOKEN = "n".repeat(43);
 

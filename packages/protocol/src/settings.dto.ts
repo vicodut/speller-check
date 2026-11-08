@@ -86,8 +86,23 @@ export type ProfileView = z.infer<typeof ProfileView>;
  * `GET /api/profiles`, and the reply to every profile change. `lockedByEnv`: `GC_*` env vars are
  * set, so a temporary "Environment" profile is in use and saved ones can't be activated.
  */
+/** The features a profile can be picked for, apart from the active one. */
+export const Feature = z.enum(["check", "rephrase"]);
+export type Feature = z.infer<typeof Feature>;
+
+/**
+ * The profile each feature uses: a profile id, or null for "same as active" (the default).
+ * `PUT /api/profiles/features` takes it whole.
+ */
+export const FeatureProfiles = z.strictObject({
+  check: z.string().min(1).nullable(),
+  rephrase: z.string().min(1).nullable(),
+});
+export type FeatureProfiles = z.infer<typeof FeatureProfiles>;
+
 export const ProfilesView = z.strictObject({
   profiles: z.array(ProfileView),
+  features: FeatureProfiles,
   activeProfileId: z.string().min(1).nullable(),
   lockedByEnv: z.boolean(),
 });

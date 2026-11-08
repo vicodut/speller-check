@@ -20,7 +20,11 @@ if (!settings.ok) {
   process.stderr.write("Set GC_BASE_URL and GC_MODEL (and GC_API_KEY for cloud models).\n");
   process.exit(2);
 }
-const core = createCore(settings.value, settings.value, new Logger(() => {}));
+const core = createCore(
+  settings.value,
+  { check: settings.value, rephrase: settings.value },
+  new Logger(() => {}),
+);
 const print = (line: string) => process.stdout.write(`${line}\n`);
 
 const describeScore = (score: CaseScore, ms: number): string => {
