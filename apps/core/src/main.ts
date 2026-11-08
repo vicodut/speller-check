@@ -10,6 +10,7 @@ import {
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
 import { type ModelConfig, type SettingsService, toFeatureModel } from "./features/settings";
 import {
+  type LocalModelsPort,
   type RuntimePort,
   SettingsPageFiles,
   type TokenSource,
@@ -118,6 +119,7 @@ export const createServer = (
     readonly rotateToken: () => Promise<Result<string, AppError>>;
     readonly settings: SettingsService;
     readonly runtime: RuntimePort;
+    readonly localModels: LocalModelsPort;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;
   },
@@ -138,6 +140,7 @@ export const createServer = (
         logger,
       ),
       runtime: options.runtime,
+      localModels: options.localModels,
       tokens: { rotate },
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),

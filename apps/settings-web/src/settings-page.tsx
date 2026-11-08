@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer, useState } from "react";
 import { ExtensionToken } from "./extension-token";
 import { FeatureProfilesPanel } from "./feature-profiles";
 import { FeatureSettings } from "./feature-settings";
+import { LocalModelsPanel } from "./local-models-panel";
 import { OllamaPanel } from "./ollama-panel";
 import { useOllamaRuntime } from "./ollama-runtime.hook";
 import { ProfileForm } from "./profile-form";
@@ -168,6 +169,7 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
               onCancelPull={onCancelPull}
             />
           )}
+          <LocalModelsPanel token={token} />
           {state.form && (
             <ProfileForm
               form={state.form}

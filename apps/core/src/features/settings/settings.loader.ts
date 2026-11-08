@@ -16,6 +16,9 @@ export const defaultSettingsPath = (homeDir: string): string =>
 
 export const defaultTokenPath = (homeDir: string): string => join(appSupportDir(homeDir), "token");
 
+/** Where downloaded local models live: next to the settings, in the app's folder. */
+export const defaultModelsDir = (homeDir: string): string => join(appSupportDir(homeDir), "models");
+
 const blankToUndefined = (value: string | undefined): string | undefined =>
   value?.trim() ? value.trim() : undefined;
 

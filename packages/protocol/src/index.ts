@@ -22,6 +22,15 @@ export {
 } from "./core-message.dto";
 export { Issue } from "./issue.schema";
 export { IssuesMessage } from "./issues-message.dto";
+export {
+  FixtureScore,
+  LocalModelState,
+  LocalModelsView,
+  LocalModelView,
+  ManifestEntry,
+  ModelFileName,
+  ModelManifest,
+} from "./local-models.dto";
 export { IssueType, ModelIssue, ModelResponse } from "./model-issue.schema";
 export {
   ModelRephraseResponse,

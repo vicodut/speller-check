@@ -382,6 +382,18 @@ button.link:hover {
   margin: 0.8rem 0 0;
 }
 
+.local-models {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+}
+.local-model {
+  margin-bottom: 1rem;
+}
+.local-model p {
+  margin: 0.4rem 0 0;
+}
+
 .token-row {
   display: flex;
   gap: 8px;
