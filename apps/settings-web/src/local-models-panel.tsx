@@ -114,7 +114,7 @@ export const LocalModelsPanel = ({ token }: { token: string | null }) => {
           {ERRORS[error] ?? "That didn't work."} (<code>{error}</code>)
         </p>
       )}
-      <ul className="models">
+      <ul className="local-models">
         {view.models.map((model) => (
           <Entry
             key={model.id}
