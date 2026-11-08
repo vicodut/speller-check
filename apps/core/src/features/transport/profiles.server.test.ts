@@ -50,7 +50,7 @@ describe("profiles over HTTP", () => {
     expect(settings.check.model).toEqual({ value: "qwen/qwen3.8-flash", source: "saved" });
 
     await Bun.sleep(20);
-    const cloudModel = { model: "qwen/qwen3.8-flash", local: false };
+    const cloudModel = { model: "qwen/qwen3.8-flash", local: false, provider: "openrouter.ai" };
     expect(watcher.received).toContainEqual({
       type: "settings.changed",
       check: cloudModel,
@@ -91,10 +91,11 @@ describe("profiles over HTTP", () => {
     await Bun.sleep(20);
     expect(watcher.received).toContainEqual({
       type: "settings.changed",
-      check: { model: "qwen3:8b", local: true },
+      check: { model: "qwen3:8b", local: true, provider: "127.0.0.1" },
       rephrase: {
         model: before.profiles.find((p) => p.id === before.activeProfileId)?.model ?? "",
         local: false,
+        provider: "openrouter.ai",
       },
     });
     watcher.close();

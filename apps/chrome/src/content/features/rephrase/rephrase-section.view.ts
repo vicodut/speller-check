@@ -112,15 +112,18 @@ const pendingLines = (labels: readonly string[]): HTMLElement[] =>
 /**
  * The panel's rephrase section: the tone buttons, then the versions received so far (with
  * Replace and Replace all) followed by a loading line per tone still to come. Text only.
+ * `sentTo`: the host the text goes to, set only while the rephrase model is a cloud one.
  */
 export const renderRephraseSection = (
   container: HTMLElement,
   state: RephrasePanelState,
   actions: RephraseSectionActions,
+  sentTo?: string,
 ): void => {
   const section = el("div", "gc-rephrase-section");
   const enabled = state.kind === "result" || state.enabled;
   section.append(toneRow(state.tones, enabled, actions.rephrase));
+  if (sentTo !== undefined) section.append(el("div", "gc-sent-to", `Sent to ${sentTo}`));
   if (state.kind === "result") {
     if (state.copy !== undefined) section.append(copyFallback(state.copy, actions.copy));
     section.append(...state.versions.map((v) => versionBlock(v, actions)));

@@ -4,7 +4,13 @@ import type { WatchedField } from "../../shared/issue-view";
 import { placeHost } from "../../shared/top-layer.util";
 import { BadgePanel, type BadgePanelCallbacks } from "./badge-panel.service";
 import { badgePosition, panelPlacement } from "./badge-position.util";
-import { type BadgeState, badgeLabel, resultState, withRephraseReady } from "./badge-state.util";
+import {
+  type BadgeState,
+  badgeLabel,
+  resultState,
+  withCloudMarker,
+  withRephraseReady,
+} from "./badge-state.util";
 import { ElapsedPopup } from "./elapsed-popup.service";
 import { fieldBox } from "./field-box.util";
 import { BADGE_CSS } from "./status-badge.styles";
@@ -35,6 +41,8 @@ export class StatusBadge {
   private state: BadgeState | null = null;
   /** The view's latest visible issues for the field, shown once the check is done. */
   private latest: readonly Issue[] = [];
+  /** The host check text goes to while the check model is a cloud one; undefined when local. */
+  private cloud: string | undefined;
 
   /** `now`: the clock for elapsed times (injectable for tests). */
   constructor(
@@ -102,6 +110,13 @@ export class StatusBadge {
     this.place();
   }
 
+  /** The models changed: the cloud marker follows the check model, and an open panel redraws. */
+  setCloud(provider: string | undefined): void {
+    this.cloud = provider;
+    this.paint();
+    if (this.field) this.refreshPanel(this.field);
+  }
+
   hide(field?: WatchedField): void {
     if (field && field !== this.field) return;
     this.detach();
@@ -132,9 +147,10 @@ export class StatusBadge {
   private paint(): void {
     if (!this.state) return;
     const ready = !!this.field && !!this.section?.hasNews(this.field);
-    const label = badgeLabel(this.state);
+    const label = withCloudMarker(badgeLabel(this.state), this.cloud);
     const { text, title, variant } = withRephraseReady(label, ready);
-    this.badge.className = `gc-badge gc-${variant}${ready ? " gc-ready" : ""}`;
+    const marks = `${ready ? " gc-ready" : ""}${label.cloud ? " gc-cloud" : ""}`;
+    this.badge.className = `gc-badge gc-${variant}${marks}`;
     this.badge.textContent = text;
     this.badge.title = title;
   }

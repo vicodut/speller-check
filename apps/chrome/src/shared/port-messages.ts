@@ -40,6 +40,18 @@ export const CoreModelChangedMessage = z.object({
 });
 export type CoreModelChangedMessage = z.infer<typeof CoreModelChangedMessage>;
 
+/**
+ * Sent to a port when it attaches and whenever the core reports its models (at connect and on a
+ * settings change): the badge and panel show where text goes. Unlike `core.model_changed`, it
+ * never makes frames check again.
+ */
+export const CoreModelsMessage = z.object({
+  type: z.literal("core.models"),
+  check: FeatureModel,
+  rephrase: FeatureModel,
+});
+export type CoreModelsMessage = z.infer<typeof CoreModelsMessage>;
+
 export const ConnectionStatus = z.enum(["connecting", "ready", "auth_failed", "unreachable"]);
 export type ConnectionStatus = z.infer<typeof ConnectionStatus>;
 
@@ -58,6 +70,7 @@ export const BackgroundMessage = z.discriminatedUnion("type", [
   ErrorMessage,
   CoreReadyMessage,
   CoreModelChangedMessage,
+  CoreModelsMessage,
   CoreStatusMessage,
 ]);
 export type BackgroundMessage = z.infer<typeof BackgroundMessage>;
@@ -66,5 +79,9 @@ export type BackgroundMessage = z.infer<typeof BackgroundMessage>;
 export const StatusRequest = z.object({ type: z.literal("status") });
 export type StatusRequest = z.infer<typeof StatusRequest>;
 
-export const StatusResponse = z.object({ status: ConnectionStatus });
+export const StatusResponse = z.object({
+  status: ConnectionStatus,
+  /** The model the check feature uses, once the core has said (read-only on the options page). */
+  check: FeatureModel.optional(),
+});
 export type StatusResponse = z.infer<typeof StatusResponse>;

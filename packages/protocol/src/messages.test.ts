@@ -71,6 +71,11 @@ describe("CoreMessage", () => {
   test("accepts ready, issues, error and settings.changed", () => {
     const messages = [
       { type: "ready" },
+      {
+        type: "ready",
+        check: { model: "m", local: false, provider: "openrouter.ai" },
+        rephrase: { model: "q", local: true },
+      },
       { type: "issues", fieldId: "f1", version: 1, issues: [] },
       { type: "error", code: "provider_timeout", fieldId: "f1" },
       { type: "error", code: "resync_needed", fieldId: "f1" },

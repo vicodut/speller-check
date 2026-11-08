@@ -6,7 +6,12 @@ import { join } from "node:path";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
 import { ProfileProbeProvider } from "../providers";
-import { isLocalUrl, type ModelConfig, SettingsFileRepository, SettingsService } from "../settings";
+import {
+  type ModelConfig,
+  SettingsFileRepository,
+  SettingsService,
+  toFeatureModel,
+} from "../settings";
 import { WebSocketServer } from "./websocket.server";
 
 export const TOKEN = "q".repeat(43);
@@ -74,12 +79,11 @@ export const startProfilesServer = async (env = {}, envModel: ModelConfig | null
   );
   if (!opened.ok) throw new Error("settings did not open");
   const { server, base } = startServer(opened.value);
-  const featureModel = (m: ModelConfig) => ({ model: m.model, local: isLocalUrl(m.baseUrl) });
   opened.value.onChange((models) =>
     server.broadcast({
       type: "settings.changed",
-      check: featureModel(models.check),
-      rephrase: featureModel(models.rephrase),
+      check: toFeatureModel(models.check),
+      rephrase: toFeatureModel(models.rephrase),
     }),
   );
   const api = (path: string, method = "GET", body?: unknown) =>
