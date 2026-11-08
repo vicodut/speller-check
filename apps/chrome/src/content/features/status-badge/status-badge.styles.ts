@@ -57,6 +57,22 @@ export const BADGE_CSS = `
   background: #3e63dd;
   box-shadow: 0 0 0 1.5px #fff;
 }
+.gc-cloud::before {
+  content: "\\2601";
+  position: absolute;
+  bottom: -4px;
+  left: -4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  color: #3e63dd;
+  font: 400 9px/1 system-ui, -apple-system, sans-serif;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+}
 @keyframes gc-spin { to { transform: rotate(360deg); } }
 @keyframes gc-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) {
@@ -98,6 +114,7 @@ export const BADGE_CSS = `
 @media (prefers-color-scheme: dark) {
   .gc-panel { background: #212225; color: #edeef0; }
   .gc-elapsed { background: rgba(33, 34, 37, 0.92); color: #9eb1ff; }
+  .gc-cloud::before { background: #212225; color: #9eb1ff; }
   .gc-item:hover, .gc-item:focus-visible { background: rgba(255, 255, 255, 0.08); }
   .gc-list:not([hidden]) + .gc-extra:not(:empty) { border-color: rgba(255, 255, 255, 0.1); }
 }

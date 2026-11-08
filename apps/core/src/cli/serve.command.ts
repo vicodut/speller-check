@@ -11,13 +11,13 @@ import { OllamaClient, OllamaProcessLauncher, OllamaRuntime } from "../features/
 import {
   defaultModelsDir,
   type FeatureModels,
-  isLocalUrl,
   loadServeSettings,
   type ModelConfig,
   SecurityKeychain,
   SettingsFileRepository,
   SettingsService,
   settingSources,
+  toFeatureModel,
 } from "../features/settings";
 import {
   InstallTokenRepository,
@@ -32,12 +32,6 @@ import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
 const SETTINGS_PAGE_DIR = join(import.meta.dir, "..", "..", "..", "settings-web", "dist");
 
 /**
-/** What clients are told about a feature's model: its name and whether text stays on this Mac. */
-const featureModel = (model: ModelConfig): FeatureModel => ({
-  model: model.model,
-  local: isLocalUrl(model.baseUrl),
-});
-
 /**
  * A model change: start Ollama if a model in use is on it (or stop the one this app started),
  * then swap the providers and tell every client. Starting Ollama can take seconds, so only the
@@ -57,8 +51,8 @@ const onModelChange = (
     for (const feature of changed) core.switchModel(feature, models[feature]);
     server.broadcast({
       type: "settings.changed",
-      check: featureModel(models.check),
-      rephrase: featureModel(models.rephrase),
+      check: toFeatureModel(models.check),
+      rephrase: toFeatureModel(models.rephrase),
     });
     logger.info({ event: "settings.switched" });
   };

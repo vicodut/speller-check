@@ -125,8 +125,31 @@ describe("ContentPortHub", () => {
     const rephrase = { model: "qwen/qwen3.8-flash", local: false };
     hub.fromCore({ type: "settings.changed", check, rephrase });
     const changed = { type: "core.model_changed", check, rephrase } as const;
-    expect(a.received).toEqual([changed]);
-    expect(b.received).toEqual([changed]);
+    const models = { type: "core.models", check, rephrase } as const;
+    expect(a.received).toEqual([models, changed]);
+    expect(b.received).toEqual([models, changed]);
+  });
+
+  test("tells frames the models at connect without asking them to check again", () => {
+    const { hub, a } = setup();
+    const check = { model: "m", local: false, provider: "openrouter.ai" };
+    const rephrase = { model: "m", local: true };
+    hub.fromCore({ type: "ready", check, rephrase });
+    expect(a.received).toEqual([{ type: "core.models", check, rephrase }, { type: "core.ready" }]);
+    expect(hub.checkModel).toEqual(check);
+  });
+
+  test("a ready without models keeps what it knew, and a late frame gets it on attach", () => {
+    const { hub } = setup();
+    const check = { model: "m", local: false };
+    hub.fromCore({ type: "ready", check, rephrase: check });
+    hub.fromCore({ type: "ready" });
+    const late = new FakePort();
+    hub.attach(late);
+    expect(late.received).toEqual([
+      { type: "core.status", status: "connecting" },
+      { type: "core.models", check, rephrase: check },
+    ]);
   });
 
   test("sends the current status on attach and broadcasts changes", () => {

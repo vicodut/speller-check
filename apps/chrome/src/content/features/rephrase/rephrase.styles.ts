@@ -54,6 +54,7 @@ export const REPHRASE_CSS = `
   color: #ad5700;
 }
 .gc-copy-note { flex: 1; }
+.gc-sent-to { margin-top: 4px; padding: 0 4px; font-size: 11px; opacity: 0.65; }
 .gc-fits { font-size: 12px; color: #30a46c; }
 @media (prefers-color-scheme: dark) {
   .gc-version + .gc-version { border-color: rgba(255, 255, 255, 0.1); }

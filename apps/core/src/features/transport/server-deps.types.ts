@@ -1,4 +1,4 @@
-import type { CheckRequest, CoreMessage, RephraseRequestMessage } from "@gc/protocol";
+import type { CheckRequest, CoreMessage, ReadyMessage, RephraseRequestMessage } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import type { Result } from "../../shared/result";
 import type { HttpDeps } from "./http-api.handler";
@@ -23,5 +23,7 @@ export type RephrasePort = {
 export type ServerDeps = HttpDeps & {
   createSession(publish: (message: CoreMessage) => void): SessionPort;
   createRephraser(publish: (message: CoreMessage) => void): RephrasePort;
+  /** The model each feature uses now, sent with `ready`; absent in tests that don't use it. */
+  currentModels?(): Promise<Pick<ReadyMessage, "check" | "rephrase">>;
   addDictionaryTerm(term: string): Promise<Result<void, AppError>>;
 };
