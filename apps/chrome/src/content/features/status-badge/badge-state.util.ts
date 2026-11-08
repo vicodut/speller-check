@@ -9,7 +9,7 @@ export type BadgeState =
   | { readonly kind: "failed"; readonly code: string }
   | { readonly kind: "offline"; readonly status: "auth_failed" | "unreachable" };
 
-export type BadgeLabel = { text: string; title: string; variant: string };
+export type BadgeLabel = { text: string; title: string; variant: string; cloud?: boolean };
 
 const CAP = MAX_TEXT_LENGTH.toLocaleString("en-US");
 
@@ -73,6 +73,17 @@ export const badgeLabel = (state: BadgeState): BadgeLabel => {
             variant: "offline",
           };
   }
+};
+
+/**
+ * Marks a badge whose check text leaves this Mac (`provider`: the host it goes to; undefined for
+ * a local model). The state, text and variant never change; a spinner keeps its empty tooltip
+ * (its hover popup shows the time instead).
+ */
+export const withCloudMarker = (label: BadgeLabel, provider: string | undefined): BadgeLabel => {
+  if (provider === undefined) return label;
+  const note = `Sent to ${provider}`;
+  return { ...label, cloud: true, title: label.title === "" ? "" : `${label.title} · ${note}` };
 };
 
 /**

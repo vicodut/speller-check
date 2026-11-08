@@ -2,8 +2,23 @@ import { z } from "zod";
 import { IssuesMessage } from "./issues-message.dto";
 import { RephraseToneResult } from "./rephrase.schema";
 
-/** Sent once the hello token is accepted. */
-export const ReadyMessage = z.object({ type: z.literal("ready") });
+/**
+ * The model one feature uses. `local` is false when its text leaves the machine; `provider` is
+ * the host it goes to (the endpoint's host name), absent when unknown.
+ */
+export const FeatureModel = z.object({
+  model: z.string().min(1),
+  local: z.boolean(),
+  provider: z.string().min(1).optional(),
+});
+export type FeatureModel = z.infer<typeof FeatureModel>;
+
+/** Sent once the hello token is accepted, with the model each feature uses when the core knows. */
+export const ReadyMessage = z.object({
+  type: z.literal("ready"),
+  check: FeatureModel.optional(),
+  rephrase: FeatureModel.optional(),
+});
 export type ReadyMessage = z.infer<typeof ReadyMessage>;
 
 /**
@@ -55,10 +70,6 @@ export const ErrorMessage = z.object({
   requestId: z.number().int().nonnegative().optional(),
 });
 export type ErrorMessage = z.infer<typeof ErrorMessage>;
-
-/** The model one feature uses. `local` is false when its text leaves the machine. */
-export const FeatureModel = z.object({ model: z.string().min(1), local: z.boolean() });
-export type FeatureModel = z.infer<typeof FeatureModel>;
 
 /** A feature's model changed: the model each feature (Check, Rephrase) uses now. */
 export const SettingsChangedMessage = z.object({

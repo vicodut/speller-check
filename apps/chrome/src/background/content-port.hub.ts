@@ -2,6 +2,7 @@ import type {
   ClientMessage,
   CoreMessage,
   ErrorMessage,
+  FeatureModel,
   RephraseDoneMessage,
   RephraseRequestMessage,
   RephraseToneMessage,
@@ -41,6 +42,7 @@ export class ContentPortHub {
   private readonly rephrasing = new Map<string, number>();
   private nextPortId = 1;
   private status: ConnectionStatus = "connecting";
+  private models: { check: FeatureModel; rephrase: FeatureModel } | undefined;
 
   constructor(private readonly sendToCore: SendToCore) {}
 
@@ -50,6 +52,12 @@ export class ContentPortHub {
     port.onMessage.addListener((raw) => this.fromContent(portId, raw));
     port.onDisconnect.addListener(() => this.detach(portId));
     port.postMessage({ type: "core.status", status: this.status });
+    if (this.models) port.postMessage({ type: "core.models", ...this.models });
+  }
+
+  /** The model the check feature uses, as the core last said. */
+  get checkModel(): FeatureModel | undefined {
+    return this.models?.check;
   }
 
   /** The core connection status changed: tell every frame (they show it on the badge). */
@@ -61,11 +69,13 @@ export class ContentPortHub {
   /** Routes a validated core message to the port that owns its field. */
   fromCore(message: CoreMessage): void {
     if (message.type === "ready") {
+      this.setModels(message.check, message.rephrase);
       this.broadcast({ type: "core.ready" });
       return;
     }
     if (message.type === "settings.changed") {
       const { check, rephrase } = message;
+      this.setModels(check, rephrase);
       this.broadcast({ type: "core.model_changed", check, rephrase });
       return;
     }
@@ -75,6 +85,12 @@ export class ContentPortHub {
       : this.router.resolve(message.fieldId);
     if (!owner) return;
     this.ports.get(owner.portId)?.postMessage({ ...message, fieldId: owner.fieldId });
+  }
+
+  private setModels(check?: FeatureModel, rephrase?: FeatureModel): void {
+    if (!check || !rephrase) return;
+    this.models = { check, rephrase };
+    this.broadcast({ type: "core.models", check, rephrase });
   }
 
   private isRephraseReply(message: CoreMessage): message is RephraseReply {

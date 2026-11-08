@@ -8,7 +8,7 @@ import {
   TimeoutRetryProvider,
 } from "./features/providers";
 import { RephraseCache, RephraseJobs, RephraseService } from "./features/rephrase";
-import type { ModelConfig, SettingsService } from "./features/settings";
+import { type ModelConfig, type SettingsService, toFeatureModel } from "./features/settings";
 import {
   type RuntimePort,
   SettingsPageFiles,
@@ -141,6 +141,10 @@ export const createServer = (
       tokens: { rotate },
       settingsPage: new SettingsPageFiles(options.settingsPageDir),
       createSession: (publish) => new FieldSessions(core.checkService, publish, logger),
+      currentModels: async () => {
+        const models = await options.settings.current();
+        return { check: toFeatureModel(models.check), rephrase: toFeatureModel(models.rephrase) };
+      },
       addDictionaryTerm: (term) => core.dictionary.add(term),
       createRephraser: (publish) => new RephraseJobs(core.rephraseService, publish),
     },

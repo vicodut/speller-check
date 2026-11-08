@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { loadSettings, saveSettings } from "../shared/extension-settings";
 import type { ConnectionStatus } from "../shared/port-messages";
 import { parseBlockedSites } from "../shared/site-blocklist";
+import { modelLine } from "./model-line.util";
 import { useConnectionStatus } from "./use-connection-status.hook";
 
 const statusLabels: Record<ConnectionStatus, string> = {
@@ -21,7 +22,9 @@ export const OptionsForm = () => {
   const [port, setPort] = useState("");
   const [sites, setSites] = useState("");
   const [message, setMessage] = useState("");
-  const status = useConnectionStatus();
+  const connection = useConnectionStatus();
+  const status = connection?.status;
+  const model = modelLine(connection?.check);
 
   useEffect(() => {
     void loadSettings().then((settings) => {
@@ -45,6 +48,7 @@ export const OptionsForm = () => {
     <form onSubmit={onSubmit}>
       <h1>Grammar Checker</h1>
       <p>Status: {status ? statusLabels[status] : "Unknown"}</p>
+      {model && <p>{model}</p>}
       <label>
         Token
         <input type="password" value={token} onChange={(e) => setToken(e.target.value)} />

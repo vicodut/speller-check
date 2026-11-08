@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
-import { type ConnectionStatus, StatusResponse } from "../shared/port-messages";
+import { StatusResponse } from "../shared/port-messages";
 
 const POLL_MS = 1000;
 
-const fetchStatus = async (): Promise<ConnectionStatus | undefined> => {
+const fetchStatus = async (): Promise<StatusResponse | undefined> => {
   try {
     const parsed = StatusResponse.safeParse(await chrome.runtime.sendMessage({ type: "status" }));
-    return parsed.success ? parsed.data.status : undefined;
+    return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;
   }
 };
 
-/** Asks the background for the core connection status, once a second. */
-export const useConnectionStatus = (): ConnectionStatus | undefined => {
-  const [status, setStatus] = useState<ConnectionStatus | undefined>(undefined);
+/** Asks the background for the core connection status and check model, once a second. */
+export const useConnectionStatus = (): StatusResponse | undefined => {
+  const [status, setStatus] = useState<StatusResponse | undefined>(undefined);
   useEffect(() => {
     let active = true;
     const poll = async () => {

@@ -13,6 +13,16 @@ describe("ConnectionHandler", () => {
     t.handler.dispose();
   });
 
+  test("sends the models in use with ready when the core can say", async () => {
+    const check = { model: "m", local: false, provider: "openrouter.ai" };
+    const rephrase = { model: "q", local: true, provider: "127.0.0.1" };
+    const t = setup({ currentModels: async () => ({ check, rephrase }) });
+    await t.handler.receive(hello);
+    await Promise.resolve();
+    expect(t.sent).toEqual([{ type: "ready", check, rephrase }]);
+    t.handler.dispose();
+  });
+
   test.each([
     ["wrong token", JSON.stringify({ type: "hello", token: "nope" })],
     ["another message first", JSON.stringify({ type: "field.closed", fieldId: "f" })],

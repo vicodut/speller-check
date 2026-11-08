@@ -1,3 +1,4 @@
+export { toFeatureModel } from "./feature-model.util";
 export { type KeyStore, SecurityKeychain } from "./keychain.repository";
 export { isLocalUrl } from "./profiles.util";
 export {

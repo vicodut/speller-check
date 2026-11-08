@@ -1,4 +1,5 @@
 // One checking session for this frame: field watcher, underlines/card, badge, rephrase and core port.
+import type { FeatureModel } from "@gc/protocol";
 import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
 import { FieldWatcher } from "./features/field-watcher";
 import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./features/rephrase";
@@ -18,10 +19,16 @@ const copyText = (text: string): Promise<boolean> =>
     () => false,
   );
 
+/** Where a feature's text goes: its host (or "the cloud" if unnamed) when the model is not local. */
+const cloudHost = (model: FeatureModel): string | undefined =>
+  model.local ? undefined : (model.provider ?? "the cloud");
+
 /** Starts watching fields; the returned function removes all UI and closes the port. */
 export const startSession = (doc: Document): StopSession => {
   const port = new CorePort((message) => onBackground(message));
   let status: ConnectionStatus | undefined;
+  /** The host rephrase text goes to, while its model is a cloud one. */
+  let rephraseCloud: string | undefined;
   const view = createIssueView({
     addToDictionary: (term) => {
       checks.dictionaryChanged();
@@ -48,11 +55,16 @@ export const startSession = (doc: Document): StopSession => {
       css: REPHRASE_CSS,
       render: (container, field) => {
         rephrase.seen(field);
-        renderRephraseSection(container, rephrase.state(field), {
-          rephrase: (tone) => rephrase.request(field, tone),
-          replace: (tone, segment) => void rephrase.replace(field, tone, segment),
-          copy: copyText,
-        });
+        renderRephraseSection(
+          container,
+          rephrase.state(field),
+          {
+            rephrase: (tone) => rephrase.request(field, tone),
+            replace: (tone, segment) => void rephrase.replace(field, tone, segment),
+            copy: copyText,
+          },
+          rephraseCloud,
+        );
       },
       hasNews: (field) => rephrase.hasNews(field),
     },
@@ -77,6 +89,11 @@ export const startSession = (doc: Document): StopSession => {
     if (message.type === "core.status") {
       status = message.status;
       if (status === "auth_failed" || status === "unreachable") badge.offline(status);
+      return;
+    }
+    if (message.type === "core.models") {
+      rephraseCloud = cloudHost(message.rephrase);
+      badge.setCloud(cloudHost(message.check));
       return;
     }
     if (message.type === "core.ready") {

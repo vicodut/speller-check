@@ -93,7 +93,14 @@ export class ConnectionHandler {
       session: this.deps.createSession(publish),
       rephraser: this.deps.createRephraser(publish),
     };
-    this.send({ type: "ready" });
+    if (this.deps.currentModels) void this.sendReady(this.deps.currentModels);
+    else this.send({ type: "ready" });
+  }
+
+  /** `ready`, with the models in use when the core can say; the client hears nothing before it. */
+  private async sendReady(currentModels: NonNullable<ServerDeps["currentModels"]>): Promise<void> {
+    const models = await currentModels().catch(() => undefined);
+    if (!this.closed) this.send({ type: "ready", ...models });
   }
 
   /** A field closing (blur) leaves its rephrase running, so the tones still arrive. */

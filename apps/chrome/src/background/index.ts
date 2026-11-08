@@ -21,7 +21,8 @@ chrome.runtime.onConnect.addListener((port) => {
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id || !StatusRequest.safeParse(message).success) return;
-  const response: StatusResponse = { status: connection.status };
+  const check = hub?.checkModel;
+  const response: StatusResponse = { status: connection.status, ...(check ? { check } : {}) };
   sendResponse(response);
 });
 

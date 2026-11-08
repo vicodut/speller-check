@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Issue } from "@gc/protocol";
-import { badgeLabel, elapsedText, resultState, withRephraseReady } from "./badge-state.util";
+import {
+  type BadgeState,
+  badgeLabel,
+  elapsedText,
+  resultState,
+  withCloudMarker,
+  withRephraseReady,
+} from "./badge-state.util";
 
 const issues = (n: number): Issue[] =>
   Array.from({ length: n }, (_, i) => ({
@@ -79,6 +86,41 @@ describe("elapsedText", () => {
 
   test("a clock that went backwards shows zero", () => {
     expect(elapsedText(5_000, 4_000)).toBe("0.0s");
+  });
+});
+
+describe("withCloudMarker", () => {
+  const states: BadgeState[] = [
+    { kind: "checking", since: 0 },
+    { kind: "count", issues: [] },
+    { kind: "count", issues: issues(2) },
+    { kind: "too_long" },
+    { kind: "failed", code: "provider_timeout" },
+    { kind: "offline", status: "unreachable" },
+  ];
+
+  test("leaves every state unchanged for a local model", () => {
+    for (const state of states) {
+      const label = badgeLabel(state);
+      expect(withCloudMarker(label, undefined)).toEqual(label);
+    }
+  });
+
+  test("adds the marker without replacing text or variant", () => {
+    for (const state of states) {
+      const label = badgeLabel(state);
+      const marked = withCloudMarker(label, "openrouter.ai");
+      expect(marked).toMatchObject({ text: label.text, variant: label.variant, cloud: true });
+      const expected = label.title === "" ? "" : `${label.title} · Sent to openrouter.ai`;
+      expect(marked.title).toBe(expected);
+    }
+  });
+
+  test("combines with the rephrase-ready line", () => {
+    const label = badgeLabel({ kind: "count", issues: [] });
+    const both = withRephraseReady(withCloudMarker(label, "x.ai"), true);
+    expect(both.title).toEndWith("Sent to x.ai · Rephrase ready");
+    expect(both.cloud).toBe(true);
   });
 });
 
