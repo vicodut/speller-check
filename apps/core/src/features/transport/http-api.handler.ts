@@ -4,6 +4,7 @@ import type { Logger } from "../../shared/logger";
 import type { Result } from "../../shared/result";
 import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
 import { bearerToken, isLocalHost, isSameOrigin } from "./http-guard.util";
+import { type LocalModelsPort, routeLocalModels } from "./local-models-routes.handler";
 import { type ProbePort, routeProbe } from "./probe-routes.handler";
 import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import { type RuntimePort, routeRuntime } from "./runtime-routes.handler";
@@ -24,6 +25,8 @@ export type HttpDeps = {
   readonly probe?: ProbePort | undefined;
   /** The local runtime; absent in tests that don't use it. */
   readonly runtime?: RuntimePort | undefined;
+  /** The curated local models; absent in tests that don't use them. */
+  readonly localModels?: LocalModelsPort | undefined;
   /** Rotates the install token; absent in tests that don't use it. */
   readonly tokens?: TokenPort | undefined;
   /** The built settings page; absent in tests that only use the API. */
@@ -43,6 +46,9 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   profile_in_use: 409,
   settings_locked: 409,
   pull_in_progress: 409,
+  model_not_found: 404,
+  model_in_use: 409,
+  download_in_progress: 409,
   ollama_unreachable: 409,
 };
 
@@ -91,6 +97,7 @@ export class HttpApi {
       return this.rotateToken(request, this.deps.tokens);
     const routed =
       (this.deps.runtime && routeRuntime(request, pathname, this.deps.runtime)) ||
+      (this.deps.localModels && routeLocalModels(request, pathname, this.deps.localModels)) ||
       (this.deps.probe && routeProbe(request, pathname, this.deps.probe)) ||
       (this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles));
     if (!routed) return this.reject("not_found", 404);

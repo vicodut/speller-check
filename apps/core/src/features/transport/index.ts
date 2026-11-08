@@ -2,6 +2,7 @@ export type { TokenSource } from "./connection-guard.service";
 export type { TokenPort } from "./http-api.handler";
 export { InstallTokenRepository } from "./install-token.repository";
 export { InstallTokenWatcher } from "./install-token.watcher";
+export type { LocalModelsPort } from "./local-models-routes.handler";
 export type { ProbePort } from "./probe-routes.handler";
 export type { RuntimePort } from "./runtime-routes.handler";
 export type { ServerDeps, SessionPort } from "./server-deps.types";

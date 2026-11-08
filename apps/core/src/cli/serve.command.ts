@@ -1,8 +1,15 @@
-import { homedir } from "node:os";
+import { homedir, totalmem } from "node:os";
 import { join } from "node:path";
 import type { Feature, FeatureModel } from "@gc/protocol";
+import {
+  CURATED_MANIFEST,
+  LocalModels,
+  ModelDownloader,
+  ModelFiles,
+} from "../features/local-models";
 import { OllamaClient, OllamaProcessLauncher, OllamaRuntime } from "../features/runtime";
 import {
+  defaultModelsDir,
   type FeatureModels,
   isLocalUrl,
   loadServeSettings,
@@ -95,6 +102,16 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   const core = createCore(settings.value, models, logger);
   const watcher = new InstallTokenWatcher(tokenPath, token.value);
   const runtime = new OllamaRuntime(new OllamaClient(), new OllamaProcessLauncher(), logger);
+  const modelFiles = new ModelFiles(defaultModelsDir(homedir()));
+  const localModels = new LocalModels({
+    manifest: CURATED_MANIFEST,
+    files: modelFiles,
+    downloader: new ModelDownloader(modelFiles),
+    // A profile uses a curated model by naming its manifest id as its model.
+    inUse: (id) => service.value.profiles().profiles.some((p) => p.model === id),
+    memoryBytes: totalmem(),
+    logger,
+  });
   const server = createServer(
     core,
     {
@@ -104,6 +121,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
       rotateToken: () => tokens.rotate(),
       settings: service.value,
       runtime,
+      localModels,
       settingsPageDir: SETTINGS_PAGE_DIR,
     },
     logger,
@@ -114,6 +132,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   // then finds it loaded, or waits for it and retries once after a timeout.
   void runtime.use(models.check, models.rephrase).then(() => core.warmUp());
   await untilSignal();
+  localModels.cancel();
   server.stop();
   runtime.stop();
   return 0;

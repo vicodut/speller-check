@@ -29,7 +29,7 @@ type Call = {
  * One API call. Errors are codes: the core's own (`auth_failed`, …), `unreachable`, or
  * `bad_response` when the body doesn't match the schema.
  */
-const call = async <T>(schema: z.ZodType<T>, c: Call): Promise<ApiResult<T>> => {
+export const call = async <T>(schema: z.ZodType<T>, c: Call): Promise<ApiResult<T>> => {
   let response: Response;
   try {
     response = await (c.fetchFn ?? fetch)(`${c.base ?? ""}${c.path}`, {
