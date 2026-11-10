@@ -36,6 +36,8 @@ describe("build", () => {
       "--color-input",
       "--color-ring",
       "--color-primary",
+      "--color-primary-foreground",
+      "--color-destructive-foreground",
       "--color-destructive",
       "--color-success",
       "--color-success-background",

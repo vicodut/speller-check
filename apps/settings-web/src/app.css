@@ -18,6 +18,8 @@
   --danger: #ce2c31;
   --saved: #2b9a66;
   --saved-bg: #e6f6eb;
+  /* Text on an accent or danger fill. */
+  --on-accent: #ffffff;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -33,6 +35,7 @@
     --danger: #ff9592;
     --saved: #3dd68c;
     --saved-bg: #132d21;
+    --on-accent: #111113;
   }
 }
 
@@ -47,8 +50,10 @@
   --color-border: var(--line);
   --color-input: var(--line);
   --color-primary: var(--accent);
+  --color-primary-foreground: var(--on-accent);
   --color-ring: var(--accent);
   --color-destructive: var(--danger);
+  --color-destructive-foreground: var(--on-accent);
   --color-success: var(--saved);
   --color-success-background: var(--saved-bg);
   --color-warning: var(--env);
