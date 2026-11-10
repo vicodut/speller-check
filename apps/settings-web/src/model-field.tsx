@@ -1,3 +1,7 @@
+import { RotateCw } from "lucide-react";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Label } from "./components/ui/label";
 import { probeErrorText } from "./probe-text.util";
 import type { ModelsState } from "./profile-probe.reducer";
 
@@ -31,10 +35,12 @@ const status = (models: ModelsState): string => {
 export const ModelField = ({ id, value, models, onChange, onReload }: Props) => {
   const listId = `${id}-models`;
   return (
-    <div className="field model-field">
-      <label htmlFor={id}>Model</label>
-      <div className="model-picker">
-        <input
+    <div className="grid gap-2 sm:grid-cols-[9rem_1fr] sm:items-start sm:gap-4">
+      <Label htmlFor={id} className="text-muted-foreground sm:h-9">
+        Model
+      </Label>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Input
           id={id}
           value={value}
           list={models.phase === "loaded" ? listId : undefined}
@@ -51,16 +57,22 @@ export const ModelField = ({ id, value, models, onChange, onReload }: Props) => 
             ))}
           </datalist>
         )}
-        <p className={`model-status ${models.phase}`} aria-live="polite">
-          <span>{status(models)}</span>
-          <button
-            type="button"
-            className="link"
+        <p
+          className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+          aria-live="polite"
+        >
+          <span className={models.phase === "failed" ? "text-warning" : undefined}>
+            {status(models)}
+          </span>
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto gap-1 p-0 text-xs has-[>svg]:px-0 [&_svg]:size-3"
             disabled={models.phase === "loading"}
             onClick={onReload}
           >
-            Reload list
-          </button>
+            <RotateCw aria-hidden="true" /> Reload list
+          </Button>
         </p>
       </div>
     </div>

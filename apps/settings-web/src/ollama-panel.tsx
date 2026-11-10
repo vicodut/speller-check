@@ -1,5 +1,12 @@
 import type { RuntimeView } from "@gc/protocol";
+import { Check, Play } from "lucide-react";
+import { Badge } from "./components/ui/badge";
+import { Button } from "./components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { StatusDot } from "./components/ui/status-dot";
 import { OllamaPull } from "./ollama-pull";
+
+const LINE = "m-0 flex flex-wrap items-center gap-x-2 gap-y-1";
 
 type Props = {
   ollama: RuntimeView["ollama"];
@@ -19,9 +26,9 @@ const Status = ({ ollama, busy, onStart }: Pick<Props, "ollama" | "busy" | "onSt
   switch (ollama.state) {
     case "running":
       return (
-        <p>
-          <span className="dot ok" /> Running{ollama.version && ` · v${ollama.version}`}
-          <span className="hint">
+        <p className={LINE}>
+          <StatusDot tone="ok" /> Running{ollama.version && ` · v${ollama.version}`}
+          <span className="text-muted-foreground">
             {ollama.startedByApp
               ? " · started by Grammar Checker, stopped when you switch to a cloud profile"
               : " · your own Ollama, left running"}
@@ -30,15 +37,20 @@ const Status = ({ ollama, busy, onStart }: Pick<Props, "ollama" | "busy" | "onSt
       );
     case "starting":
       return (
-        <p>
-          <span className="dot busy" /> Starting Ollama…
+        <p className={LINE}>
+          <StatusDot tone="busy" /> Starting Ollama…
         </p>
       );
     case "not_installed":
       return (
-        <p>
-          <span className="dot off" /> Ollama isn't installed. Get it from{" "}
-          <a href="https://ollama.com/download" target="_blank" rel="noreferrer">
+        <p className={LINE}>
+          <StatusDot tone="off" /> Ollama isn't installed. Get it from{" "}
+          <a
+            href="https://ollama.com/download"
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary underline underline-offset-4"
+          >
             ollama.com
           </a>
           , or pick a cloud profile.
@@ -46,16 +58,40 @@ const Status = ({ ollama, busy, onStart }: Pick<Props, "ollama" | "busy" | "onSt
       );
     default:
       return (
-        <p>
-          <span className="dot off" />{" "}
-          {ollama.state === "failed" ? "Ollama didn't start within 30 s." : "Ollama isn't running."}{" "}
-          <button type="button" disabled={busy} onClick={onStart}>
-            Start Ollama
-          </button>
+        <p className={LINE}>
+          <StatusDot tone="off" />
+          {ollama.state === "failed" ? "Ollama didn't start within 30 s." : "Ollama isn't running."}
+          <Button variant="outline" size="sm" disabled={busy} onClick={onStart}>
+            <Play aria-hidden="true" /> Start Ollama
+          </Button>
         </p>
       );
   }
 };
+
+/** The models Ollama has, the profile's one marked. */
+const PulledModels = ({ models, model }: { models: readonly string[]; model: string | null }) => (
+  <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+    {models.map((m) => {
+      const current = model !== null && sameModel(m, model);
+      return (
+        <li key={m}>
+          <Badge variant={current ? "success" : "outline"} className="font-mono">
+            {current && <Check aria-hidden="true" />}
+            {m}
+          </Badge>
+        </li>
+      );
+    })}
+    {models.length === 0 && (
+      <li>
+        <Badge variant="outline" className="border-dashed text-muted-foreground">
+          No models pulled yet
+        </Badge>
+      </li>
+    )}
+  </ul>
+);
 
 /** The local runtime behind the active profile: its state and the models it has. */
 export const OllamaPanel = ({ ollama, model, busy, onStart, onPull, onCancelPull }: Props) => {
@@ -64,28 +100,23 @@ export const OllamaPanel = ({ ollama, model, busy, onStart, onPull, onCancelPull
       ? model
       : null;
   return (
-    <section aria-label="Ollama" className="ollama">
-      <h2>Ollama</h2>
-      <Status ollama={ollama} busy={busy} onStart={onStart} />
-      {ollama.state === "running" && (
-        <ul className="models">
-          {ollama.models.map((m) => (
-            <li key={m} className={model && sameModel(m, model) ? "current" : undefined}>
-              {m}
-            </li>
-          ))}
-          {ollama.models.length === 0 && <li className="none">No models pulled yet</li>}
-        </ul>
-      )}
-      {ollama.state === "running" && (
-        <OllamaPull
-          pull={ollama.pull}
-          missing={missing}
-          busy={busy}
-          onPull={onPull}
-          onCancel={onCancelPull}
-        />
-      )}
-    </section>
+    <Card aria-label="Ollama">
+      <CardHeader>
+        <CardTitle className="m-0 text-base">Ollama</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        <Status ollama={ollama} busy={busy} onStart={onStart} />
+        {ollama.state === "running" && <PulledModels models={ollama.models} model={model} />}
+        {ollama.state === "running" && (
+          <OllamaPull
+            pull={ollama.pull}
+            missing={missing}
+            busy={busy}
+            onPull={onPull}
+            onCancel={onCancelPull}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 };

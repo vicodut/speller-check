@@ -1,7 +1,17 @@
+import { LoaderCircle, PlugZap } from "lucide-react";
+import { Button } from "./components/ui/button";
+import { cn } from "./components/ui/cn.util";
 import { probeErrorText, testPassedText } from "./probe-text.util";
 import type { TestState } from "./profile-probe.reducer";
 
 type Props = { test: TestState; onTest: () => void };
+
+const TONE: Record<TestState["phase"], string> = {
+  idle: "",
+  testing: "text-muted-foreground",
+  passed: "text-success",
+  failed: "text-destructive",
+};
 
 const result = (test: TestState): string | null => {
   switch (test.phase) {
@@ -19,10 +29,15 @@ const result = (test: TestState): string | null => {
 /** Sends one short request with the form as it is now, saved or not, and shows how it went. */
 export const ProfileTest = ({ test, onTest }: Props) => (
   <>
-    <button type="button" disabled={test.phase === "testing"} onClick={onTest}>
+    <Button variant="outline" disabled={test.phase === "testing"} onClick={onTest}>
+      {test.phase === "testing" ? (
+        <LoaderCircle aria-hidden="true" className="animate-spin" />
+      ) : (
+        <PlugZap aria-hidden="true" />
+      )}
       Test
-    </button>
-    <output className={`test-result ${test.phase}`} aria-live="polite">
+    </Button>
+    <output className={cn("text-sm tabular-nums", TONE[test.phase])} aria-live="polite">
       {result(test)}
     </output>
   </>
