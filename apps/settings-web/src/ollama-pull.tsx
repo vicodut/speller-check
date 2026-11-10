@@ -1,4 +1,9 @@
 import type { OllamaPullView } from "@gc/protocol";
+import { CircleAlert, Download, X } from "lucide-react";
+import { Alert, AlertDescription } from "./components/ui/alert";
+import { Button } from "./components/ui/button";
+import { Progress } from "./components/ui/progress";
+import { StatusDot } from "./components/ui/status-dot";
 import { isPulling, pullLabel } from "./pull-progress.util";
 
 type Props = {
@@ -23,21 +28,21 @@ const Running = ({
   busy,
   onCancel,
 }: { pull: OllamaPullView } & Pick<Props, "busy" | "onCancel">) => (
-  <div className="pull">
-    <p>
-      Pulling <code>{pull.model}</code>
+  <div className="flex flex-col gap-2">
+    <p className="m-0">
+      Pulling <code className="font-mono text-xs">{pull.model}</code>
     </p>
-    <div className="pull-row">
-      <progress
+    <div className="flex items-center gap-3">
+      <Progress
         aria-label={`Pulling ${pull.model}`}
         max={pull.total || undefined}
         value={pull.step === "downloading" ? pull.completed : undefined}
       />
-      <button type="button" disabled={busy} onClick={onCancel}>
-        Cancel
-      </button>
+      <Button variant="outline" size="sm" disabled={busy} onClick={onCancel}>
+        <X aria-hidden="true" /> Cancel
+      </Button>
     </div>
-    <p className="hint" aria-live="polite">
+    <p className="m-0 text-xs text-muted-foreground tabular-nums" aria-live="polite">
       {pullLabel(pull)}
     </p>
   </div>
@@ -53,22 +58,28 @@ export const OllamaPull = ({ pull, missing, busy, onPull, onCancel }: Props) => 
   return (
     <>
       {pull?.step === "done" && (
-        <p>
-          <span className="dot ok" /> Pulled <code>{pull.model}</code>.
+        <p className="m-0 flex items-center gap-2">
+          <StatusDot tone="ok" /> Pulled <code className="font-mono text-xs">{pull.model}</code>.
         </p>
       )}
       {failed && (
-        <p className="notice" role="alert">
-          Couldn't pull {failed.model}: {PULL_ERROR[failed.error ?? ""] ?? "it failed."} (
-          <code>{failed.error}</code>)
-        </p>
+        <Alert variant="destructive" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <AlertDescription>
+            <p className="m-0">
+              Couldn't pull {failed.model}: {PULL_ERROR[failed.error ?? ""] ?? "it failed."} (
+              <code className="font-mono text-xs">{failed.error}</code>)
+            </p>
+          </AlertDescription>
+        </Alert>
       )}
       {missing && (
-        <p className="pull-offer">
-          <code>{missing}</code> isn't pulled yet.{" "}
-          <button type="button" disabled={busy} onClick={() => onPull(missing)}>
+        <p className="m-0 flex flex-wrap items-center gap-2">
+          <code className="font-mono text-xs">{missing}</code> isn't pulled yet.
+          <Button size="sm" disabled={busy} onClick={() => onPull(missing)}>
+            <Download aria-hidden="true" />
             {failed?.model === missing ? "Try again" : `Pull ${missing}`}
-          </button>
+          </Button>
         </p>
       )}
     </>
