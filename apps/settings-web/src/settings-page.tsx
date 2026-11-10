@@ -1,5 +1,9 @@
 import type { FeatureProfiles, ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
+import { CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
+import { Alert, AlertDescription } from "./components/ui/alert";
+import { Button } from "./components/ui/button";
+import { errorText } from "./error-text.util";
 import { ExtensionToken } from "./extension-token";
 import { FeatureProfilesPanel } from "./feature-profiles";
 import { FeatureSettings } from "./feature-settings";
@@ -24,27 +28,6 @@ import {
   startOllama,
 } from "./settings-api.client";
 import { initialState, type SettingsPageEvent, settingsPageReducer } from "./settings-page.reducer";
-
-/** What to tell the user for each error code. */
-const ERROR_TEXT: Record<string, string> = {
-  no_token: "This page needs the install token. Open it with `core settings`.",
-  auth_failed: "The core rejected the token. Run `core settings` again to get a fresh link.",
-  unreachable: "Can't reach the grammar checker core. Is it running?",
-  bad_response: "The core answered with something this page doesn't understand.",
-  body_invalid:
-    "Check the profile: it needs a name, an http(s) base URL and a model. An API key can't hold spaces or quotes.",
-  keychain_failed: "The core couldn't use the macOS Keychain, so nothing was saved.",
-  profile_active: "That profile is in use. Switch to another one before deleting it.",
-  profile_builtin: "The Local profile can't be deleted; you can edit it.",
-  profile_in_use: "That profile is used by a feature. Move the feature to another profile first.",
-  profile_not_found: "That profile no longer exists. Reload the page.",
-  settings_locked: "GC_* environment variables set the model, so profiles can't be switched.",
-  settings_write_failed: "The core couldn't save the settings file.",
-  pull_in_progress: "Another model is being pulled. Wait for it, or cancel it.",
-  ollama_unreachable: "Ollama isn't answering, so nothing can be pulled.",
-  token_read_failed: "The core couldn't write a new token, so the old one still works.",
-};
-const errorText = (code: string) => ERROR_TEXT[code] ?? `Something went wrong (${code}).`;
 
 /** The model the Ollama panel is about: the first feature's model served by Ollama. */
 const ollamaModel = (view: SettingsView): string | null => {
@@ -132,17 +115,28 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
     void act((t) => setFeatureProfiles(t, features));
 
   return (
-    <main>
-      <h1>Grammar Checker settings</h1>
-      <p className="lead">The model each feature uses, and where each value comes from.</p>
-      {state.phase === "loading" && <p>Loading…</p>}
+    <main className="mx-auto flex max-w-2xl flex-col gap-6 px-4 pt-10 pb-16 text-sm">
+      <header className="flex flex-col gap-1">
+        <h1 className="m-0 text-2xl font-semibold tracking-tight">Grammar Checker settings</h1>
+        <p className="m-0 text-muted-foreground">
+          The model each feature uses, and where each value comes from.
+        </p>
+      </header>
+      {state.phase === "loading" && (
+        <p className="m-0 flex items-center gap-2 text-muted-foreground">
+          <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> Loading…
+        </p>
+      )}
       {state.phase === "error" && (
-        <section className="notice" role="alert">
-          <p>{errorText(state.error)}</p>
-          <button type="button" onClick={() => dispatch({ type: "reload" })}>
-            Try again
-          </button>
-        </section>
+        <Alert variant="destructive" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <AlertDescription>
+            <p className="m-0">{errorText(state.error)}</p>
+            <Button variant="outline" size="sm" onClick={() => dispatch({ type: "reload" })}>
+              <RotateCw aria-hidden="true" /> Try again
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
       {state.phase === "ready" && (
         <>
@@ -155,9 +149,10 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
           />
           <FeatureProfilesPanel profiles={state.profiles} busy={state.busy} onChange={onFeatures} />
           {state.notice && (
-            <p className="notice" role="alert">
-              {errorText(state.notice)}
-            </p>
+            <Alert variant="destructive" role="alert">
+              <CircleAlert aria-hidden="true" />
+              <AlertDescription>{errorText(state.notice)}</AlertDescription>
+            </Alert>
           )}
           {state.runtime?.ollama.inUse && (
             <OllamaPanel

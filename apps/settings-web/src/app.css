@@ -64,23 +64,27 @@
  * The page's own rules. In a layer above Tailwind's preflight (base), and starting with what
  * preflight resets that the page relied on, so the existing panels look as they did.
  */
+/*
+ * Legacy rules, being replaced panel by panel. They skip the shared ui primitives (data-slot)
+ * and anything inside them.
+ */
 @layer components {
-  h1,
-  h2,
-  h3 {
+  h1:not([data-slot], [data-slot] *),
+  h2:not([data-slot], [data-slot] *),
+  h3:not([data-slot], [data-slot] *) {
     font-weight: revert;
   }
-  p {
+  p:not([data-slot], [data-slot] *) {
     margin: revert;
   }
-  a {
+  a:not([data-slot], [data-slot] *) {
     text-decoration: revert;
   }
-  input[type="radio"],
-  input[type="checkbox"] {
+  input[type="radio"]:not([data-slot], [data-slot] *),
+  input[type="checkbox"]:not([data-slot], [data-slot] *) {
     margin: revert;
   }
-  ::placeholder {
+  :not([data-slot], [data-slot] *)::placeholder {
     color: revert;
     opacity: revert;
   }
@@ -96,51 +100,51 @@
       -apple-system,
       sans-serif;
   }
-  main {
+  main:not([data-slot], [data-slot] *) {
     max-width: 44rem;
     margin: 0 auto;
     padding: 2rem 1rem 4rem;
   }
-  h1 {
+  h1:not([data-slot], [data-slot] *) {
     font-size: 1.4rem;
     margin: 0 0 0.25rem;
   }
-  .lead {
+  .lead:not([data-slot], [data-slot] *) {
     color: var(--muted);
     margin: 0 0 1.5rem;
   }
-  section {
+  section:not([data-slot], [data-slot] *) {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 10px;
     padding: 1rem 1.25rem;
     margin-bottom: 1rem;
   }
-  h2 {
+  h2:not([data-slot], [data-slot] *) {
     font-size: 1rem;
     margin: 0 0 0.75rem;
   }
-  dl {
+  dl:not([data-slot], [data-slot] *) {
     display: grid;
     grid-template-columns: max-content 1fr max-content;
     gap: 0.5rem 1rem;
     margin: 0;
   }
-  dt {
+  dt:not([data-slot], [data-slot] *) {
     color: var(--muted);
   }
-  dd {
+  dd:not([data-slot], [data-slot] *) {
     margin: 0;
     overflow-wrap: anywhere;
     font-family: ui-monospace, SFMono-Regular, monospace;
     font-size: 13px;
   }
-  dd.none {
+  dd.none:not([data-slot], [data-slot] *) {
     color: var(--muted);
     font-family: inherit;
     font-style: italic;
   }
-  .source {
+  .source:not([data-slot], [data-slot] *) {
     justify-self: end;
     font-size: 12px;
     padding: 1px 8px;
@@ -148,22 +152,22 @@
     white-space: nowrap;
     font-family: ui-monospace, SFMono-Regular, monospace;
   }
-  .source.env {
+  .source.env:not([data-slot], [data-slot] *) {
     background: var(--env-bg);
     color: var(--env);
   }
-  .source.default,
-  .source.unset {
+  .source.default:not([data-slot], [data-slot] *),
+  .source.unset:not([data-slot], [data-slot] *) {
     background: var(--unset-bg);
     color: var(--muted);
   }
-  .notice {
+  .notice:not([data-slot], [data-slot] *) {
     border-color: var(--danger);
   }
-  .notice p {
+  .notice p:not([data-slot], [data-slot] *) {
     margin: 0 0 0.75rem;
   }
-  button {
+  button:not([data-slot], [data-slot] *) {
     font: inherit;
     padding: 0.35rem 0.9rem;
     border-radius: 6px;
@@ -172,73 +176,73 @@
     color: var(--text);
     cursor: pointer;
   }
-  button:hover {
+  button:not([data-slot], [data-slot] *):hover {
     border-color: var(--accent);
   }
-  code {
+  code:not([data-slot], [data-slot] *) {
     font-family: ui-monospace, SFMono-Regular, monospace;
   }
-  .source.saved,
-  .kind.local {
+  .source.saved:not([data-slot], [data-slot] *),
+  .kind.local:not([data-slot], [data-slot] *) {
     background: var(--saved-bg);
     color: var(--saved);
   }
-  .kind {
+  .kind:not([data-slot], [data-slot] *) {
     font-size: 12px;
     padding: 1px 8px;
     border-radius: 999px;
     background: var(--env-bg);
     color: var(--env);
   }
-  p.notice {
+  p.notice:not([data-slot], [data-slot] *) {
     border: 1px solid var(--danger);
     border-radius: 10px;
     padding: 0.6rem 1rem;
     color: var(--danger);
   }
-  .profiles {
+  .profiles:not([data-slot], [data-slot] *) {
     list-style: none;
     margin: 0 0 1rem;
     padding: 0;
   }
-  .profiles li {
+  .profiles li:not([data-slot], [data-slot] *) {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.5rem 0;
     border-top: 1px solid var(--line);
   }
-  .profiles li {
+  .profiles li:not([data-slot], [data-slot] *) {
     flex-wrap: wrap;
   }
-  .sent-to {
+  .sent-to:not([data-slot], [data-slot] *) {
     flex-basis: 100%;
     margin: 0 0 0 1.6rem;
     color: var(--env);
     font-size: 12px;
   }
-  .has-key {
+  .has-key:not([data-slot], [data-slot] *) {
     font-size: 12px;
     color: var(--muted);
     white-space: nowrap;
   }
-  .key {
+  .key:not([data-slot], [data-slot] *) {
     display: flex;
     flex: 1;
     gap: 0.6rem;
     align-items: center;
   }
-  .remove-key {
+  .remove-key:not([data-slot], [data-slot] *) {
     display: flex;
     gap: 0.3rem;
     align-items: center;
     white-space: nowrap;
     color: var(--muted);
   }
-  .profiles li:first-child {
+  .profiles li:not([data-slot], [data-slot] *):first-child {
     border-top: 0;
   }
-  .profiles label {
+  .profiles label:not([data-slot], [data-slot] *) {
     display: flex;
     align-items: center;
     gap: 0.6rem;
@@ -246,7 +250,7 @@
     min-width: 0;
     cursor: pointer;
   }
-  .profiles .model {
+  .profiles .model:not([data-slot], [data-slot] *) {
     color: var(--muted);
     font-family: ui-monospace, SFMono-Regular, monospace;
     font-size: 13px;
@@ -254,17 +258,17 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .add,
-  .field {
+  .add:not([data-slot], [data-slot] *),
+  .field:not([data-slot], [data-slot] *) {
     display: flex;
     gap: 0.6rem;
     align-items: center;
   }
-  .add span,
-  .field label {
+  .add span:not([data-slot], [data-slot] *),
+  .field label:not([data-slot], [data-slot] *) {
     color: var(--muted);
   }
-  .profile-form {
+  .profile-form:not([data-slot], [data-slot] *) {
     background: var(--panel);
     border: 1px solid var(--accent);
     border-radius: 10px;
@@ -273,16 +277,16 @@
     display: grid;
     gap: 0.6rem;
   }
-  .profile-form h3 {
+  .profile-form h3:not([data-slot], [data-slot] *) {
     margin: 0;
     font-size: 1rem;
   }
-  .field label {
+  .field label:not([data-slot], [data-slot] *) {
     width: 9rem;
     flex-shrink: 0;
   }
-  input,
-  select {
+  input:not([data-slot], [data-slot] *),
+  select:not([data-slot], [data-slot] *) {
     font: inherit;
     flex: 1;
     min-width: 0;
@@ -292,33 +296,33 @@
     background: var(--bg);
     color: var(--text);
   }
-  input[type="radio"],
-  input[type="checkbox"] {
+  input[type="radio"]:not([data-slot], [data-slot] *),
+  input[type="checkbox"]:not([data-slot], [data-slot] *) {
     flex: none;
   }
-  .actions {
+  .actions:not([data-slot], [data-slot] *) {
     display: flex;
     gap: 0.5rem;
   }
-  button:disabled {
+  button:not([data-slot], [data-slot] *):disabled {
     opacity: 0.5;
     cursor: default;
   }
   @media (max-width: 520px) {
-    .field {
+    .field:not([data-slot], [data-slot] *) {
       flex-direction: column;
       align-items: stretch;
     }
 
-    dl {
+    dl:not([data-slot], [data-slot] *) {
       grid-template-columns: 1fr max-content;
     }
-    dt {
+    dt:not([data-slot], [data-slot] *) {
       grid-column: 1 / -1;
       margin-top: 0.5rem;
     }
   }
-  .dot {
+  .dot:not([data-slot], [data-slot] *) {
     display: inline-block;
     width: 8px;
     height: 8px;
@@ -326,25 +330,25 @@
     margin-right: 0.3rem;
     vertical-align: middle;
   }
-  .dot.ok {
+  .dot.ok:not([data-slot], [data-slot] *) {
     background: var(--saved);
   }
-  .dot.busy {
+  .dot.busy:not([data-slot], [data-slot] *) {
     background: var(--env);
   }
-  .dot.off {
+  .dot.off:not([data-slot], [data-slot] *) {
     background: var(--muted);
   }
-  .ollama p {
+  .ollama p:not([data-slot], [data-slot] *) {
     margin: 0 0 0.6rem;
   }
-  .ollama .hint {
+  .ollama .hint:not([data-slot], [data-slot] *) {
     color: var(--muted);
   }
-  .ollama a {
+  .ollama a:not([data-slot], [data-slot] *) {
     color: var(--accent);
   }
-  .models {
+  .models:not([data-slot], [data-slot] *) {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
@@ -352,35 +356,35 @@
     margin: 0;
     padding: 0;
   }
-  .models li {
+  .models li:not([data-slot], [data-slot] *) {
     font-family: ui-monospace, SFMono-Regular, monospace;
     font-size: 12px;
     padding: 2px 8px;
     border: 1px solid var(--line);
     border-radius: 999px;
   }
-  .models li.current {
+  .models li.current:not([data-slot], [data-slot] *) {
     border-color: var(--saved);
     color: var(--saved);
   }
-  .models li.none {
+  .models li.none:not([data-slot], [data-slot] *) {
     color: var(--muted);
     border-style: dashed;
   }
   /* Model list and Test (#35) */
-  .model-field {
+  .model-field:not([data-slot], [data-slot] *) {
     align-items: flex-start;
   }
-  .model-field > label {
+  .model-field > label:not([data-slot], [data-slot] *) {
     padding-top: 0.4rem;
   }
-  .model-picker {
+  .model-picker:not([data-slot], [data-slot] *) {
     flex: 1;
     min-width: 0;
     display: grid;
     gap: 0.3rem;
   }
-  .model-status {
+  .model-status:not([data-slot], [data-slot] *) {
     margin: 0;
     font-size: 12px;
     color: var(--muted);
@@ -389,73 +393,73 @@
     gap: 0.2rem 0.6rem;
     align-items: baseline;
   }
-  .model-status.failed span {
+  .model-status.failed span:not([data-slot], [data-slot] *) {
     color: var(--env);
   }
-  button.link {
+  button.link:not([data-slot], [data-slot] *) {
     padding: 0;
     border: none;
     background: none;
     color: var(--accent);
     font-size: inherit;
   }
-  button.link:hover {
+  button.link:not([data-slot], [data-slot] *):hover {
     text-decoration: underline;
   }
-  .test-result {
+  .test-result:not([data-slot], [data-slot] *) {
     align-self: center;
     font-variant-numeric: tabular-nums;
   }
-  .test-result.passed {
+  .test-result.passed:not([data-slot], [data-slot] *) {
     color: var(--saved);
   }
-  .test-result.failed {
+  .test-result.failed:not([data-slot], [data-slot] *) {
     color: var(--danger);
   }
-  .test-result.testing {
+  .test-result.testing:not([data-slot], [data-slot] *) {
     color: var(--muted);
   }
-  .pull,
-  .pull-offer {
+  .pull:not([data-slot], [data-slot] *),
+  .pull-offer:not([data-slot], [data-slot] *) {
     margin-top: 0.8rem;
   }
-  .pull-row {
+  .pull-row:not([data-slot], [data-slot] *) {
     display: flex;
     align-items: center;
     gap: 0.6rem;
     margin-bottom: 0.3rem;
   }
-  .pull progress {
+  .pull progress:not([data-slot], [data-slot] *) {
     flex: 1;
     height: 8px;
     accent-color: var(--accent);
   }
-  .pull .hint {
+  .pull .hint:not([data-slot], [data-slot] *) {
     font-variant-numeric: tabular-nums;
   }
-  .ollama .notice {
+  .ollama .notice:not([data-slot], [data-slot] *) {
     margin: 0.8rem 0 0;
   }
 
-  .local-models {
+  .local-models:not([data-slot], [data-slot] *) {
     list-style: none;
     margin: 0.8rem 0 0;
     padding: 0;
   }
-  .local-model {
+  .local-model:not([data-slot], [data-slot] *) {
     margin-bottom: 1rem;
   }
-  .local-model p {
+  .local-model p:not([data-slot], [data-slot] *) {
     margin: 0.4rem 0 0;
   }
 
-  .token-row {
+  .token-row:not([data-slot], [data-slot] *) {
     display: flex;
     gap: 8px;
     align-items: center;
     margin: 8px 0 12px;
   }
-  .token {
+  .token:not([data-slot], [data-slot] *) {
     flex: 1;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -464,43 +468,43 @@
     border-radius: 6px;
     font-size: 13px;
   }
-  .confirm {
+  .confirm:not([data-slot], [data-slot] *) {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
     align-items: center;
   }
-  .confirm p {
+  .confirm p:not([data-slot], [data-slot] *) {
     flex-basis: 100%;
     margin: 0;
   }
-  p.done {
+  p.done:not([data-slot], [data-slot] *) {
     border: 1px solid var(--accent);
     border-radius: 10px;
     padding: 0.6rem 1rem;
     color: var(--accent);
   }
 
-  details.advanced {
+  details.advanced:not([data-slot], [data-slot] *) {
     margin: 0.8rem 0 1.2rem;
     padding: 0.6rem 1rem;
     border: 1px solid var(--line);
     border-radius: 10px;
   }
-  details.advanced summary {
+  details.advanced summary:not([data-slot], [data-slot] *) {
     cursor: pointer;
     font-weight: 600;
   }
-  .feature-profile {
+  .feature-profile:not([data-slot], [data-slot] *) {
     display: flex;
     align-items: center;
     gap: 0.8rem;
     margin-top: 0.6rem;
   }
-  .feature-name {
+  .feature-name:not([data-slot], [data-slot] *) {
     width: 6rem;
   }
-  .feature-profile select {
+  .feature-profile select:not([data-slot], [data-slot] *) {
     flex: 1;
     min-width: 0;
   }
