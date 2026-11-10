@@ -1,6 +1,11 @@
 import type { ProfilesView } from "@gc/protocol";
-import { useState } from "react";
+import { TriangleAlert } from "lucide-react";
+import { useId, useState } from "react";
+import { Alert, AlertDescription } from "./components/ui/alert";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
+import { NativeSelect } from "./components/ui/native-select";
 import { PRESETS } from "./profile-presets";
+import { ConfirmMove, ProfileRow } from "./profile-row";
 import { confirmText, profileUses } from "./profile-uses.util";
 import type { SettingsPageEvent } from "./settings-page.reducer";
 
@@ -12,28 +17,33 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-const host = (url: string) => {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
+const AddFromPreset = ({ dispatch }: Pick<Props, "dispatch">) => {
+  const id = useId();
+  return (
+    <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+      <label htmlFor={id} className="shrink-0 text-muted-foreground">
+        Add a profile from
+      </label>
+      <NativeSelect
+        id={id}
+        value=""
+        onChange={(e) => {
+          const preset = PRESETS[Number(e.target.value)];
+          if (preset) dispatch({ type: "add", input: preset.input });
+        }}
+      >
+        <option value="" disabled>
+          Choose a preset…
+        </option>
+        {PRESETS.map((preset, i) => (
+          <option key={preset.label} value={i}>
+            {preset.label}
+          </option>
+        ))}
+      </NativeSelect>
+    </div>
+  );
 };
-
-type ConfirmProps = { question: string; onYes: () => void; onNo: () => void };
-
-/** Asked before deleting a profile in use: its uses move to Local, which can't be deleted. */
-const ConfirmMove = ({ question, onYes, onNo }: ConfirmProps) => (
-  <div className="confirm" role="alert">
-    <p>{question}</p>
-    <button type="button" onClick={onYes}>
-      Switch to Local and delete
-    </button>
-    <button type="button" onClick={onNo}>
-      Cancel
-    </button>
-  </div>
-);
 
 /** The saved profiles: pick the one in use, edit, delete, or add one from a preset. */
 export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: Props) => {
@@ -43,47 +53,34 @@ export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: 
     else onDelete(id);
   };
   return (
-    <section aria-label="Profiles">
-      <h2>Profiles</h2>
-      {profiles.lockedByEnv && (
-        <p className="notice">
-          <code>GC_*</code> environment variables set the model, so saved profiles can't be used
-          until the core restarts without them.
-        </p>
-      )}
-      <ul className="profiles">
-        {profiles.profiles.map((p) => {
-          const active = p.id === profiles.activeProfileId;
-          return (
-            <li key={p.id} className={active ? "active" : undefined}>
-              <label>
-                <input
-                  type="radio"
-                  name="active-profile"
-                  checked={active}
-                  disabled={busy || profiles.lockedByEnv}
-                  onChange={() => onActivate(p.id)}
-                />
-                <strong>{p.name}</strong>
-                <span className={`kind ${p.local ? "local" : "cloud"}`}>
-                  {p.local ? "local" : "cloud"}
-                </span>
-                <span className="model">{p.model}</span>
-                {p.hasKey && <span className="has-key">key saved</span>}
-              </label>
-              <button type="button" onClick={() => dispatch({ type: "edit", id: p.id })}>
-                Edit
-              </button>
-              {!p.builtIn && (
-                <button
-                  type="button"
-                  disabled={busy || profiles.lockedByEnv}
-                  onClick={() => askDelete(p.id)}
-                >
-                  Delete
-                </button>
-              )}
-              {!p.local && <p className="sent-to">Your text is sent to {host(p.baseUrl)}</p>}
+    <Card aria-label="Profiles">
+      <CardHeader>
+        <CardTitle className="m-0 text-base">Profiles</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {profiles.lockedByEnv && (
+          <Alert variant="warning">
+            <TriangleAlert aria-hidden="true" />
+            <AlertDescription>
+              <p className="m-0">
+                <code>GC_*</code> environment variables set the model, so saved profiles can't be
+                used until the core restarts without them.
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
+        <ul className="m-0 list-none divide-y divide-border rounded-lg border border-border p-0">
+          {profiles.profiles.map((p) => (
+            <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
+              <ProfileRow
+                profile={p}
+                active={p.id === profiles.activeProfileId}
+                locked={profiles.lockedByEnv}
+                busy={busy}
+                onActivate={() => onActivate(p.id)}
+                onEdit={() => dispatch({ type: "edit", id: p.id })}
+                onDelete={() => askDelete(p.id)}
+              />
               {confirming === p.id && (
                 <ConfirmMove
                   question={confirmText(p.name, profileUses(profiles, p.id))}
@@ -95,28 +92,12 @@ export const ProfileList = ({ profiles, busy, dispatch, onActivate, onDelete }: 
                 />
               )}
             </li>
-          );
-        })}
-      </ul>
-      <label className="add">
-        <span>Add a profile from</span>
-        <select
-          value=""
-          onChange={(e) => {
-            const preset = PRESETS[Number(e.target.value)];
-            if (preset) dispatch({ type: "add", input: preset.input });
-          }}
-        >
-          <option value="" disabled>
-            Choose a preset…
-          </option>
-          {PRESETS.map((preset, i) => (
-            <option key={preset.label} value={i}>
-              {preset.label}
-            </option>
           ))}
-        </select>
-      </label>
-    </section>
+        </ul>
+      </CardContent>
+      <CardFooter>
+        <AddFromPreset dispatch={dispatch} />
+      </CardFooter>
+    </Card>
   );
 };
