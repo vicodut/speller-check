@@ -1,6 +1,10 @@
 import type { LocalModelView } from "@gc/protocol";
+import { CircleAlert, TriangleAlert } from "lucide-react";
+import { Alert, AlertDescription } from "./components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { type Actions, Controls } from "./local-model-controls";
 import { useLocalModels } from "./local-models.hook";
-import { downloadLabel, isDownloading, ramWarningText, scoreText } from "./local-models.util";
+import { ramWarningText, scoreText } from "./local-models.util";
 import { formatBytes } from "./pull-progress.util";
 
 /** Why a download or delete failed, by error code; the code itself is shown too. */
@@ -13,58 +17,14 @@ const ERRORS: Record<string, string> = {
   unreachable: "The core isn't answering.",
 };
 
-type Actions = Pick<ReturnType<typeof useLocalModels>, "onDownload" | "onCancel" | "onDelete">;
-
-const Controls = ({
-  model,
-  busy,
-  ...actions
-}: { model: LocalModelView; busy: boolean } & Actions) => {
-  if (isDownloading(model)) {
-    return (
-      <div className="pull">
-        <div className="pull-row">
-          <progress
-            aria-label={`Downloading ${model.name}`}
-            max={model.sizeBytes}
-            value={model.state === "downloading" ? model.completed : undefined}
-          />
-          <button type="button" disabled={busy} onClick={() => actions.onCancel(model.id)}>
-            Cancel
-          </button>
-        </div>
-        <p className="hint" aria-live="polite">
-          {downloadLabel(model)}
-        </p>
-      </div>
-    );
-  }
-  if (model.state === "ready") {
-    return (
-      <p>
-        <span className="dot ok" /> On disk, verified{" "}
-        <button
-          type="button"
-          disabled={busy || model.inUse}
-          title={model.inUse ? "A profile uses this model" : undefined}
-          onClick={() => actions.onDelete(model.id)}
-        >
-          Delete
-        </button>
-        {model.inUse && <span className="hint"> · in use by a profile</span>}
-      </p>
-    );
-  }
-  const resume = model.completed > 0 ? ` (${formatBytes(model.completed)} already here)` : "";
-  return (
-    <p>
-      <button type="button" disabled={busy} onClick={() => actions.onDownload(model.id)}>
-        {model.state === "failed" ? "Try again" : model.completed > 0 ? "Resume" : "Download"}
-      </button>
-      <span className="hint">{resume}</span>
-    </p>
-  );
-};
+const ErrorAlert = ({ children }: { children: React.ReactNode }) => (
+  <Alert variant="destructive" role="alert">
+    <CircleAlert aria-hidden="true" />
+    <AlertDescription>
+      <p className="m-0">{children}</p>
+    </AlertDescription>
+  </Alert>
+);
 
 const Entry = ({
   model,
@@ -73,22 +33,26 @@ const Entry = ({
 }: { model: LocalModelView; memoryBytes: number; busy: boolean } & Actions) => {
   const warning = ramWarningText(model, memoryBytes);
   return (
-    <li className="local-model">
-      <strong>{model.name}</strong>
-      <span className="hint">
-        {" "}
-        · {formatBytes(model.sizeBytes)} ·{" "}
-        {model.kind === "server" ? "runs the models" : scoreText(model)}
-      </span>
+    <li className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+      <p className="m-0">
+        <span className="font-medium">{model.name}</span>
+        <span className="text-muted-foreground">
+          {" "}
+          · {formatBytes(model.sizeBytes)} ·{" "}
+          {model.kind === "server" ? "runs the models" : scoreText(model)}
+        </span>
+      </p>
       {warning && (
-        <p className="notice" role="alert">
-          {warning}
-        </p>
+        <Alert variant="warning" role="alert">
+          <TriangleAlert aria-hidden="true" />
+          <AlertDescription>{warning}</AlertDescription>
+        </Alert>
       )}
       {model.state === "failed" && (
-        <p className="notice" role="alert">
-          {ERRORS[model.error ?? ""] ?? "The download failed."} (<code>{model.error}</code>)
-        </p>
+        <ErrorAlert>
+          {ERRORS[model.error ?? ""] ?? "The download failed."} (
+          <code className="font-mono text-xs">{model.error}</code>)
+        </ErrorAlert>
       )}
       <Controls model={model} {...rest} />
     </li>
@@ -104,27 +68,33 @@ export const LocalModelsPanel = ({ token }: { token: string | null }) => {
   const { view, error, busy, ...actions } = useLocalModels(token);
   if (!view) return null;
   return (
-    <section aria-label="Local models" className="ollama">
-      <h2>Local models</h2>
-      <p className="hint">
-        Downloaded to your Mac and checked against a checksum before use. Your text never leaves it.
-      </p>
-      {error && (
-        <p className="notice" role="alert">
-          {ERRORS[error] ?? "That didn't work."} (<code>{error}</code>)
-        </p>
-      )}
-      <ul className="local-models">
-        {view.models.map((model) => (
-          <Entry
-            key={model.id}
-            model={model}
-            memoryBytes={view.memoryBytes}
-            busy={busy}
-            {...actions}
-          />
-        ))}
-      </ul>
-    </section>
+    <Card aria-label="Local models">
+      <CardHeader>
+        <CardTitle className="m-0 text-base">Local models</CardTitle>
+        <CardDescription className="m-0">
+          Downloaded to your Mac and checked against a checksum before use. Your text never leaves
+          it.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {error && (
+          <ErrorAlert>
+            {ERRORS[error] ?? "That didn't work."} (
+            <code className="font-mono text-xs">{error}</code>)
+          </ErrorAlert>
+        )}
+        <ul className="m-0 list-none divide-y divide-border p-0">
+          {view.models.map((model) => (
+            <Entry
+              key={model.id}
+              model={model}
+              memoryBytes={view.memoryBytes}
+              busy={busy}
+              {...actions}
+            />
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 };
