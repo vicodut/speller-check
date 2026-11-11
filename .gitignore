@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 out/
+*.bun-build
 *.tsbuildinfo
 DerivedData/
 .build/
@@ -24,3 +25,6 @@ xcuserdata/
 # OS / editor
 .DS_Store
 .claude/worktrees/
+
+# Generated from packages/ui/src/tokens/palette.ts (bun run generate)
+packages/ui/src/*.generated.*

@@ -1,11 +1,17 @@
 import type { ProfileInput, ProfileSave, ReasoningEffort } from "@gc/protocol";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  NativeSelect,
+} from "@gc/ui";
 import { Save } from "lucide-react";
 import { type FormEvent, useId } from "react";
-import { Button } from "./components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
-import { Input } from "./components/ui/input";
-import { Label } from "./components/ui/label";
-import { NativeSelect } from "./components/ui/native-select";
 import { ModelField } from "./model-field";
 import { ProfileTest } from "./profile-test";
 import {

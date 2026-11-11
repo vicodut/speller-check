@@ -1,8 +1,7 @@
 import type { FeatureProfiles, ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
+import { Alert, AlertDescription, Button } from "@gc/ui";
 import { CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Button } from "./components/ui/button";
 import { errorText } from "./error-text.util";
 import { ExtensionToken } from "./extension-token";
 import { FeatureProfilesPanel } from "./feature-profiles";

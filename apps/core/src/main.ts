@@ -1,2 +1,2 @@
-export { createCore, type Core } from "./composition/core";
+export { type Core, createCore } from "./composition/core";
 export { createServer } from "./composition/server";

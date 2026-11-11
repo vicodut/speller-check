@@ -1,0 +1,28 @@
+# Typecheck, lint and tests on every pull request and on main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    # macOS: the core and its tests target the Mac (Keychain, Application Support paths).
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      # postinstall runs `bun run generate` (the @gc/ui theme files).
+      - run: bun install --frozen-lockfile
+      - run: bun run check

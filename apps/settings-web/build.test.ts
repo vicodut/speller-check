@@ -46,7 +46,7 @@ describe("build", () => {
     ]) {
       expect(css).toContain(`${token}:`);
     }
-    expect(css).toContain("--bg");
+    expect(css).toContain("--gc-background");
     expect(css).toContain("prefers-color-scheme:dark");
   });
 

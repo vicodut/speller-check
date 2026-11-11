@@ -9,7 +9,10 @@ Decisions log: `docs/decisions.md`.
 - `apps/core`: Bun/TS core (providers, check pipeline, dictionary, settings, WebSocket server)
 - `apps/mac`: Swift menu-bar app (Accessibility, overlay, card)
 - `apps/chrome`: Chrome extension (MV3, TS)
+- `apps/settings-web`: settings page served by the core (React, Tailwind)
 - `packages/protocol`: Zod schemas, single source of truth for every message and model output
+- `packages/ui`: shared palette and shadcn-style components; generates the theme files (`bun run generate`)
+- `.github/workflows`: CI (`bun run check`) and Build (extension zip, core binaries, releases on `v*` tags)
 - `docs/`: spec and decisions
 
 Each app has its own CLAUDE.md with its conventions. Follow it when working there.
@@ -20,6 +23,8 @@ Each app has its own CLAUDE.md with its conventions. Follow it when working ther
 - `bun run lint` (Biome)
 - `bun test`
 - `bun run check` runs all three. It must pass before you say a task is done.
+- `bun run generate` writes the `@gc/ui` theme files; install, typecheck, test and builds run it for you. Colours change in `packages/ui/src/tokens/palette.ts` only.
+- `bun run package:extension`, `bun run package:core arm64|x64`: what CI builds, into `out/`.
 
 ## Code shape
 - Files ≤ ~200 lines, functions ≤ ~40 lines, one exported class per file. Over the limit: split before continuing.

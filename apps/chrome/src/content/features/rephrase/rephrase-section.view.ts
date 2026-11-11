@@ -68,7 +68,7 @@ const rowNode = (row: RephraseRow, replace: (segment: number) => void): HTMLElem
   const node = el("div", "gc-rewrite");
   node.append(el("span", "gc-rewrite-text", row.text));
   if (row.replace === "available") {
-    node.append(button("gc-replace", "Replace", () => replace(row.segment)));
+    node.append(button("gc-btn gc-btn-link gc-replace", "Replace", () => replace(row.segment)));
   } else if (row.replace === "applied") {
     node.append(el("span", "gc-replaced-tag", "replaced"));
   }
@@ -80,7 +80,9 @@ const versionBlock = (version: RephraseVersionView, actions: RephraseSectionActi
   const head = el("div", "gc-version-head");
   head.append(el("span", "gc-tone", version.label));
   if (version.replaceAll) {
-    head.append(button("gc-replace", "Replace all", () => actions.replace(version.tone)));
+    head.append(
+      button("gc-btn gc-btn-link gc-replace", "Replace all", () => actions.replace(version.tone)),
+    );
   }
   block.append(head);
   for (const row of version.rows) {
@@ -94,7 +96,7 @@ const versionBlock = (version: RephraseVersionView, actions: RephraseSectionActi
 const copyFallback = (text: string, copy: (text: string) => Promise<boolean>): HTMLElement => {
   const box = el("div", "gc-copy-fallback");
   box.setAttribute("role", "status");
-  const copyButton = button("gc-replace", "Copy", async () => {
+  const copyButton = button("gc-btn gc-btn-link gc-replace", "Copy", async () => {
     copyButton.textContent = (await copy(text)) ? "Copied" : "Copy failed";
   });
   box.append(el("span", "gc-copy-note", FALLBACK_NOTE), copyButton);
@@ -122,6 +124,7 @@ export const renderRephraseSection = (
 ): void => {
   const section = el("div", "gc-rephrase-section");
   const enabled = state.kind === "result" || state.enabled;
+  section.append(el("div", "gc-section-label", "Rephrase"));
   section.append(toneRow(state.tones, enabled, actions.rephrase));
   if (sentTo !== undefined) section.append(el("div", "gc-sent-to", `Sent to ${sentTo}`));
   if (state.kind === "result") {

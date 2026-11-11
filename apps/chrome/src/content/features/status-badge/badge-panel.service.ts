@@ -28,7 +28,7 @@ export class BadgePanel {
     private readonly host: HTMLElement,
     private readonly callbacks: BadgePanelCallbacks,
   ) {
-    this.el.className = "gc-panel";
+    this.el.className = "gc-panel gc-surface";
     this.el.hidden = true;
     this.list.className = "gc-list";
     this.extra.className = "gc-extra";

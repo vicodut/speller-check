@@ -56,7 +56,7 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
    bun run dev
    ```
 
-4. In another terminal, print the install token (it's created on first use):
+4. In another terminal, print the install token (it's created on first use). You can also copy it, or generate a new one, from the **Chrome extension** section of the settings page (`bun run settings`):
 
    ```bash
    bun run --cwd apps/core cli token
@@ -68,18 +68,27 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
    bun run build:chrome
    ```
 
-6. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick `apps/chrome/dist`. Open the extension's **Options** page, paste the token and save. The status line should read **Connected**.
+6. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick `apps/chrome/dist`. Open the extension's **Options** page, paste the token and save. The status card at the top should turn green and read **Connected**, with the model and a Local or Cloud badge.
 
 > [!TIP]
 > After rebuilding the extension, reload it in `chrome://extensions`, then reload the tabs that were already open.
+
+### Use a prebuilt build
+
+The **Build** workflow packages everything on `main`, on manual runs and on `v*` tags (as a GitHub release):
+
+- `grammar-checker-extension.zip`: unzip it, then **Load unpacked** the folder in `chrome://extensions`.
+- `grammar-checker-core-arm64.tar.gz` (Apple silicon) or `-x64.tar.gz` (Intel): the core as one binary, with its settings page beside it. Unpack it and run `./gc-core serve` (the `GC_*` variables below apply), then `./gc-core token` for the extension. The binary is ad-hoc signed only: if macOS blocks it, run `xattr -d com.apple.quarantine gc-core`.
+
+Build the same files locally with `bun run package:extension` and `bun run package:core arm64` (or `x64`); they land in `out/`.
 
 ## Usage
 
 Focus any text field in Chrome and type. Underlines appear about a second after you stop. Click one to open its card, or click the badge to list every issue and reach the **Rephrase** tone buttons.
 
-While a check runs, the badge is a spinner. On a slow local model, the time spent appears beside it after 10 s, so you can tell a long check from a stuck one:
+While a check runs, the badge is a spinner. Hover it to see how long the check has been running, so on a slow local model you can tell a long check from a stuck one:
 
-![The checking spinner with "11s" beside it](docs/images/checking-timer.png)
+![The checking spinner with "Checking… 13s" beside it](docs/images/checking-timer.png)
 
 <table>
 <tr>
@@ -123,6 +132,7 @@ The core is configured with environment variables. `bun run dev` fills in the Ol
 | `GC_DICTIONARY_PATH` | `~/Library/Application Support/GrammarChecker/dictionary.json` | Your personal dictionary. |
 | `GC_PORT` | `7341` | WebSocket port on `127.0.0.1`. If you change it, change it in the extension's Options too. |
 | `GC_TOKEN_PATH` | `~/Library/Application Support/GrammarChecker/token` | Where the install token is kept. |
+| `GC_SETTINGS_PAGE_DIR` | `settings/` beside a packaged binary, `apps/settings-web/dist` from source | Where `serve` finds the built settings page. |
 
 > [!WARNING]
 > With a cloud provider, the text you type leaves your machine and goes to that provider. Keep your API key in the environment, never in a file inside this repo.
@@ -146,9 +156,12 @@ The extension's Options page also has a **site blocklist** (one hostname per lin
 | --- | --- |
 | [`apps/core`](apps/core) | Bun/TS core: providers, check pipeline, rephrase, dictionary, settings, WebSocket server and CLI |
 | [`apps/chrome`](apps/chrome) | Chrome extension (Manifest V3, TypeScript, React for the card and options page) |
+| [`apps/settings-web`](apps/settings-web) | The settings page the core serves at `/settings` (React, Tailwind) |
 | [`apps/mac`](apps/mac) | Swift menu-bar app (planned) |
 | [`packages/protocol`](packages/protocol) | Zod schemas, the single source of truth for every message and model output |
-| [`scripts/dev.ts`](scripts/dev.ts) | The `bun run dev` launcher (Ollama + core) |
+| [`packages/ui`](packages/ui) | Shared palette and shadcn-style components; generates the theme CSS for the pages and the injected UI |
+| [`scripts`](scripts) | `dev.ts` (the `bun run dev` launcher) and the packaging scripts used by CI |
+| [`.github/workflows`](.github/workflows) | CI (`bun run check`) and the Build workflow (extension zip, core binaries) |
 | [`docs`](docs) | Product spec and decisions log |
 
 ## Development
@@ -161,6 +174,8 @@ bun run lint        # Biome
 bun test            # unit tests, no model needed
 bun run check       # all three
 ```
+
+`bun install` also runs `bun run generate`, which writes the theme files from `packages/ui/src/tokens/palette.ts` (`*.generated.*`, gitignored). Typecheck, tests and every build run it again, so change colours in the palette only.
 
 **Score a model against the EN/FR fixtures** (opt-in; calls the model set by the `GC_*` variables):
 

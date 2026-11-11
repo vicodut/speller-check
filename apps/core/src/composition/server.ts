@@ -1,17 +1,13 @@
-import type { Core } from "./core";
-import { ProfileProbeProvider } from "../features/providers";
-import { type SettingsService, toFeatureModel } from "../features/settings";
-import type {
-  LocalModelsPort,
-  RuntimePort,
-  TokenSource,
-} from "../features/transport";
-import { SettingsPageFiles, WebSocketServer } from "../features/transport";
 import { FieldSessions } from "../features/check";
+import { ProfileProbeProvider } from "../features/providers";
 import { RephraseJobs } from "../features/rephrase";
+import { type SettingsService, toFeatureModel } from "../features/settings";
+import type { LocalModelsPort, RuntimePort, TokenSource } from "../features/transport";
+import { SettingsPageFiles, WebSocketServer } from "../features/transport";
 import type { AppError } from "../shared/errors";
-import type { Result } from "../shared/result";
 import type { Logger } from "../shared/logger";
+import type { Result } from "../shared/result";
+import type { Core } from "./core";
 
 /**
  * The WebSocket server and settings page. `token` is read on every hello and API call;
@@ -42,7 +38,8 @@ export const createServer = (
       settingsView: () => options.settings.view(),
       profiles: options.settings,
       probe: new ProfileProbeProvider(
-        (profileId: string | null, baseUrl: string) => options.settings.savedKeyFor(profileId, baseUrl),
+        (profileId: string | null, baseUrl: string) =>
+          options.settings.savedKeyFor(profileId, baseUrl),
         logger,
       ),
       runtime: options.runtime,

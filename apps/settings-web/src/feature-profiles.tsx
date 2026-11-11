@@ -1,7 +1,7 @@
 import type { Feature, FeatureProfiles, ProfilesView } from "@gc/protocol";
+import { NativeSelect } from "@gc/ui";
 import { ChevronRight } from "lucide-react";
 import { useId } from "react";
-import { NativeSelect } from "./components/ui/native-select";
 
 type Props = {
   profiles: ProfilesView;

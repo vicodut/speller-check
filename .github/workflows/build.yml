@@ -1,0 +1,72 @@
+# Builds what a user needs to run Grammar Checker:
+#   - grammar-checker-extension.zip   the Chrome extension (unzip, then "Load unpacked")
+#   - grammar-checker-core-arm64.tar.gz / -x64.tar.gz
+#                                      the core binary + its settings page, per Mac architecture
+# On main and on manual runs the files are workflow artifacts. On a v* tag they are also
+# attached to a GitHub release.
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  extension:
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run package:extension
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension
+          path: out/grammar-checker-extension.zip
+          if-no-files-found: error
+
+  core:
+    # A Mac runner, so each binary gets an ad-hoc signature (Apple silicon won't run it unsigned).
+    runs-on: macos-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - run: bun install --frozen-lockfile
+      - run: bun run package:core ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: core-${{ matrix.arch }}
+          path: out/grammar-checker-core-${{ matrix.arch }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [extension, core]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create the release with the built files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" dist/*
+          --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
