@@ -56,7 +56,7 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
    bun run dev
    ```
 
-4. In another terminal, print the install token (it's created on first use):
+4. In another terminal, print the install token (it's created on first use). You can also copy it, or generate a new one, from the **Chrome extension** section of the settings page (`bun run settings`):
 
    ```bash
    bun run --cwd apps/core cli token
