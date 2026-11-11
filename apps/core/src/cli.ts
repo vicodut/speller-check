@@ -17,6 +17,7 @@ const USAGE = `Usage:
 check and serve require GC_BASE_URL and GC_MODEL
   (GC_API_KEY, GC_DICTIONARY_PATH, GC_REASONING_EFFORT optional).
 serve, settings and token read GC_PORT (default 7341) and GC_TOKEN_PATH (optional).
+serve reads GC_SETTINGS_PAGE_DIR (optional: where the built settings page is).
 Logs go to stderr.
 `;
 

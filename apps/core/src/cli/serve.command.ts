@@ -1,5 +1,4 @@
 import { homedir, totalmem } from "node:os";
-import { join } from "node:path";
 import type { Feature, FeatureModel } from "@gc/protocol";
 import {
   CURATED_MANIFEST,
@@ -27,9 +26,10 @@ import {
 import { type Core, createCore, createServer } from "../main";
 import type { Logger } from "../shared/logger";
 import { EXIT_FAILURE, EXIT_USAGE, type ExitCode } from "./exit-code";
+import { settingsPageDir } from "./settings-page-dir.util";
 
-/** The built settings page in this repo; packaging (milestone 6) will point elsewhere. */
-const SETTINGS_PAGE_DIR = join(import.meta.dir, "..", "..", "..", "settings-web", "dist");
+/** The built settings page: beside a compiled binary, or the repo build when run from source. */
+const SETTINGS_PAGE_DIR = settingsPageDir(process.env, process.execPath, import.meta.dir);
 
 /**
 /**
