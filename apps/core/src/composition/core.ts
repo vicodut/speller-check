@@ -1,7 +1,11 @@
 import type { Feature } from "@gc/protocol";
 import { CheckCache, CheckService } from "../features/check";
 import { JsonDictionaryRepository } from "../features/dictionary";
-import { OpenAiCompatibleProvider, SwitchableProvider, TimeoutRetryProvider } from "../features/providers";
+import {
+  OpenAiCompatibleProvider,
+  SwitchableProvider,
+  TimeoutRetryProvider,
+} from "../features/providers";
 import { RephraseCache, RephraseService } from "../features/rephrase";
 import type { ModelConfig } from "../features/settings";
 import type { Logger } from "../shared/logger";
