@@ -39,10 +39,16 @@ const BADGE_RULES = `
   z-index: 2147483647;
   box-shadow: var(--gc-shadow);
 }
-.gc-checking {
+/* The ring spins on its own layer, so the cloud marker (::before) stays still. */
+.gc-checking { box-shadow: none; }
+.gc-checking::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
   border: 2px solid color-mix(in srgb, #3e63dd 25%, transparent);
   border-top-color: #3e63dd;
-  box-shadow: none;
+  border-radius: 50%;
   animation: gc-spin 0.8s linear infinite;
 }
 .gc-clean { background: #30a46c; cursor: pointer; }
@@ -80,7 +86,7 @@ const BADGE_RULES = `
 @keyframes gc-pulse { 50% { opacity: 0.35; } }
 @media (prefers-reduced-motion: reduce) {
   .gc-badge { transition: none; }
-  .gc-checking { border-color: #3e63dd; animation: gc-pulse 1.6s ease-in-out infinite; }
+  .gc-checking::after { border-color: #3e63dd; animation: gc-pulse 1.6s ease-in-out infinite; }
 }
 `;
 
