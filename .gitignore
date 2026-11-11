@@ -24,3 +24,6 @@ xcuserdata/
 # OS / editor
 .DS_Store
 .claude/worktrees/
+
+# Generated from packages/ui/src/tokens/palette.ts (bun run generate)
+packages/ui/src/*.generated.*

@@ -8,5 +8,12 @@
     "jsx": "react-jsx"
   },
   "include": ["src", "build.ts", "build.test.ts"],
-  "references": [{ "path": "../../packages/protocol" }]
+  "references": [
+    {
+      "path": "../../packages/protocol"
+    },
+    {
+      "path": "../../packages/ui"
+    }
+  ]
 }

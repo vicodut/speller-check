@@ -1,7 +1,14 @@
 import type { LocalModelView } from "@gc/protocol";
+import {
+  Alert,
+  AlertDescription,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@gc/ui";
 import { CircleAlert, TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
 import { type Actions, Controls } from "./local-model-controls";
 import { useLocalModels } from "./local-models.hook";
 import { ramWarningText, scoreText } from "./local-models.util";
