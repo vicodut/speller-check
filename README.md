@@ -68,7 +68,7 @@ A grammar and spelling checker for macOS, in English and standard French. A Chro
    bun run build:chrome
    ```
 
-6. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick `apps/chrome/dist`. Open the extension's **Options** page, paste the token and save. The status line should read **Connected**.
+6. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick `apps/chrome/dist`. Open the extension's **Options** page, paste the token and save. The status card at the top should turn green and read **Connected**, with the model and a Local or Cloud badge.
 
 > [!TIP]
 > After rebuilding the extension, reload it in `chrome://extensions`, then reload the tabs that were already open.
