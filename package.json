@@ -21,7 +21,9 @@
     "build:settings": "bun run --cwd apps/settings-web build",
     "settings": "bun run --cwd apps/core cli settings",
     "generate": "bun run --cwd packages/ui generate",
-    "postinstall": "bun run generate"
+    "postinstall": "bun run generate",
+    "package:core": "bun scripts/package-core.ts",
+    "package:extension": "bun scripts/package-extension.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",
