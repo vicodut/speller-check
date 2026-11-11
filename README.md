@@ -86,9 +86,9 @@ Build the same files locally with `bun run package:extension` and `bun run packa
 
 Focus any text field in Chrome and type. Underlines appear about a second after you stop. Click one to open its card, or click the badge to list every issue and reach the **Rephrase** tone buttons.
 
-While a check runs, the badge is a spinner. On a slow local model, the time spent appears beside it after 10 s, so you can tell a long check from a stuck one:
+While a check runs, the badge is a spinner. Hover it to see how long the check has been running, so on a slow local model you can tell a long check from a stuck one:
 
-![The checking spinner with "11s" beside it](docs/images/checking-timer.png)
+![The checking spinner with "Checking… 13s" beside it](docs/images/checking-timer.png)
 
 <table>
 <tr>
