@@ -1,10 +1,26 @@
 import { z } from "zod";
 import { CheckRequest } from "./check-request.dto";
+import { HandshakeNonce, HandshakeProof } from "./handshake.schema";
 import { RephraseTones } from "./rephrase.schema";
 
-/** First message on every connection; anything else before it closes the socket. */
+/**
+ * Legacy first message, from extensions that predate the handshake: it sent the token in clear.
+ * The core answers it with `error {code: "update_extension"}` and closes the socket.
+ */
 export const HelloMessage = z.object({ type: z.literal("hello"), token: z.string().min(1) });
 export type HelloMessage = z.infer<typeof HelloMessage>;
+
+/**
+ * The client's answer to `challenge`, and the first message it sends: its own fresh `nonce`,
+ * and its `proof` over the core's nonce and its own (see `handshakeInput`). Anything else
+ * first, or a wrong proof, closes the socket.
+ */
+export const ProofMessage = z.object({
+  type: z.literal("proof"),
+  nonce: HandshakeNonce,
+  proof: HandshakeProof,
+});
+export type ProofMessage = z.infer<typeof ProofMessage>;
 
 export const TextChangedMessage = CheckRequest.extend({ type: z.literal("text.changed") });
 export type TextChangedMessage = z.infer<typeof TextChangedMessage>;
@@ -72,6 +88,7 @@ export type PingMessage = z.infer<typeof PingMessage>;
 /** Messages a client (Swift helper, Chrome extension) sends to the core. */
 export const ClientMessage = z.discriminatedUnion("type", [
   HelloMessage,
+  ProofMessage,
   TextChangedMessage,
   TextEditMessage,
   FieldClosedMessage,
