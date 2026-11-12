@@ -1,5 +1,5 @@
 import { homedir, totalmem } from "node:os";
-import type { Feature, FeatureModel } from "@gc/protocol";
+import type { Feature } from "@gc/protocol";
 import {
   CURATED_MANIFEST,
   LocalModels,
@@ -11,7 +11,6 @@ import {
   defaultModelsDir,
   type FeatureModels,
   loadServeSettings,
-  type ModelConfig,
   SecurityKeychain,
   SettingsFileRepository,
   SettingsService,
