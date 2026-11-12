@@ -9,10 +9,10 @@ import {
   CardTitle,
 } from "@gc/ui";
 import { CircleAlert, TriangleAlert } from "lucide-react";
+import { formatBytes } from "../ollama/pull-progress.util";
 import { type Actions, Controls } from "./local-model-controls";
 import { useLocalModels } from "./local-models.hook";
 import { ramWarningText, scoreText } from "./local-models.util";
-import { formatBytes } from "./pull-progress.util";
 
 /** Why a download or delete failed, by error code; the code itself is shown too. */
 const ERRORS: Record<string, string> = {

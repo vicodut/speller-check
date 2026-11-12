@@ -1,11 +1,10 @@
 import { Alert, AlertDescription, Button } from "@gc/ui";
 import { CircleAlert, CircleCheck, Save, SpellCheck } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { loadSettings, saveSettings } from "../shared/extension-settings";
-import { parseBlockedSites } from "../shared/site-blocklist";
-import { ConnectionCard } from "./connection-card";
+import { loadSettings, saveSettings } from "../../../shared/extension-settings";
+import { parseBlockedSites } from "../../../shared/site-blocklist";
+import { ConnectionCard, useConnectionStatus } from "../connection";
 import { BlockedSitesField, CoreFields } from "./options-fields";
-import { useConnectionStatus } from "./use-connection-status.hook";
 
 type Notice = { ok: boolean; text: string } | undefined;
 

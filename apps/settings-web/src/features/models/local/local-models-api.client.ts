@@ -1,5 +1,5 @@
 import { LocalModelsView } from "@gc/protocol";
-import { call } from "./settings-api.client";
+import { call } from "../../../lib/settings-api.client";
 
 const PATH = "/api/local-models";
 

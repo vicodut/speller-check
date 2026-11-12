@@ -11,10 +11,10 @@ import {
 } from "@gc/ui";
 import { TriangleAlert } from "lucide-react";
 import { useId, useState } from "react";
-import { PRESETS } from "./profile-presets";
+import type { SettingsPageEvent } from "../../../lib/settings-page.model";
+import { PRESETS } from "../utils/profile-presets.constants";
+import { confirmText, profileUses } from "../utils/profile-uses.util";
 import { ConfirmMove, ProfileRow } from "./profile-row";
-import { confirmText, profileUses } from "./profile-uses.util";
-import type { SettingsPageEvent } from "./settings-page.reducer";
 
 type Props = {
   profiles: ProfilesView;

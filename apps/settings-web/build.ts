@@ -7,7 +7,7 @@ const tailwind = join(root, "node_modules", ".bin", "tailwindcss");
 
 const bundleScript = async (outdir: string): Promise<void> => {
   const result = await Bun.build({
-    entrypoints: [join(root, "src/index.tsx")],
+    entrypoints: [join(root, "src/app/index.tsx")],
     outdir,
     naming: "app.js",
     target: "browser",
@@ -24,7 +24,7 @@ const bundleScript = async (outdir: string): Promise<void> => {
 
 /** Compiles src/app.css (the Tailwind entry) into one static, same-origin stylesheet. */
 const buildStyle = async (outdir: string): Promise<void> => {
-  const input = join(root, "src/app.css");
+  const input = join(root, "src/app/app.css");
   const proc = Bun.spawn([tailwind, "-i", input, "-o", join(outdir, "app.css"), "--minify"], {
     cwd: root,
     stdout: "ignore",
@@ -42,7 +42,7 @@ export const build = async (outdir: string): Promise<void> => {
   await mkdir(outdir, { recursive: true });
   await generate();
   await Promise.all([bundleScript(outdir), buildStyle(outdir)]);
-  await copyFile(join(root, "src/index.html"), join(outdir, "index.html"));
+  await copyFile(join(root, "src/app/index.html"), join(outdir, "index.html"));
 };
 
 if (import.meta.main) await build(join(root, "dist"));

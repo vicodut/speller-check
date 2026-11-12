@@ -12,13 +12,13 @@ import {
 } from "@gc/ui";
 import { Save } from "lucide-react";
 import { type FormEvent, useId } from "react";
-import { ModelField } from "./model-field";
-import { ProfileTest } from "./profile-test";
 import {
   type ProfileForm as Form,
   keyChange,
   type SettingsPageEvent,
-} from "./settings-page.reducer";
+} from "../../../lib/settings-page.model";
+import { ModelField } from "../../models";
+import { ProfileTest } from "./profile-test";
 
 const EFFORTS: readonly ReasoningEffort[] = ["none", "low", "medium", "high"];
 

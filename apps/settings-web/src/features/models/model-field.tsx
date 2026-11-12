@@ -1,7 +1,7 @@
 import { Button, Input, Label } from "@gc/ui";
 import { RotateCw } from "lucide-react";
-import { probeErrorText } from "./probe-text.util";
-import type { ModelsState } from "./profile-probe.reducer";
+import { probeErrorText } from "../../lib/probe-text.util";
+import type { ModelsState } from "../../lib/profile-probe.reducer";
 
 type Props = {
   id: string;

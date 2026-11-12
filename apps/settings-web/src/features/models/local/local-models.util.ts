@@ -1,5 +1,5 @@
 import type { LocalModelsView, LocalModelView } from "@gc/protocol";
-import { formatBytes } from "./pull-progress.util";
+import { formatBytes } from "../ollama/pull-progress.util";
 
 /** A download that is still going: the page polls and shows a progress bar. */
 export const isDownloading = (model: LocalModelView): boolean =>

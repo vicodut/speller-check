@@ -10,7 +10,7 @@ import {
   type StatusTone,
 } from "@gc/ui";
 import { Cloud, HardDrive } from "lucide-react";
-import type { ConnectionStatus } from "../shared/port-messages";
+import type { ConnectionStatus } from "../../../shared/port-messages";
 
 const LABELS: Record<ConnectionStatus, string> = {
   connecting: "Connecting…",

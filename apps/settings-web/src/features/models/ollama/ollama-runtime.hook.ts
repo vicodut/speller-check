@@ -1,8 +1,13 @@
 import type { RuntimeView } from "@gc/protocol";
 import { type Dispatch, useEffect } from "react";
+import {
+  type ApiResult,
+  cancelPull,
+  fetchRuntime,
+  pullModel,
+} from "../../../lib/settings-api.client";
+import type { SettingsPageEvent } from "../../../lib/settings-page.model";
 import { isPulling } from "./pull-progress.util";
-import { type ApiResult, cancelPull, fetchRuntime, pullModel } from "./settings-api.client";
-import type { SettingsPageEvent } from "./settings-page.reducer";
 
 /**
  * Follows Ollama while it starts (after a switch to a local profile) or pulls a model: refreshes

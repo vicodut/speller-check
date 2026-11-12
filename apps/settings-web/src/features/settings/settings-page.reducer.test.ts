@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { FeatureSettingsView, ProfilesView, RuntimeView } from "@gc/protocol";
-import {
-  initialState,
-  keyChange,
-  type SettingsPageState,
-  settingsPageReducer,
-} from "./settings-page.reducer";
+import { keyChange } from "../../lib/settings-page.model";
+import { initialState, type SettingsPageState, settingsPageReducer } from "./settings-page.reducer";
 
 const feature: FeatureSettingsView = {
   baseUrl: { value: "http://127.0.0.1:11434/v1", source: "saved" },

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 /* Palette, dark mode, shadcn tokens and the shared components: generated from @gc/ui. */
 @import "@gc/ui/theme.css";
-@source "./";
+@source "../";
 
 /* Everything else is utility classes on the components (@gc/ui and the panels). */

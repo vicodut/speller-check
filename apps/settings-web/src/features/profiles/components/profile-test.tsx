@@ -1,7 +1,7 @@
 import { Button, cn } from "@gc/ui";
 import { LoaderCircle, PlugZap } from "lucide-react";
-import { probeErrorText, testPassedText } from "./probe-text.util";
-import type { TestState } from "./profile-probe.reducer";
+import { probeErrorText, testPassedText } from "../../../lib/probe-text.util";
+import type { TestState } from "../../../lib/profile-probe.reducer";
 
 type Props = { test: TestState; onTest: () => void };
 

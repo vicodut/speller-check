@@ -1,5 +1,6 @@
 import type { LocalModelsView } from "@gc/protocol";
 import { useCallback, useEffect, useState } from "react";
+import type { ApiResult } from "../../../lib/settings-api.client";
 import { anyDownloading } from "./local-models.util";
 import {
   cancelLocalModel,
@@ -7,7 +8,6 @@ import {
   downloadLocalModel,
   fetchLocalModels,
 } from "./local-models-api.client";
-import type { ApiResult } from "./settings-api.client";
 
 /**
  * The curated local models: loaded once, then refreshed twice a second while one downloads.
