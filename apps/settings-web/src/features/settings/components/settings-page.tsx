@@ -51,12 +51,11 @@ const loadAll = async (token: string): Promise<SettingsPageEvent> => {
 
 /** The model connection: the saved profiles, the one in use, and where each value comes from. */
 type Props = {
+  /** From the page link, held in memory only; a rotation replaces it for this tab. */
   token: string | null;
-  /** Keeps a rotated token for the next visit. */
-  onTokenChange: (token: string) => void;
 };
 
-export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
+export const SettingsPage = ({ token: initialToken }: Props) => {
   const [state, dispatch] = useReducer(settingsPageReducer, initialState);
   const [token, setToken] = useState(initialToken);
 
@@ -88,7 +87,6 @@ export const SettingsPage = ({ token: initialToken, onTokenChange }: Props) => {
       return false;
     }
     setToken(rotated.value.token);
-    onTokenChange(rotated.value.token);
     dispatch(await loadAll(rotated.value.token));
     return true;
   };
