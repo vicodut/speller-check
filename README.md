@@ -172,4 +172,4 @@ GC_BASE_URL=http://127.0.0.1:11434/v1 GC_MODEL=qwen3:8b GC_REASONING_EFFORT=none
 
 - [Product spec](docs/spec.md): architecture, checking pipeline, protocol, UX and privacy rules
 - [Decisions log](docs/decisions.md): a dated record of what changed and why, with model timings
-- [`CLAUDE.md`](CLAUDE.md): code conventions (each app has its own as well)
+- [`AGENTS.md`](AGENTS.md): code conventions (each app has its own as well)
