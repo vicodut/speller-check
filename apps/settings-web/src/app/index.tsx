@@ -1,6 +1,6 @@
 import { createRoot } from "react-dom/client";
-import { takeToken } from "./page-token.util";
-import { SettingsPage } from "./settings-page";
+import { takeToken } from "../features/auth";
+import { SettingsPage } from "../features/settings";
 
 const STORAGE_KEY = "gc.installToken";
 

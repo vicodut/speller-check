@@ -1,9 +1,9 @@
 import type { OllamaPullView } from "@gc/protocol";
 import { CircleAlert, Download, X } from "lucide-react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Button } from "./components/ui/button";
-import { Progress } from "./components/ui/progress";
-import { StatusDot } from "./components/ui/status-dot";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { Button } from "../../../components/ui/button";
+import { Progress } from "../../../components/ui/progress";
+import { StatusDot } from "../../../components/ui/status-dot";
 import { isPulling, pullLabel } from "./pull-progress.util";
 
 type Props = {

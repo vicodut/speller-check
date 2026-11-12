@@ -1,18 +1,18 @@
 import type { ProfileInput, ProfileSave, ReasoningEffort } from "@gc/protocol";
 import { Save } from "lucide-react";
 import { type FormEvent, useId } from "react";
-import { Button } from "./components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
-import { Input } from "./components/ui/input";
-import { Label } from "./components/ui/label";
-import { NativeSelect } from "./components/ui/native-select";
-import { ModelField } from "./model-field";
-import { ProfileTest } from "./profile-test";
+import { Button } from "../../../components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
+import { NativeSelect } from "../../../components/ui/native-select";
 import {
   type ProfileForm as Form,
   keyChange,
   type SettingsPageEvent,
-} from "./settings-page.reducer";
+} from "../../../lib/settings-page.model";
+import { ModelField } from "../../models";
+import { ProfileTest } from "./profile-test";
 
 const EFFORTS: readonly ReasoningEffort[] = ["none", "low", "medium", "high"];
 

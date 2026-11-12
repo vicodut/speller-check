@@ -1,7 +1,7 @@
 import type { FeatureSettingsView } from "@gc/protocol";
-import { Badge } from "./components/ui/badge";
-import type { BadgeVariants } from "./components/ui/badge.variants";
-import { Card, CardContent, CardHeader, CardTitle } from "./components/ui/card";
+import { Badge } from "../../../components/ui/badge";
+import type { BadgeVariants } from "../../../components/ui/badge.variants";
+import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 
 type Origin = { source: string; envVar?: string | undefined };
 

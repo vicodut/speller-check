@@ -1,8 +1,8 @@
 import { LoaderCircle, PlugZap } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { cn } from "./components/ui/cn.util";
-import { probeErrorText, testPassedText } from "./probe-text.util";
-import type { TestState } from "./profile-probe.reducer";
+import { Button } from "../../../components/ui/button";
+import { cn } from "../../../components/ui/cn.util";
+import { probeErrorText, testPassedText } from "../../../lib/probe-text.util";
+import type { TestState } from "../../../lib/profile-probe.reducer";
 
 type Props = { test: TestState; onTest: () => void };
 

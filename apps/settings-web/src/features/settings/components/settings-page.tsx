@@ -1,19 +1,8 @@
 import type { FeatureProfiles, ProfileSave, ProfilesView, SettingsView } from "@gc/protocol";
 import { CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Button } from "./components/ui/button";
-import { errorText } from "./error-text.util";
-import { ExtensionToken } from "./extension-token";
-import { FeatureProfilesPanel } from "./feature-profiles";
-import { FeatureSettings } from "./feature-settings";
-import { LocalModelsPanel } from "./local-models-panel";
-import { OllamaPanel } from "./ollama-panel";
-import { useOllamaRuntime } from "./ollama-runtime.hook";
-import { ProfileForm } from "./profile-form";
-import { ProfileList } from "./profile-list";
-import { useProfileProbe } from "./profile-probe.hook";
-import { moveToLocal, profileUses } from "./profile-uses.util";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { Button } from "../../../components/ui/button";
 import {
   type ApiResult,
   activateProfile,
@@ -26,8 +15,21 @@ import {
   saveProfile,
   setFeatureProfiles,
   startOllama,
-} from "./settings-api.client";
-import { initialState, type SettingsPageEvent, settingsPageReducer } from "./settings-page.reducer";
+} from "../../../lib/settings-api.client";
+import type { SettingsPageEvent } from "../../../lib/settings-page.model";
+import { LocalModelsPanel, OllamaPanel, useOllamaRuntime } from "../../models";
+import {
+  FeatureProfilesPanel,
+  moveToLocal,
+  ProfileForm,
+  ProfileList,
+  profileUses,
+  useProfileProbe,
+} from "../../profiles";
+import { initialState, settingsPageReducer } from "../hooks/settings-page.reducer";
+import { errorText } from "../utils/error-text.util";
+import { ExtensionToken } from "./extension-token";
+import { FeatureSettings } from "./feature-settings";
 
 /** The model the Ollama panel is about: the first feature's model served by Ollama. */
 const ollamaModel = (view: SettingsView): string | null => {

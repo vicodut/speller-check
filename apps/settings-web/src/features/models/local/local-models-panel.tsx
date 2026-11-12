@@ -1,11 +1,17 @@
 import type { LocalModelView } from "@gc/protocol";
 import { CircleAlert, TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/ui/card";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../components/ui/card";
+import { formatBytes } from "../ollama/pull-progress.util";
 import { type Actions, Controls } from "./local-model-controls";
 import { useLocalModels } from "./local-models.hook";
 import { ramWarningText, scoreText } from "./local-models.util";
-import { formatBytes } from "./pull-progress.util";
 
 /** Why a download or delete failed, by error code; the code itself is shown too. */
 const ERRORS: Record<string, string> = {

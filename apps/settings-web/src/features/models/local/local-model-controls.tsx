@@ -1,11 +1,11 @@
 import type { LocalModelView } from "@gc/protocol";
 import { Download, RotateCw, Trash2, X } from "lucide-react";
-import { Button } from "./components/ui/button";
-import { Progress } from "./components/ui/progress";
-import { StatusDot } from "./components/ui/status-dot";
+import { Button } from "../../../components/ui/button";
+import { Progress } from "../../../components/ui/progress";
+import { StatusDot } from "../../../components/ui/status-dot";
+import { formatBytes } from "../ollama/pull-progress.util";
 import type { useLocalModels } from "./local-models.hook";
 import { downloadLabel, isDownloading } from "./local-models.util";
-import { formatBytes } from "./pull-progress.util";
 
 export type Actions = Pick<
   ReturnType<typeof useLocalModels>,

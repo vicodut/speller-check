@@ -1,13 +1,13 @@
 import type { ProfilesView } from "@gc/protocol";
 import { TriangleAlert } from "lucide-react";
 import { useId, useState } from "react";
-import { Alert, AlertDescription } from "./components/ui/alert";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./components/ui/card";
-import { NativeSelect } from "./components/ui/native-select";
-import { PRESETS } from "./profile-presets";
+import { Alert, AlertDescription } from "../../../components/ui/alert";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../../components/ui/card";
+import { NativeSelect } from "../../../components/ui/native-select";
+import type { SettingsPageEvent } from "../../../lib/settings-page.model";
+import { PRESETS } from "../utils/profile-presets";
+import { confirmText, profileUses } from "../utils/profile-uses.util";
 import { ConfirmMove, ProfileRow } from "./profile-row";
-import { confirmText, profileUses } from "./profile-uses.util";
-import type { SettingsPageEvent } from "./settings-page.reducer";
 
 type Props = {
   profiles: ProfilesView;
