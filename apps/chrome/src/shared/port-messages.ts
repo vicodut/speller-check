@@ -52,8 +52,24 @@ export const CoreModelsMessage = z.object({
 });
 export type CoreModelsMessage = z.infer<typeof CoreModelsMessage>;
 
-export const ConnectionStatus = z.enum(["connecting", "ready", "auth_failed", "unreachable"]);
+/**
+ * `auth_failed`: no token, or the core rejected it. `unverified`: what answered on the core's
+ * port could not prove the token (something else may be listening there); nothing is sent.
+ */
+export const ConnectionStatus = z.enum([
+  "connecting",
+  "ready",
+  "auth_failed",
+  "unverified",
+  "unreachable",
+]);
 export type ConnectionStatus = z.infer<typeof ConnectionStatus>;
+
+/** The core can't be used: field text is dropped, and the badge says why. */
+export type OfflineStatus = Exclude<ConnectionStatus, "connecting" | "ready">;
+
+export const isOffline = (status: ConnectionStatus): status is OfflineStatus =>
+  status !== "connecting" && status !== "ready";
 
 /** Sent to a port when it attaches and to every port when the core connection status changes. */
 export const CoreStatusMessage = z.object({

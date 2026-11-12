@@ -1,6 +1,7 @@
 import { type ClientMessage, CoreMessage } from "@gc/protocol";
 import type { ExtensionSettings } from "../shared/extension-settings.schema";
 import type { ConnectionStatus } from "../shared/port-messages";
+import { CoreHandshake } from "./core-handshake.service";
 import { reconnectDelay } from "./reconnect-backoff.policy";
 
 /** The part of `WebSocket` the connection uses, so tests can pass a fake. */
@@ -38,8 +39,11 @@ const parseCoreMessage = (data: unknown): CoreMessage | undefined => {
 };
 
 /**
- * One WebSocket to the core: hello -> ready, then messages both ways.
- * Reconnects with capped exponential backoff; stops after `auth_failed` until settings change.
+ * One WebSocket to the core: challenge -> proof -> ready (with the core's proof), then messages
+ * both ways. The token never goes on the wire, and nothing is sent until the core has proven it
+ * knows the token; a core that can't is dropped as `unverified`.
+ * Reconnects with capped exponential backoff; stops after `auth_failed` or `unverified` until
+ * settings change.
  * MV3: since Chrome 116, WebSocket traffic keeps the service worker alive, so while ready it
  * pings every 20 s; a slow model call would otherwise leave the socket silent long enough for
  * Chrome to stop the worker and drop the reply. If the worker is stopped anyway, it reconnects
@@ -52,6 +56,9 @@ export class CoreConnection {
   private attempt = 0;
   private cancelRetry: (() => void) | undefined;
   private cancelKeepalive: (() => void) | undefined;
+  private handshake: CoreHandshake | undefined;
+  /** Messages are handled one at a time, in order, though verifying a proof is async. */
+  private inbox: Promise<void> = Promise.resolve();
   private readonly createSocket: (url: string) => CoreSocket;
   private readonly schedule: (run: () => void, ms: number) => () => void;
 
@@ -95,32 +102,54 @@ export class CoreConnection {
       return;
     }
     this.socket = socket;
-    socket.onopen = () => socket.send(JSON.stringify({ type: "hello", token: settings.token }));
+    this.handshake = new CoreHandshake(settings.token);
+    socket.onopen = null; // The core speaks first, with its challenge.
     socket.onmessage = (event) => {
-      if (socket === this.socket) this.handle(parseCoreMessage(event.data));
+      const message = parseCoreMessage(event.data);
+      this.inbox = this.inbox.then(() => this.handle(socket, message));
     };
     socket.onclose = () => {
       if (socket !== this.socket) return;
       this.socket = undefined;
       this.stopKeepalive();
-      if (this.currentStatus !== "auth_failed") this.retryLater();
+      if (this.currentStatus !== "auth_failed" && this.currentStatus !== "unverified") {
+        this.retryLater();
+      }
     };
   }
 
-  private handle(message: CoreMessage | undefined): void {
-    if (!message) return;
+  private async handle(socket: CoreSocket, message: CoreMessage | undefined): Promise<void> {
+    if (!message || socket !== this.socket) return;
     if (message.type === "error" && message.code === "auth_failed") {
-      this.setStatus("auth_failed");
-      this.teardown();
+      this.stop("auth_failed");
       return;
     }
-    if (this.currentStatus !== "ready") {
-      if (message.type !== "ready") return;
-      this.attempt = 0;
-      this.setStatus("ready");
-      this.keepAlive();
+    if (this.currentStatus === "ready") {
+      if (message.type !== "challenge") this.deps.onMessage(message);
+      return;
     }
+    if (message.type === "challenge") {
+      const proof = await this.handshake?.answer(message);
+      if (proof && socket === this.socket) socket.send(JSON.stringify(proof));
+      return;
+    }
+    if (message.type !== "ready") return;
+    const verified = (await this.handshake?.verify(message)) === true;
+    if (socket !== this.socket) return;
+    if (!verified) {
+      this.stop("unverified");
+      return;
+    }
+    this.attempt = 0;
+    this.setStatus("ready");
+    this.keepAlive();
     this.deps.onMessage(message);
+  }
+
+  /** Gives up on this core until settings change. */
+  private stop(status: "auth_failed" | "unverified"): void {
+    this.setStatus(status);
+    this.teardown();
   }
 
   private retryLater(): void {
