@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { loadSettings, saveSettings } from "../shared/extension-settings";
-import type { ConnectionStatus } from "../shared/port-messages";
-import { parseBlockedSites } from "../shared/site-blocklist";
+import { loadSettings, saveSettings } from "../../../shared/extension-settings";
+import type { ConnectionStatus } from "../../../shared/port-messages";
+import { parseBlockedSites } from "../../../shared/site-blocklist";
+import { useConnectionStatus } from "../connection";
 import { modelLine } from "./model-line.util";
-import { useConnectionStatus } from "./use-connection-status.hook";
 
 const statusLabels: Record<ConnectionStatus, string> = {
   connecting: "Connecting…",

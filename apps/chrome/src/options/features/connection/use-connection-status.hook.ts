@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { StatusResponse } from "../shared/port-messages";
+import { StatusResponse } from "../../../shared/port-messages";
 
 const POLL_MS = 1000;
 
