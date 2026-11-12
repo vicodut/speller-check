@@ -1,8 +1,6 @@
 import type { ProfileView } from "@gc/protocol";
+import { Alert, AlertDescription, Badge, Button } from "@gc/ui";
 import { Cloud, KeyRound, Laptop, Pencil, Trash2, TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
 
 const host = (url: string) => {
   try {

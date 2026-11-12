@@ -1,5 +1,6 @@
 import { copyFile, mkdir, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { generate } from "@gc/ui/generate";
 
 const root = import.meta.dir;
 const tailwind = join(root, "node_modules", ".bin", "tailwindcss");
@@ -39,6 +40,7 @@ const buildStyle = async (outdir: string): Promise<void> => {
 export const build = async (outdir: string): Promise<void> => {
   await rm(outdir, { recursive: true, force: true });
   await mkdir(outdir, { recursive: true });
+  await generate();
   await Promise.all([bundleScript(outdir), buildStyle(outdir)]);
   await copyFile(join(root, "src/app/index.html"), join(outdir, "index.html"));
 };

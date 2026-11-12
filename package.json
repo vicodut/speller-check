@@ -6,19 +6,24 @@
     "apps/core",
     "apps/chrome",
     "apps/settings-web",
-    "packages/protocol"
+    "packages/protocol",
+    "packages/ui"
   ],
   "scripts": {
     "dev": "bun scripts/dev.ts",
-    "typecheck": "tsc -b",
+    "typecheck": "bun run generate && tsc -b",
     "lint": "biome check .",
-    "test": "bun test",
+    "test": "bun run generate && bun test",
     "check": "bun run typecheck && bun run lint && bun run test",
     "test:models": "bun run --cwd apps/core test:models",
     "test:keychain": "bun run --cwd apps/core test:keychain",
     "build:chrome": "bun run --cwd apps/chrome build",
     "build:settings": "bun run --cwd apps/settings-web build",
-    "settings": "bun run --cwd apps/core cli settings"
+    "settings": "bun run --cwd apps/core cli settings",
+    "generate": "bun run --cwd packages/ui generate",
+    "postinstall": "bun run generate",
+    "package:core": "bun scripts/package-core.ts",
+    "package:extension": "bun scripts/package-extension.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.4",

@@ -1,6 +1,5 @@
+import { Button, cn } from "@gc/ui";
 import { LoaderCircle, PlugZap } from "lucide-react";
-import { Button } from "../../../components/ui/button";
-import { cn } from "../../../components/ui/cn.util";
 import { probeErrorText, testPassedText } from "../../../lib/probe-text.util";
 import type { TestState } from "../../../lib/profile-probe.reducer";
 

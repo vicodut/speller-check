@@ -1,9 +1,6 @@
 import type { RuntimeView } from "@gc/protocol";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, StatusDot } from "@gc/ui";
 import { Check, Play } from "lucide-react";
-import { Badge } from "../../../components/ui/badge";
-import { Button } from "../../../components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
-import { StatusDot } from "../../../components/ui/status-dot";
 import { OllamaPull } from "./ollama-pull";
 
 const LINE = "m-0 flex flex-wrap items-center gap-x-2 gap-y-1";

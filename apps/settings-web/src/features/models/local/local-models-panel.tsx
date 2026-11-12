@@ -1,13 +1,14 @@
 import type { LocalModelView } from "@gc/protocol";
-import { CircleAlert, TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
 import {
+  Alert,
+  AlertDescription,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
+} from "@gc/ui";
+import { CircleAlert, TriangleAlert } from "lucide-react";
 import { formatBytes } from "../ollama/pull-progress.util";
 import { type Actions, Controls } from "./local-model-controls";
 import { useLocalModels } from "./local-models.hook";

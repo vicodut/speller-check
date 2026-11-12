@@ -1,30 +1,44 @@
+import { Alert, AlertDescription, Button } from "@gc/ui";
+import { CircleAlert, CircleCheck, Save, SpellCheck } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { loadSettings, saveSettings } from "../../../shared/extension-settings";
-import type { ConnectionStatus } from "../../../shared/port-messages";
 import { parseBlockedSites } from "../../../shared/site-blocklist";
-import { useConnectionStatus } from "../connection";
-import { modelLine } from "./model-line.util";
+import { ConnectionCard, useConnectionStatus } from "../connection";
+import { BlockedSitesField, CoreFields } from "./options-fields";
 
-const statusLabels: Record<ConnectionStatus, string> = {
-  connecting: "Connecting…",
-  ready: "Connected",
-  auth_failed: "Token missing or rejected",
-  unreachable: "Core not reachable",
-};
+type Notice = { ok: boolean; text: string } | undefined;
 
 const parsePort = (text: string): number | undefined => {
   const port = Number(text.trim());
   return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : undefined;
 };
 
+const Header = () => (
+  <header className="flex items-center gap-3">
+    <span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <SpellCheck className="size-5" aria-hidden="true" />
+    </span>
+    <div>
+      <h1 className="text-lg leading-tight font-semibold">Grammar Checker</h1>
+      <p className="text-sm text-muted-foreground">Extension options</p>
+    </div>
+  </header>
+);
+
+const SaveNotice = ({ notice }: { notice: Notice }) =>
+  notice ? (
+    <Alert variant={notice.ok ? "success" : "destructive"} role={notice.ok ? "status" : "alert"}>
+      {notice.ok ? <CircleCheck /> : <CircleAlert />}
+      <AlertDescription>{notice.text}</AlertDescription>
+    </Alert>
+  ) : null;
+
 export const OptionsForm = () => {
   const [token, setToken] = useState("");
   const [port, setPort] = useState("");
   const [sites, setSites] = useState("");
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice>(undefined);
   const connection = useConnectionStatus();
-  const status = connection?.status;
-  const model = modelLine(connection?.check);
 
   useEffect(() => {
     void loadSettings().then((settings) => {
@@ -37,35 +51,31 @@ export const OptionsForm = () => {
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     const portNumber = parsePort(port);
-    if (portNumber === undefined) return setMessage("Port must be a number from 1 to 65535.");
+    if (portNumber === undefined) {
+      return setNotice({ ok: false, text: "Port must be a number from 1 to 65535." });
+    }
     const blockedSites = parseBlockedSites(sites);
     await saveSettings({ token: token.trim(), port: portNumber, blockedSites });
     setSites(blockedSites.join("\n"));
-    setMessage("Saved.");
+    setNotice({ ok: true, text: "Saved." });
   };
 
   return (
-    <form onSubmit={onSubmit}>
-      <h1>Grammar Checker</h1>
-      <p>Status: {status ? statusLabels[status] : "Unknown"}</p>
-      {model && <p>{model}</p>}
-      <label>
-        Token
-        <input type="password" value={token} onChange={(e) => setToken(e.target.value)} />
-      </label>
-      <p>
-        Run <code>bun run --cwd apps/core cli token</code> and paste the token.
-      </p>
-      <label>
-        Port
-        <input inputMode="numeric" value={port} onChange={(e) => setPort(e.target.value)} />
-      </label>
-      <label>
-        Blocked sites (one per line, subdomains included)
-        <textarea rows={6} value={sites} onChange={(e) => setSites(e.target.value)} />
-      </label>
-      <button type="submit">Save</button>
-      {message && <p>{message}</p>}
+    <form onSubmit={onSubmit} className="mx-auto flex max-w-xl flex-col gap-4 px-4 py-8">
+      <Header />
+      <ConnectionCard status={connection?.status} check={connection?.check} />
+      <CoreFields
+        token={{ value: token, onChange: setToken }}
+        port={{ value: port, onChange: setPort }}
+      />
+      <BlockedSitesField sites={{ value: sites, onChange: setSites }} />
+      <div className="flex justify-end">
+        <Button type="submit">
+          <Save />
+          Save
+        </Button>
+      </div>
+      <SaveNotice notice={notice} />
     </form>
   );
 };

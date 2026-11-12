@@ -1,14 +1,15 @@
-import { Check, CircleCheck, Copy, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
-import { useState } from "react";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
-import { Button } from "../../../components/ui/button";
 import {
+  Alert,
+  AlertDescription,
+  Button,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../../components/ui/card";
+} from "@gc/ui";
+import { Check, CircleCheck, Copy, Eye, EyeOff, RefreshCw, TriangleAlert } from "lucide-react";
+import { useState } from "react";
 
 type Props = {
   token: string;

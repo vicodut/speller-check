@@ -1,9 +1,16 @@
 import type { ProfilesView } from "@gc/protocol";
+import {
+  Alert,
+  AlertDescription,
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  NativeSelect,
+} from "@gc/ui";
 import { TriangleAlert } from "lucide-react";
 import { useId, useState } from "react";
-import { Alert, AlertDescription } from "../../../components/ui/alert";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../../components/ui/card";
-import { NativeSelect } from "../../../components/ui/native-select";
 import type { SettingsPageEvent } from "../../../lib/settings-page.model";
 import { PRESETS } from "../utils/profile-presets.constants";
 import { confirmText, profileUses } from "../utils/profile-uses.util";

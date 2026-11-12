@@ -24,7 +24,7 @@ export const renderIssueList = (
     row.append(
       dot,
       span("gc-original", issue.original),
-      span("", "→"),
+      span("gc-to", "→"),
       span("gc-suggestion", issue.suggestion === "" ? "(remove)" : issue.suggestion),
     );
     row.addEventListener("click", () => select(issue));
