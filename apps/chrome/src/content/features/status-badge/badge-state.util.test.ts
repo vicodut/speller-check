@@ -40,6 +40,7 @@ describe("badgeLabel", () => {
   test("explains offline and failed states without any field text", () => {
     expect(badgeLabel({ kind: "offline", status: "auth_failed" }).title).toContain("Token");
     expect(badgeLabel({ kind: "offline", status: "unreachable" }).title).toContain("reach");
+    expect(badgeLabel({ kind: "offline", status: "unverified" }).title).toContain("not verified");
     expect(badgeLabel({ kind: "failed", code: "provider_timeout" }).title).toContain(
       "provider_timeout",
     );

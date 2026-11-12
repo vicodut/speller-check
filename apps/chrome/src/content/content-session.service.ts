@@ -1,6 +1,6 @@
 // One checking session for this frame: field watcher, underlines/card, badge, rephrase and core port.
 import type { FeatureModel } from "@gc/protocol";
-import type { BackgroundMessage, ConnectionStatus } from "../shared/port-messages";
+import { type BackgroundMessage, type ConnectionStatus, isOffline } from "../shared/port-messages";
 import { FieldWatcher } from "./features/field-watcher";
 import { REPHRASE_CSS, RephraseController, renderRephraseSection } from "./features/rephrase";
 import type { StopSession } from "./features/site-gate";
@@ -88,7 +88,7 @@ export const startSession = (doc: Document): StopSession => {
   const onBackground = (message: BackgroundMessage): void => {
     if (message.type === "core.status") {
       status = message.status;
-      if (status === "auth_failed" || status === "unreachable") badge.offline(status);
+      if (isOffline(status)) badge.offline(status);
       return;
     }
     if (message.type === "core.models") {

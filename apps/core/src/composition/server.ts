@@ -10,8 +10,8 @@ import type { Result } from "../shared/result";
 import type { Core } from "./core";
 
 /**
- * The WebSocket server and settings page. `token` is read on every hello and API call;
- * `rotateToken` writes a new one, after which every connected client must hello again.
+ * The WebSocket server and settings page. `token` is read on every handshake and API call;
+ * `rotateToken` writes a new one, after which every connected client must prove the token again.
  */
 export const createServer = (
   core: Core,

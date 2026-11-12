@@ -79,7 +79,8 @@ export class ContentPortHub {
       this.broadcast({ type: "core.model_changed", check, rephrase });
       return;
     }
-    if (message.fieldId === undefined) return;
+    // The handshake stays in the core connection; a challenge never concerns a field.
+    if (message.type === "challenge" || message.fieldId === undefined) return;
     const owner = this.isRephraseReply(message)
       ? this.rephraseOwner(message.fieldId, message)
       : this.router.resolve(message.fieldId);

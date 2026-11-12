@@ -5,12 +5,14 @@ export {
   FieldClosedMessage,
   HelloMessage,
   PingMessage,
+  ProofMessage,
   RephraseCancelMessage,
   RephraseRequestMessage,
   TextChangedMessage,
   TextEditMessage,
 } from "./client-message.dto";
 export {
+  ChallengeMessage,
   CoreMessage,
   ErrorMessage,
   FeatureModel,
@@ -20,6 +22,12 @@ export {
   RephraseToneMessage,
   SettingsChangedMessage,
 } from "./core-message.dto";
+export {
+  HandshakeNonce,
+  HandshakeProof,
+  type HandshakeRole,
+  handshakeInput,
+} from "./handshake.schema";
 export { Issue } from "./issue.schema";
 export { IssuesMessage } from "./issues-message.dto";
 export {

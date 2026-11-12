@@ -98,7 +98,7 @@ export class StatusBadge {
   }
 
   /** The core can't be used; shown on the field the badge is on, if any. */
-  offline(status: "auth_failed" | "unreachable", field?: WatchedField): void {
+  offline(status: Extract<BadgeState, { kind: "offline" }>["status"], field?: WatchedField): void {
     if (field) this.attach(field);
     if (this.field) this.set({ kind: "offline", status });
   }
