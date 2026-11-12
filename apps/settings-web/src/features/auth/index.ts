@@ -1,1 +1,1 @@
-export { takeToken } from "./utils/page-token.util";
+export { takeToken } from "./page-token.util";

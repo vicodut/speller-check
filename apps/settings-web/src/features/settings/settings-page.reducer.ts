@@ -1,6 +1,6 @@
 import type { ProfilesView, RuntimeView, SettingsView } from "@gc/protocol";
-import { afterEdit, IDLE_PROBE, probeReducer } from "../../../lib/profile-probe.reducer";
-import type { KeyField, ProfileForm, SettingsPageEvent } from "../../../lib/settings-page.model";
+import { afterEdit, IDLE_PROBE, probeReducer } from "../../lib/profile-probe.reducer";
+import type { KeyField, ProfileForm, SettingsPageEvent } from "../../lib/settings-page.model";
 
 const NO_KEY: KeyField = { typed: "", remove: false, saved: false };
 

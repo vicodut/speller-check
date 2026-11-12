@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { FeatureSettingsView, ProfilesView, RuntimeView } from "@gc/protocol";
-import { keyChange } from "../../../lib/settings-page.model";
+import { keyChange } from "../../lib/settings-page.model";
 import { initialState, type SettingsPageState, settingsPageReducer } from "./settings-page.reducer";
 
 const feature: FeatureSettingsView = {

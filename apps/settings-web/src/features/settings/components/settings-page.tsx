@@ -26,8 +26,8 @@ import {
   profileUses,
   useProfileProbe,
 } from "../../profiles";
-import { initialState, settingsPageReducer } from "../hooks/settings-page.reducer";
-import { errorText } from "../utils/error-text.util";
+import { errorText } from "../error-text.util";
+import { initialState, settingsPageReducer } from "../settings-page.reducer";
 import { ExtensionToken } from "./extension-token";
 import { FeatureSettings } from "./feature-settings";
 

@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "../../../components/ui/alert";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../../components/ui/card";
 import { NativeSelect } from "../../../components/ui/native-select";
 import type { SettingsPageEvent } from "../../../lib/settings-page.model";
-import { PRESETS } from "../utils/profile-presets";
+import { PRESETS } from "../utils/profile-presets.constants";
 import { confirmText, profileUses } from "../utils/profile-uses.util";
 import { ConfirmMove, ProfileRow } from "./profile-row";
 

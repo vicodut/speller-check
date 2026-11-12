@@ -1,11 +1,7 @@
 import { useCallback, useEffect } from "react";
-import { modelsProbe, testProbe } from "../../../lib/profile-probe.reducer";
-import { listModels, testProfile } from "../../../lib/settings-api.client";
-import {
-  keyChange,
-  type ProfileForm,
-  type SettingsPageEvent,
-} from "../../../lib/settings-page.model";
+import { modelsProbe, testProbe } from "../../lib/profile-probe.reducer";
+import { listModels, testProfile } from "../../lib/settings-api.client";
+import { keyChange, type ProfileForm, type SettingsPageEvent } from "../../lib/settings-page.model";
 
 /** Waits for typing in the base URL to pause before listing its models. */
 const LIST_DELAY_MS = 500;
