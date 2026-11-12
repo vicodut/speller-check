@@ -13,7 +13,7 @@ const PortFromEnv = z
 /** What `core serve` and `core token` need; loadable without any model settings. */
 export const TransportSettings = z.object({
   port: PortFromEnv.default(DEFAULT_PORT),
-  /** File holding the per-install token clients send in `hello`. */
+  /** File holding the per-install token clients prove in the handshake. */
   tokenPath: z.string().min(1),
 });
 export type TransportSettings = z.infer<typeof TransportSettings>;

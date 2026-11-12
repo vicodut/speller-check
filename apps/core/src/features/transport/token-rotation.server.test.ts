@@ -2,9 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { CoreMessage, FeatureSettingsView } from "@gc/protocol";
+import type { FeatureSettingsView } from "@gc/protocol";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
+import { connectWithProof } from "./handshake-client.fixture";
 import { InstallTokenRepository } from "./install-token.repository";
 import { InstallTokenWatcher } from "./install-token.watcher";
 import { WebSocketServer } from "./websocket.server";
@@ -58,36 +59,33 @@ afterAll(async () => {
 const apiStatus = async (token: string) =>
   (await fetch(`${base}/api/settings`, { headers: { authorization: `Bearer ${token}` } })).status;
 
-/** The core's first reply to a hello with `token`: `ready` or an `auth_failed` error. */
-const helloReply = (token: string): Promise<CoreMessage> =>
-  new Promise((resolve, reject) => {
-    const ws = new WebSocket(base.replace("http", "ws"));
-    ws.onopen = () => ws.send(JSON.stringify({ type: "hello", token }));
-    ws.onmessage = (event) => {
-      resolve(JSON.parse(String(event.data)) as CoreMessage);
-      ws.close();
-    };
-    ws.onerror = () => reject(new Error("connection failed"));
-  });
+/** Whether the core accepts a proof made with `token`: "ready" (with its proof) or the error code. */
+const proofReply = async (token: string): Promise<string> => {
+  const client = await connectWithProof(base.replace("http", "ws"), token);
+  client.ws.close();
+  const { reply, coreProof } = client;
+  if (reply.type === "ready") return reply.proof === coreProof ? "ready" : "bad core proof";
+  return reply.type === "error" ? reply.code : reply.type;
+};
 
 describe("a running core after core token --rotate", () => {
   test("accepts the token it started with", async () => {
     expect(await apiStatus(oldToken)).toBe(200);
-    expect(await helloReply(oldToken)).toEqual({ type: "ready" });
+    expect(await proofReply(oldToken)).toBe("ready");
   });
 
   test("refuses the old token and accepts the new one, without a restart", async () => {
     const rotated = await repo.rotate();
     if (!rotated.ok) throw new Error("expected a rotated token");
     expect(await apiStatus(oldToken)).toBe(401);
-    expect(await helloReply(oldToken)).toEqual({ type: "error", code: "auth_failed" });
+    expect(await proofReply(oldToken)).toBe("auth_failed");
     expect(await apiStatus(rotated.value)).toBe(200);
-    expect(await helloReply(rotated.value)).toEqual({ type: "ready" });
+    expect(await proofReply(rotated.value)).toBe("ready");
   });
 
   test("refuses every token once the token file is gone (fails closed)", async () => {
     await rm(join(dir, "token"));
     expect(await apiStatus(oldToken)).toBe(401);
-    expect(await helloReply(oldToken)).toEqual({ type: "error", code: "auth_failed" });
+    expect(await proofReply(oldToken)).toBe("auth_failed");
   });
 });

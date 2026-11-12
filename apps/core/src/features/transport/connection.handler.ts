@@ -1,6 +1,7 @@
 import { ClientMessage, type CoreMessage } from "@gc/protocol";
 import type { Logger } from "../../shared/logger";
-import { currentToken, type TokenSource, tokensMatch } from "./connection-guard.service";
+import { currentToken, type TokenSource } from "./connection-guard.service";
+import { newNonce, signProof, verifyProof } from "./handshake-proof.util";
 import { MessageRouter } from "./message-router.handler";
 import type { ServerDeps } from "./server-deps.types";
 
@@ -10,19 +11,24 @@ export type ConnectionSocket = {
   close(code: number, reason: string): void;
 };
 
+/** `helloTimeoutMs`: how long the client has to send a valid proof after the challenge. */
 export type ConnectionOptions = { readonly token: TokenSource; readonly helloTimeoutMs: number };
 
 /** WebSocket close code 1008: policy violation. */
 const POLICY_VIOLATION = 1008;
 
+type RejectCode = "auth_failed" | "update_extension";
+
 /**
- * One connection's state: waits for a valid `hello`, then hands messages to its router.
- * Never echoes or logs message content.
+ * One connection's state: sends a challenge, waits for a valid proof of the install token,
+ * answers `ready` with its own proof, then hands messages to its router. The token never
+ * crosses the wire. Never echoes or logs message content.
  */
 export class ConnectionHandler {
   private router: MessageRouter | undefined;
   private closed = false;
   private readonly helloTimer: ReturnType<typeof setTimeout>;
+  private readonly nonce = newNonce();
 
   constructor(
     private readonly options: ConnectionOptions,
@@ -31,6 +37,7 @@ export class ConnectionHandler {
     private readonly logger: Logger,
   ) {
     this.helloTimer = setTimeout(() => this.reject(), options.helloTimeoutMs);
+    this.send({ type: "challenge", nonce: this.nonce });
   }
 
   async receive(raw: string | Buffer): Promise<void> {
@@ -66,33 +73,48 @@ export class ConnectionHandler {
     this.router = undefined;
   }
 
+  /** An extension that predates the handshake sends `hello`: it is told to update. */
   private authenticate(message: ClientMessage | undefined): void {
+    if (message?.type === "hello") {
+      this.reject("update_extension");
+      return;
+    }
+    // Read once: the proof checked and the proof sent back use the same token.
+    const token = currentToken(this.options.token);
     if (
-      message?.type !== "hello" ||
-      !tokensMatch(currentToken(this.options.token), message.token)
+      message?.type !== "proof" ||
+      !token ||
+      !verifyProof(token, "client", this.nonce, message.nonce, message.proof)
     ) {
       this.reject();
       return;
     }
     clearTimeout(this.helloTimer);
     this.router = new MessageRouter(this.deps, (out) => this.send(out), this.logger);
-    if (this.deps.currentModels) void this.sendReady(this.deps.currentModels);
-    else this.send({ type: "ready" });
+    const proof = signProof(token, "core", this.nonce, message.nonce);
+    if (this.deps.currentModels) void this.sendReady(proof, this.deps.currentModels);
+    else this.send({ type: "ready", proof });
   }
 
-  /** `ready`, with the models in use when the core can say; the client hears nothing before it. */
-  private async sendReady(currentModels: NonNullable<ServerDeps["currentModels"]>): Promise<void> {
+  /**
+   * `ready` with the core's proof, and the models in use when the core can say; the client
+   * hears nothing else before it.
+   */
+  private async sendReady(
+    proof: string,
+    currentModels: NonNullable<ServerDeps["currentModels"]>,
+  ): Promise<void> {
     const models = await currentModels().catch(() => undefined);
-    if (!this.closed) this.send({ type: "ready", ...models });
+    if (!this.closed) this.send({ type: "ready", proof, ...models });
   }
 
-  private reject(): void {
+  private reject(code: RejectCode = "auth_failed"): void {
     if (this.closed) return;
-    this.logger.info({ event: "connection.rejected", code: "auth_failed" });
-    this.send({ type: "error", code: "auth_failed" });
+    this.logger.info({ event: "connection.rejected", code });
+    this.send({ type: "error", code });
     this.closed = true;
     clearTimeout(this.helloTimer);
-    this.socket.close(POLICY_VIOLATION, "auth_failed");
+    this.socket.close(POLICY_VIOLATION, code);
   }
 
   private send(message: CoreMessage): void {

@@ -2,9 +2,10 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type CoreMessage, type FeatureSettingsView, TokenView } from "@gc/protocol";
+import { type FeatureSettingsView, TokenView } from "@gc/protocol";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
+import { connectWithProof } from "./handshake-client.fixture";
 import { InstallTokenRepository } from "./install-token.repository";
 import { InstallTokenWatcher } from "./install-token.watcher";
 import { WebSocketServer } from "./websocket.server";
@@ -71,22 +72,7 @@ const apiStatus = async (token: string) =>
   (await fetch(`${base}/api/settings`, { headers: { authorization: `Bearer ${token}` } })).status;
 
 /** An authenticated client that records what the core sends and whether it was closed. */
-const client = async () => {
-  const received: CoreMessage[] = [];
-  let closed = false;
-  const ws = new WebSocket(base.replace("http", "ws"));
-  ws.onclose = () => {
-    closed = true;
-  };
-  await new Promise<void>((resolve) => {
-    ws.onopen = () => ws.send(JSON.stringify({ type: "hello", token: oldToken }));
-    ws.onmessage = (event) => {
-      received.push(JSON.parse(String(event.data)) as CoreMessage);
-      resolve();
-    };
-  });
-  return { received, closed: () => closed };
-};
+const client = () => connectWithProof(base.replace("http", "ws"), oldToken);
 
 describe("POST /api/token/rotate", () => {
   test("refuses other methods, other origins and a wrong token, and rotates nothing", async () => {
@@ -101,7 +87,7 @@ describe("POST /api/token/rotate", () => {
 
   test("answers a new token, saves it, and the old one stops working at once", async () => {
     const extension = await client();
-    expect(extension.received).toEqual([{ type: "ready" }]);
+    expect(extension.received).toEqual([{ type: "ready", proof: extension.coreProof }]);
 
     const response = await post("/api/token/rotate", oldToken);
     expect(response.status).toBe(200);

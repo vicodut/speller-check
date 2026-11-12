@@ -14,7 +14,7 @@ export const tokenAction = (args: readonly string[]): "print" | "rotate" | null 
 /**
  * `core token`: prints the install token on stdout, creating it on first use.
  * `core token --rotate`: replaces it with a new one and prints that; a running core refuses the
- * old token from its next hello or API call.
+ * old token from its next handshake or API call.
  */
 export const runToken = async (logger: Logger, args: readonly string[] = []): Promise<ExitCode> => {
   const action = tokenAction(args);
