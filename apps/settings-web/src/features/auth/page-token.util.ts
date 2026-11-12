@@ -3,6 +3,15 @@ const PREFIX = "#token=";
 /** Where pages before the in-memory change kept the install token. Only ever removed now. */
 export const LEGACY_TOKEN_KEY = "gc.installToken";
 
+/** A malformed escape (e.g. `%E0%A4%A`) is no token, not a crash: the page then asks for a link. */
+const decodeLink = (raw: string): string => {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return "";
+  }
+};
+
 /**
  * The install token for API calls. `core settings` opens the page with `#token=<token>`: the
  * fragment never reaches the server, and the page clears it from the address bar (`clearHash`).
@@ -11,8 +20,7 @@ export const LEGACY_TOKEN_KEY = "gc.installToken";
  */
 export const takeToken = (hash: string): { token: string | null; clearHash: boolean } => {
   if (!hash.startsWith(PREFIX)) return { token: null, clearHash: false };
-  const fromLink = decodeURIComponent(hash.slice(PREFIX.length));
-  return { token: fromLink || null, clearHash: true };
+  return { token: decodeLink(hash.slice(PREFIX.length)) || null, clearHash: true };
 };
 
 /**

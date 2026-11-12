@@ -30,6 +30,10 @@ describe("takeToken", () => {
     expect(takeToken("#token=a%2Bb")).toEqual({ token: "a+b", clearHash: true });
   });
 
+  test("a malformed escape gives no token but is still cleared, and does not throw", () => {
+    expect(takeToken("#token=%E0%A4%A")).toEqual({ token: null, clearHash: true });
+  });
+
   test("without a fragment there is no token, so the page asks for `core settings`", () => {
     expect(takeToken("")).toEqual({ token: null, clearHash: false });
   });

@@ -1,4 +1,5 @@
 import { type Issue, MAX_TEXT_LENGTH } from "@gc/protocol";
+import type { OfflineStatus } from "../../../shared/port-messages";
 
 /** What the badge shows for the focused field. "too_long": over the cap, nothing is sent. */
 export type BadgeState =
@@ -7,11 +8,17 @@ export type BadgeState =
   | { readonly kind: "count"; readonly issues: readonly Issue[] }
   | { readonly kind: "too_long" }
   | { readonly kind: "failed"; readonly code: string }
-  | { readonly kind: "offline"; readonly status: "auth_failed" | "unreachable" };
+  | { readonly kind: "offline"; readonly status: OfflineStatus };
 
 export type BadgeLabel = { text: string; title: string; variant: string; cloud?: boolean };
 
 const CAP = MAX_TEXT_LENGTH.toLocaleString("en-US");
+
+const OFFLINE_TITLES: Record<OfflineStatus, string> = {
+  auth_failed: "Token rejected: paste a new one in the extension options.",
+  unverified: "Core not verified: something else answered on its port. Nothing was sent.",
+  unreachable: "Can't reach the grammar checker core. Is it running?",
+};
 
 const plural = (n: number) => (n === 1 ? "1 issue" : `${n} issues`);
 
@@ -61,17 +68,7 @@ export const badgeLabel = (state: BadgeState): BadgeLabel => {
         variant: "failed",
       };
     case "offline":
-      return state.status === "auth_failed"
-        ? {
-            text: "!",
-            title: "Token rejected: paste a new one in the extension options.",
-            variant: "offline",
-          }
-        : {
-            text: "!",
-            title: "Can't reach the grammar checker core. Is it running?",
-            variant: "offline",
-          };
+      return { text: "!", title: OFFLINE_TITLES[state.status], variant: "offline" };
   }
 };
 

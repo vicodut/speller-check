@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { CheckRequest, CoreMessage } from "@gc/protocol";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
+import { proofFor } from "./handshake-client.fixture";
+import type { ServerDeps } from "./server-deps.types";
 import { WebSocketServer } from "./websocket.server";
 
 const TOKEN = "s".repeat(43);
@@ -10,31 +12,32 @@ const updates: CheckRequest[] = [];
 const terms: string[] = [];
 let disposed = 0;
 
+const deps: ServerDeps = {
+  settingsView: () => {
+    throw new Error("not used by these tests");
+  },
+  createSession: (publish) => ({
+    update: (request) => {
+      updates.push(request);
+      publish({ type: "issues", fieldId: request.fieldId, version: request.version, issues: [] });
+    },
+    close: () => undefined,
+    dispose: () => disposed++,
+  }),
+  addDictionaryTerm: async (term) => {
+    terms.push(term);
+    return ok(undefined);
+  },
+  createRephraser: () => ({
+    request: async () => undefined,
+    edited: () => undefined,
+    cancel: () => undefined,
+    dispose: () => undefined,
+  }),
+};
 const server = new WebSocketServer(
   { port: 0, token: TOKEN, helloTimeoutMs: 200 },
-  {
-    settingsView: () => {
-      throw new Error("not used by these tests");
-    },
-    createSession: (publish) => ({
-      update: (request) => {
-        updates.push(request);
-        publish({ type: "issues", fieldId: request.fieldId, version: request.version, issues: [] });
-      },
-      close: () => undefined,
-      dispose: () => disposed++,
-    }),
-    addDictionaryTerm: async (term) => {
-      terms.push(term);
-      return ok(undefined);
-    },
-    createRephraser: () => ({
-      request: async () => undefined,
-      edited: () => undefined,
-      cancel: () => undefined,
-      dispose: () => undefined,
-    }),
-  },
+  deps,
   new Logger(() => undefined),
 );
 let url = "";
@@ -88,8 +91,10 @@ describe("WebSocketServer", () => {
 
   test("authenticates, routes text.changed to the session and disposes it on close", async () => {
     const client = await connect({ Origin: EXTENSION_ORIGIN });
-    send(client, { type: "hello", token: TOKEN });
-    expect(await client.next()).toEqual({ type: "ready" });
+    const challenge = await client.next();
+    if (challenge.type !== "challenge") throw new Error("expected a challenge first");
+    client.ws.send(proofFor(TOKEN, challenge.nonce));
+    expect(await client.next()).toMatchObject({ type: "ready", proof: expect.any(String) });
     send(client, { type: "text.changed", fieldId: "f1", version: 3, text: "Hello" });
     expect(await client.next()).toEqual({ type: "issues", fieldId: "f1", version: 3, issues: [] });
     expect(updates.at(-1)).toEqual({ fieldId: "f1", version: 3, text: "Hello" });
@@ -104,17 +109,41 @@ describe("WebSocketServer", () => {
     expect(disposed).toBe(before + 1);
   });
 
-  test("rejects a wrong token with auth_failed and closes the socket", async () => {
+  test("rejects a proof made with another token with auth_failed and closes", async () => {
     const client = await connect();
-    send(client, { type: "hello", token: "wrong" });
+    const challenge = await client.next();
+    if (challenge.type !== "challenge") throw new Error("expected a challenge first");
+    client.ws.send(proofFor("wrong".repeat(9), challenge.nonce));
     expect(await client.next()).toEqual({ type: "error", code: "auth_failed" });
     expect(await client.closed).toBe(1008);
   });
 
-  test("closes a connection that never says hello", async () => {
+  test("tells an outdated extension that sends hello to update", async () => {
+    const client = await connect({ Origin: EXTENSION_ORIGIN });
+    expect((await client.next()).type).toBe("challenge");
+    send(client, { type: "hello", token: TOKEN });
+    expect(await client.next()).toEqual({ type: "error", code: "update_extension" });
+    expect(await client.closed).toBe(1008);
+  });
+
+  test("closes a connection that never sends a proof", async () => {
     const client = await connect();
+    expect((await client.next()).type).toBe("challenge");
     expect(await client.next()).toEqual({ type: "error", code: "auth_failed" });
     expect(await client.closed).toBe(1008);
+  });
+
+  test("refuses to start on a port already in use, and says so", () => {
+    const port = Number(url.split(":").at(-1));
+    const logs: string[] = [];
+    const second = new WebSocketServer(
+      { port, token: TOKEN },
+      deps,
+      new Logger((line) => logs.push(line)),
+    );
+    const started = second.start();
+    expect(started.ok ? undefined : started.error.code).toBe("port_in_use");
+    expect(logs.some((line) => line.includes('"port_in_use"'))).toBe(true);
   });
 
   test("refuses the upgrade from a web page origin", async () => {

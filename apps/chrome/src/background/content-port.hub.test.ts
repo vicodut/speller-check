@@ -102,9 +102,10 @@ describe("ContentPortHub", () => {
     ]);
   });
 
-  test("ignores invalid content messages and forbids hello from content", () => {
+  test("ignores invalid content messages and forbids handshake messages from content", () => {
     const { toCore, a } = setup();
     a.send({ type: "hello", token: "stolen" });
+    a.send({ type: "proof", nonce: "a".repeat(64), proof: "b".repeat(64) });
     a.send({ type: "text.changed", fieldId: "f1", version: -1, text: "" });
     a.send("garbage");
     expect(toCore).toEqual([]);

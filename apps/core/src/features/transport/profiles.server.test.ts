@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type CoreMessage, ProfilesView, SettingsView } from "@gc/protocol";
+import { connectWithProof } from "./handshake-client.fixture";
 import { cloud, startProfilesServer, TOKEN } from "./profiles-server.fixture";
 
 let ctx: Awaited<ReturnType<typeof startProfilesServer>>;
@@ -9,16 +10,8 @@ const api = (path: string, method = "GET", body?: unknown) => ctx.api(path, meth
 
 /** An authenticated WebSocket client that records what the core sends. */
 const client = async () => {
-  const received: CoreMessage[] = [];
-  const ws = new WebSocket(ctx.base.replace("http", "ws"));
-  await new Promise<void>((resolve) => {
-    ws.onopen = () => ws.send(JSON.stringify({ type: "hello", token: TOKEN }));
-    ws.onmessage = (event) => {
-      const message = JSON.parse(String(event.data)) as CoreMessage;
-      received.push(message);
-      if (message.type === "ready") resolve();
-    };
-  });
+  const { ws, reply, received } = await connectWithProof(ctx.base.replace("http", "ws"), TOKEN);
+  if (reply.type !== "ready") throw new Error("expected ready");
   return { received, close: () => ws.close() };
 };
 
@@ -130,7 +123,7 @@ describe("profiles over HTTP", () => {
     const local = { model: "m", local: true };
     ctx.server.broadcast({ type: "settings.changed", check: local, rephrase: local });
     await Bun.sleep(20);
-    expect(received).toEqual([]);
+    expect(received.map((raw) => (JSON.parse(raw) as CoreMessage).type)).toEqual(["challenge"]);
     ws.close();
   });
 });

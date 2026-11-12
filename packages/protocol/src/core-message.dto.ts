@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { HandshakeNonce, HandshakeProof } from "./handshake.schema";
 import { IssuesMessage } from "./issues-message.dto";
 import { RephraseToneResult } from "./rephrase.schema";
 
@@ -13,9 +14,18 @@ export const FeatureModel = z.object({
 });
 export type FeatureModel = z.infer<typeof FeatureModel>;
 
-/** Sent once the hello token is accepted, with the model each feature uses when the core knows. */
+/** First message on every connection: the core's fresh nonce, for the client to prove over. */
+export const ChallengeMessage = z.object({ type: z.literal("challenge"), nonce: HandshakeNonce });
+export type ChallengeMessage = z.infer<typeof ChallengeMessage>;
+
+/**
+ * Sent once the client's proof is accepted, with the core's own `proof` over both nonces and
+ * the model each feature uses when the core knows. The core always sends `proof`; the Chrome
+ * extension sends no text until it has verified it, and drops the socket otherwise.
+ */
 export const ReadyMessage = z.object({
   type: z.literal("ready"),
+  proof: HandshakeProof.optional(),
   check: FeatureModel.optional(),
   rephrase: FeatureModel.optional(),
 });
@@ -81,6 +91,7 @@ export type SettingsChangedMessage = z.infer<typeof SettingsChangedMessage>;
 
 /** Messages the core sends to a client. */
 export const CoreMessage = z.discriminatedUnion("type", [
+  ChallengeMessage,
   ReadyMessage,
   IssuesCoreMessage,
   RephraseToneMessage,

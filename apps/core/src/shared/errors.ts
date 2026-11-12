@@ -17,6 +17,8 @@ export type ErrorCode =
   | "auth_failed"
   | "message_invalid"
   | "server_start_failed"
+  | "port_in_use"
+  | "update_extension"
   | "origin_forbidden"
   | "host_forbidden"
   | "not_found"

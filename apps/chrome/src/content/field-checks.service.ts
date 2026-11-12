@@ -6,7 +6,7 @@ import type {
   TextChangedMessage,
   TextEditMessage,
 } from "@gc/protocol";
-import type { ConnectionStatus } from "../shared/port-messages";
+import { type ConnectionStatus, isOffline, type OfflineStatus } from "../shared/port-messages";
 import { CheckMemoryStore } from "./features/check-memory";
 import type { ChangeCause, FieldWatcherCallbacks } from "./features/field-watcher";
 import { messageForChange } from "./features/text-cap";
@@ -15,8 +15,6 @@ import type { WatchedField } from "./shared/issue-view";
 
 /** How long a blurred field waits for its in-flight result before it is closed anyway. */
 export const SETTLE_TIMEOUT_MS = 60_000;
-
-type OfflineStatus = "auth_failed" | "unreachable";
 
 export type FieldChecksDeps = {
   send(message: TextChangedMessage | TextEditMessage | FieldClosedMessage): void;
@@ -76,8 +74,7 @@ export class FieldChecks implements FieldWatcherCallbacks {
       this.memory.sent(field, fieldId, version, text);
       const status = this.deps.status();
       // While the core is unusable the background drops the text; say so instead of spinning.
-      if (status === "auth_failed" || status === "unreachable")
-        this.deps.badge.offline(status, field);
+      if (status && isOffline(status)) this.deps.badge.offline(status, field);
       else this.deps.badge.checking(field);
     }
     this.send(message, cause);

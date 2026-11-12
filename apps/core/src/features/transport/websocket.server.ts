@@ -15,7 +15,7 @@ const DEFAULT_HELLO_TIMEOUT_MS = 5000;
 
 export type ServerOptions = {
   readonly port: number;
-  /** Checked on every hello and API call, so a getter lets a rotated token apply at once. */
+  /** Read on every handshake and API call, so a getter lets a rotated token apply at once. */
   readonly token: TokenSource;
   /** Overridable for tests only. */
   readonly helloTimeoutMs?: number;
@@ -25,8 +25,8 @@ type SocketData = { handler: ConnectionHandler | undefined };
 type Socket = ServerWebSocket<SocketData>;
 
 /**
- * Local transport on 127.0.0.1: the WebSocket (origin check, then hello/token auth, then message
- * routing) and, on the same port, the HTTP settings API.
+ * Local transport on 127.0.0.1: the WebSocket (origin check, then the challenge/proof handshake,
+ * then message routing) and, on the same port, the HTTP settings API.
  */
 export class WebSocketServer {
   private server: Server<SocketData> | undefined;
@@ -57,9 +57,11 @@ export class WebSocketServer {
           close: (ws) => this.close(ws),
         },
       });
-    } catch {
-      this.logger.error({ event: "server.failed", code: "server_start_failed" });
-      return err(appError("server_start_failed"));
+    } catch (error) {
+      // Never shared: another process on the port could pose as the core, so say so plainly.
+      const code = isAddressInUse(error) ? "port_in_use" : "server_start_failed";
+      this.logger.error({ event: "server.failed", code });
+      return err(appError(code));
     }
     const port = this.server.port ?? this.options.port;
     this.logger.info({ event: "server.started" });
@@ -71,7 +73,7 @@ export class WebSocketServer {
     for (const handler of this.handlers) handler.notify(message);
   }
 
-  /** Ends every authenticated connection (after a token rotation): each must hello again. */
+  /** Ends every authenticated connection (after a token rotation): each must prove again. */
   revokeAll(): void {
     for (const handler of this.handlers) handler.revoke();
   }
@@ -114,3 +116,6 @@ export class WebSocketServer {
     this.logger.info({ event: "connection.closed" });
   }
 }
+
+const isAddressInUse = (error: unknown): boolean =>
+  typeof error === "object" && error !== null && "code" in error && error.code === "EADDRINUSE";

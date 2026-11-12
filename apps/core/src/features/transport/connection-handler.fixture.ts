@@ -3,10 +3,10 @@ import type { CheckRequest, CoreMessage } from "@gc/protocol";
 import { Logger } from "../../shared/logger";
 import { ok } from "../../shared/result";
 import { ConnectionHandler } from "./connection.handler";
+import { coreProofFor, proofFor } from "./handshake-client.fixture";
 import type { ServerDeps } from "./server-deps.types";
 
 export const TOKEN = "t".repeat(43);
-export const hello = JSON.stringify({ type: "hello", token: TOKEN });
 
 export const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000) => {
   const sent: CoreMessage[] = [];
@@ -50,8 +50,16 @@ export const setup = (overrides: Partial<ServerDeps> = {}, helloTimeoutMs = 5000
   };
   const logger = new Logger((line) => logs.push(line));
   const handler = new ConnectionHandler({ token: TOKEN, helloTimeoutMs }, deps, socket, logger);
+  // The challenge is set aside, so `sent` holds what follows it.
+  const challenge = sent.shift();
+  if (challenge?.type !== "challenge") throw new Error("expected a challenge first");
   return {
     handler,
+    challenge,
+    /** The valid proof for this connection's challenge. */
+    proof: proofFor(TOKEN, challenge.nonce),
+    /** The `ready` a valid proof gets back (without models). */
+    ready: { type: "ready", proof: coreProofFor(TOKEN, challenge.nonce) } as const,
     sent,
     closes,
     updates,

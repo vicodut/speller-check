@@ -16,6 +16,7 @@ const LABELS: Record<ConnectionStatus, string> = {
   connecting: "Connecting…",
   ready: "Connected",
   auth_failed: "Token missing or rejected",
+  unverified: "Core not verified",
   unreachable: "Core not reachable",
 };
 
@@ -23,6 +24,7 @@ const TONES: Record<ConnectionStatus, StatusTone> = {
   connecting: "busy",
   ready: "ok",
   auth_failed: "off",
+  unverified: "off",
   unreachable: "off",
 };
 
