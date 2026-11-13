@@ -17,21 +17,27 @@ import {
   cellCounts,
   EMPTY_STATISTICS_TEXT,
   formatMsPerLetter,
+  formatMsPerWord,
   hasNoTimedCalls,
   hasSamples,
   placeTag,
+  rowTotals,
 } from "./statistics.util";
+
+/** One median line: muted and italic while there are not enough samples for it. */
+const Median = ({ text, value }: { text: string; value: number | null }) => (
+  <span className={value === null ? "block text-muted-foreground italic" : "block font-medium"}>
+    {text}
+  </span>
+);
 
 const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
   <td className="px-2 py-2 align-top">
     <span className="sr-only">{label}: </span>
     {hasSamples(cell) ? (
       <>
-        <span
-          className={cell.msPerLetter === null ? "text-muted-foreground italic" : "font-medium"}
-        >
-          {formatMsPerLetter(cell.msPerLetter)}
-        </span>
+        <Median text={formatMsPerLetter(cell.msPerLetter)} value={cell.msPerLetter} />
+        <Median text={formatMsPerWord(cell.msPerWord)} value={cell.msPerWord} />
         <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
       </>
     ) : (
@@ -50,7 +56,7 @@ const Row = ({ row }: { row: StatisticsRow }) => (
       <span className="block font-mono text-xs text-muted-foreground">
         {placeTag(row.local)} · {row.model}
       </span>
-      <span className="block text-xs text-muted-foreground">Total: {row.letters} letters</span>
+      <span className="block text-xs text-muted-foreground">Total: {rowTotals(row)}</span>
     </th>
     <Cell label="Corrections" cell={row.check} />
     <Cell label="Rephrase" cell={row.rephrase} />
@@ -135,8 +141,8 @@ export const StatisticsPanel = ({ token }: { token: string }) => {
       <CardHeader>
         <CardTitle className="m-0 text-base">Statistics</CardTitle>
         <p className="m-0 text-muted-foreground">
-          Median time per letter of each model call, with its ok and failed counts. Numbers only; a
-          deleted profile keeps its last name.
+          Median time per letter and per word of each model call, with its ok and failed counts.
+          Numbers only; a deleted profile keeps its last name.
         </p>
       </CardHeader>
       <CardContent>
