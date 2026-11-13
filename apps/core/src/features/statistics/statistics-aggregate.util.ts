@@ -1,11 +1,7 @@
+import type { TimedSample } from "./statistics-file.schema";
+
 /** Fewer ok samples than this and a cell shows no median: one slow first call would decide it. */
 export const MIN_TIMED_SAMPLES = 5;
-
-/**
- * One ok sample as stored: letters checked, the ms it took, then the words checked. Samples saved
- * before word counts have no third value, and count toward letters only.
- */
-export type TimedSample = readonly [letters: number, ms: number, words?: number | undefined];
 
 /** What one feature's cell in a row is made of, as stored. */
 export type CellData = {
@@ -22,7 +18,7 @@ export type CellStats = {
   readonly failureCount: number;
   /** Letters over the ok samples only. */
   readonly letters: number;
-  /** Words over the ok samples that have a word count; null when none has one. */
+  /** Words over the ok samples with a word count above zero; null when none has one. */
   readonly words: number | null;
 };
 
@@ -50,8 +46,9 @@ export const msPerWord = (ok: readonly TimedSample[]): number | null => {
   return oneDecimal(median(counted.map(([words, ms]) => ms / words)));
 };
 
+/** Only a sample with a word count above zero counts toward words; null when none does. */
 const wordsOf = (ok: readonly TimedSample[]): number | null => {
-  const counted = ok.flatMap(([, , words]) => (words === undefined ? [] : [words]));
+  const counted = withWords(ok).map(([words]) => words);
   return counted.length === 0 ? null : counted.reduce((sum, n) => sum + n, 0);
 };
 

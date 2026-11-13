@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { lettersSent } from "./letters-sent.util";
 import { cellStats, rowLetters, rowWords } from "./statistics-aggregate.util";
+import { wordsSent } from "./words-sent.util";
 
 const samples = (pairs: [number, number][]) => pairs.map(([letters, ms]) => [letters, ms] as const);
 
@@ -15,6 +17,28 @@ describe("cellStats", () => {
     expect(cell.letters).toBe(30);
     expect(cell.words).toBe(4);
     expect(cell.msPerWord).toBeNull();
+  });
+
+  test("a sample with zero words does not count toward words; a cell of only those shows null", () => {
+    const cell = cellStats({ ok: [[10, 50, 0]], failures: {} });
+    expect(cell.letters).toBe(10);
+    expect(cell.words).toBeNull();
+    expect(
+      cellStats({
+        ok: [
+          [10, 50, 0],
+          [5, 20, 3],
+        ],
+        failures: {},
+      }).words,
+    ).toBe(3);
+  });
+
+  test("a whitespace-only batch has letters but no words, so it adds no words", () => {
+    const sent = ["  \n  "];
+    const sample = [lettersSent(sent), 40, wordsSent(sent)] as const;
+    expect(sample).toEqual([5, 40, 0]);
+    expect(cellStats({ ok: [sample], failures: {} })).toMatchObject({ letters: 5, words: null });
   });
 
   test("an old-only cell has letters, no word count at all (null, not zero)", () => {
