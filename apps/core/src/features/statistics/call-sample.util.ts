@@ -49,10 +49,12 @@ export const samplesFromAttempts = (
   const { identity, feature, letters } = call;
   if (!identity) return [];
   return attempts.flatMap((attempt): CallSample[] => {
-    if (ABANDONED.has(attempt.outcome as ErrorCode)) return [];
     if (attempt.outcome === "ok") {
       return letters > 0 ? [{ kind: "ok", feature, identity, letters, ms: attempt.ms }] : [];
     }
-    return [{ kind: "failure", feature, identity, code: codeOf(attempt.outcome as ErrorCode) }];
+    // Past the "ok" check, the outcome is narrowed to the error codes (ModelCallOutcome minus "ok").
+    const outcome = attempt.outcome;
+    if (ABANDONED.has(outcome)) return [];
+    return [{ kind: "failure", feature, identity, code: codeOf(outcome) }];
   });
 };
