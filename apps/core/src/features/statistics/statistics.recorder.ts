@@ -87,7 +87,7 @@ export class StatisticsRecorder implements SampleSink {
     });
   }
 
-  /** Resolves once every write queued so far has finished (for shutdown and tests). */
+  /** Resolves once every write queued so far has finished; `core serve` awaits it before exiting. */
   async flush(): Promise<void> {
     await this.writing;
   }

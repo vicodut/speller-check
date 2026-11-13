@@ -180,5 +180,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   localModels.cancel();
   server.stop();
   runtime.stop();
+  // Last: no call can record after the server stops, so the pending statistics writes all land.
+  await statistics.recorder.flush();
   return 0;
 };

@@ -149,6 +149,25 @@ describe("StatisticsRecorder", () => {
     expect(saved()).toBeNull();
   });
 
+  test("flush resolves only once a pending write has landed, so shutdown keeps the last samples", async () => {
+    const { store, saved } = memoryStore();
+    let landed = false;
+    const slow = {
+      load: store.load,
+      save: async (file: StatisticsFile): Promise<Result<void, AppError>> => {
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        landed = true;
+        return store.save(file);
+      },
+    };
+    const recorder = new StatisticsRecorder(slow, new Logger(() => {}));
+    await recorder.load();
+    recorder.record([answered(480)]);
+    await recorder.flush();
+    expect(landed).toBe(true);
+    expect(saved()?.entries[0]?.ok).toEqual([[100, 480, 20]]);
+  });
+
   test("clear forgets the kept names too", async () => {
     const { store, saved } = memoryStore();
     const recorder = new StatisticsRecorder(store, quiet());
