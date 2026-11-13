@@ -9,7 +9,8 @@ export type ChatMessage = {
 /**
  * `signal` aborts the call (the caller no longer needs the reply); `timeoutMs` replaces the
  * provider's configured timeout for this call only. `onRetry` runs when a provider gives up on
- * a timed-out attempt and starts another, so a caller can time only the attempt that answered.
+ * an attempt (a timeout, a rejected JSON mode) and starts another, so a caller can time only
+ * the attempt that answered.
  */
 export type CompleteOptions = {
   readonly signal?: AbortSignal | undefined;

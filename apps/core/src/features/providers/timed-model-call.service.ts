@@ -18,7 +18,7 @@ export type TimedModelCallInput<T> = {
   readonly now?: () => number;
 };
 
-export type TimedModelCall<T> = {
+export type TimedModelReply<T> = {
   readonly feature: Feature;
   readonly result: Result<T, AppError>;
   readonly outcome: ModelCallOutcome;
@@ -31,10 +31,10 @@ type Request = (messages: readonly ChatMessage[]) => Promise<Result<string, AppE
 /** One model call for a feature, timed: the call, parsing, and one retry on a bad reply. */
 export const timedModelCall = async <T>(
   input: TimedModelCallInput<T>,
-): Promise<TimedModelCall<T>> => {
+): Promise<TimedModelReply<T>> => {
   const now = input.now ?? (() => performance.now());
   const startedAt = now();
-  // Time spent in attempts the provider gave up on (a timeout it retried) doesn't count.
+  // Time spent in attempts the provider gave up on (a timeout, a rejected JSON mode) doesn't count.
   let attemptStart = startedAt;
   let discarded = 0;
   const onRetry = () => {

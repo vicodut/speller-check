@@ -2,32 +2,33 @@ import { describe, expect, test } from "bun:test";
 import { type AppError, appError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
-import type { ChatMessage, CompleteOptions, Provider } from "./provider";
-import { timedModelCall } from "./timed-model-call.util";
+import type { ChatMessage, Provider } from "./provider";
+import { timedModelCall } from "./timed-model-call.service";
+import { TimeoutRetryProvider } from "./timeout-retry.provider";
 
 type Step = { readonly takes: number; readonly reply: Result<string, AppError> };
 
-/** A fake clock and a provider whose each call advances it by `takes` ms. */
+/**
+ * A fake clock and a provider whose each request advances it by `takes` ms; with
+ * `retryOnTimeout` it sits behind the real TimeoutRetryProvider, as in the core.
+ */
 const scripted = (steps: Step[], retryOnTimeout = false) => {
   let clock = 1000;
   const calls: (readonly ChatMessage[])[] = [];
-  const attempt = (): Result<string, AppError> => {
-    const step = steps.shift();
-    if (!step) throw new Error("unexpected call");
-    clock += step.takes;
-    return step.reply;
-  };
-  const provider: Provider = {
+  const inner: Provider = {
     model: "m",
     healthcheck: async () => true,
-    complete: async (messages, options: CompleteOptions = {}) => {
+    complete: async (messages) => {
       calls.push(messages);
-      const first = attempt();
-      if (!retryOnTimeout || first.ok || first.error.code !== "provider_timeout") return first;
-      options.onRetry?.();
-      return attempt();
+      const step = steps.shift();
+      if (!step) throw new Error("unexpected call");
+      clock += step.takes;
+      return step.reply;
     },
   };
+  const provider = retryOnTimeout
+    ? new TimeoutRetryProvider(inner, 120_000, new Logger(() => {}))
+    : inner;
   return { provider, calls, now: () => clock };
 };
 
@@ -93,7 +94,7 @@ describe("timedModelCall", () => {
     const timed = await call(provider, now);
     expect(timed.outcome).toBe("provider_timeout");
     expect(timed.ms).toBe(120_000);
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2); // both attempts inside the provider, no parse retry
   });
 
   test("an unparsable reply is retried once with the reminder, timed until parsed", async () => {

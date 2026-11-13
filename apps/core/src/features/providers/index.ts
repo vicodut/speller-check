@@ -12,7 +12,7 @@ export type { ChatMessage, CompleteOptions, Provider } from "./provider";
 export { pinProvider, SwitchableProvider } from "./switchable.provider";
 export {
   type ModelCallOutcome,
-  type TimedModelCall,
+  type TimedModelReply,
   timedModelCall,
-} from "./timed-model-call.util";
+} from "./timed-model-call.service";
 export { TimeoutRetryProvider } from "./timeout-retry.provider";
