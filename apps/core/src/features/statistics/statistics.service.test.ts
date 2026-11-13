@@ -81,4 +81,26 @@ describe("StatisticsService.view", () => {
     expect(await service.clear()).toEqual({ ok: true, value: { rows: [] } });
     expect(service.view()).toEqual({ rows: [] });
   });
+
+  test("clear also forgets the rows of deleted profiles", async () => {
+    const service = await build([
+      answered("check", "p1", "m", 50),
+      answered("rephrase", "gone", "m", 80),
+    ]);
+    expect(service.view().rows.map((r) => r.profileName)).toContain("Removed profile");
+    expect(await service.clear()).toEqual({ ok: true, value: { rows: [] } });
+    expect(service.view()).toEqual({ rows: [] });
+  });
+
+  test("after clear, new calls start the statistics again from zero", async () => {
+    const recorder = new StatisticsRecorder(memoryStore(), new Logger(() => {}));
+    await recorder.load();
+    recorder.record([answered("check", "p1", "m", 50, 10)]);
+    const service = new StatisticsService(recorder, (id) => names[id]);
+    await service.clear();
+    recorder.record([answered("check", "p1", "m", 90, 10)]);
+    const [row] = service.view().rows;
+    expect(row?.check.okCount).toBe(1);
+    expect(row?.check.letters).toBe(10);
+  });
 });

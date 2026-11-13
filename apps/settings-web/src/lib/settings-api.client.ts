@@ -61,6 +61,10 @@ export const fetchSettings = (token: string, base = "", fetchFn: typeof fetch = 
 export const fetchStatistics = (token: string, base = "") =>
   call(StatisticsView, { token, path: "/api/statistics", base });
 
+/** Forgets every model-call statistic, including those of deleted profiles; answers the empty view. */
+export const clearStatistics = (token: string, base = "") =>
+  call(StatisticsView, { token, path: "/api/statistics", method: "DELETE", base });
+
 export const fetchProfiles = (token: string, base = "") =>
   call(ProfilesView, { token, path: "/api/profiles", base });
 
