@@ -170,4 +170,24 @@ describe("StatisticsRecorder", () => {
     expect(recorder.entries()).toHaveLength(1);
     expect(lines.join("\n")).toContain('"code":"statistics_write_failed"');
   });
+
+  test("a failed clear returns the code and keeps the numbers and names, as the file was", async () => {
+    const lines: string[] = [];
+    const { store, saved } = memoryStore();
+    const recorder = new StatisticsRecorder(store, new Logger((l) => lines.push(l)));
+    await recorder.load();
+    recorder.record([answered(480)]);
+    recorder.markRemoved("p1", "Local");
+    await recorder.flush();
+    const before = saved();
+    store.failSaves = true;
+
+    const cleared = await recorder.clear();
+    expect(cleared.ok).toBe(false);
+    if (!cleared.ok) expect(cleared.error.code).toBe("statistics_write_failed");
+    expect(recorder.entries()).toHaveLength(1);
+    expect(recorder.removedName("p1")).toBe("Local");
+    expect(saved()).toEqual(before);
+    expect(lines.join("\n")).toContain('"code":"statistics_write_failed"');
+  });
 });

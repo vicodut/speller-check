@@ -4,14 +4,14 @@ import { ok, type Result } from "../../shared/result";
 import type { CallSample } from "./call-sample.util";
 import type { SampleSink } from "./statistics.port";
 import type { StatisticsEntry, StatisticsFile } from "./statistics-file.schema";
+import { statisticsKey } from "./statistics-key.util";
 
 type Store = {
   load(): Promise<Result<StatisticsFile | null, AppError>>;
   save(file: StatisticsFile): Promise<Result<void, AppError>>;
 };
 
-const keyOf = (feature: string, profileId: string, model: string): string =>
-  JSON.stringify([feature, profileId, model]);
+const EMPTY_FILE: StatisticsFile = { version: 1, removed: [], entries: [] };
 
 /**
  * Keeps the model-call statistics in memory and writes them through after each change, one
@@ -36,7 +36,7 @@ export class StatisticsRecorder implements SampleSink {
       return;
     }
     for (const entry of loaded.value?.entries ?? []) {
-      this.byKey.set(keyOf(entry.feature, entry.profileId, entry.model), entry);
+      this.byKey.set(statisticsKey(entry.feature, entry.profileId, entry.model), entry);
     }
     for (const { profileId, name } of loaded.value?.removed ?? []) {
       this.removedNames.set(profileId, name);
@@ -72,12 +72,19 @@ export class StatisticsRecorder implements SampleSink {
     return this.removedNames.get(profileId);
   }
 
-  /** Forgets every number and kept name, and saves the empty file. */
-  async clear(): Promise<Result<void, AppError>> {
-    this.byKey.clear();
-    this.removedNames.clear();
-    this.logger.info({ event: "statistics.cleared" });
-    return this.write();
+  /**
+   * Forgets every number and kept name. The empty file is saved first, and memory is cleared
+   * only once it is written: a failed write returns its code and leaves everything as it was.
+   */
+  clear(): Promise<Result<void, AppError>> {
+    return this.enqueue(async () => {
+      const saved = await this.persist(EMPTY_FILE);
+      if (!saved.ok) return saved;
+      this.byKey.clear();
+      this.removedNames.clear();
+      this.logger.info({ event: "statistics.cleared" });
+      return ok(undefined);
+    });
   }
 
   /** Resolves once every write queued so far has finished (for shutdown and tests). */
@@ -87,7 +94,7 @@ export class StatisticsRecorder implements SampleSink {
 
   private apply(sample: CallSample): void {
     const { feature, identity } = sample;
-    const key = keyOf(feature, identity.profileId, identity.model);
+    const key = statisticsKey(feature, identity.profileId, identity.model);
     const entry = this.byKey.get(key) ?? {
       feature,
       profileId: identity.profileId,
@@ -107,14 +114,22 @@ export class StatisticsRecorder implements SampleSink {
 
   /** Queues a write of the current numbers behind any still running. */
   private write(): Promise<Result<void, AppError>> {
-    const next = this.writing.then(() => this.save());
+    return this.enqueue(() => this.persist(this.snapshot()));
+  }
+
+  /** Runs a task after every write queued so far, so no older write lands after it. */
+  private enqueue<T>(task: () => Promise<T>): Promise<T> {
+    const next = this.writing.then(task);
     this.writing = next;
     return next;
   }
 
-  private async save(): Promise<Result<void, AppError>> {
+  private snapshot(): StatisticsFile {
     const removed = [...this.removedNames].map(([profileId, name]) => ({ profileId, name }));
-    const file: StatisticsFile = { version: 1, removed, entries: this.entries() };
+    return { version: 1, removed, entries: this.entries() };
+  }
+
+  private async persist(file: StatisticsFile): Promise<Result<void, AppError>> {
     const saved = await this.store.save(file);
     if (!saved.ok) {
       this.logger.error({ event: "statistics.write_failed", code: saved.error.code });
