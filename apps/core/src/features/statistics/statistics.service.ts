@@ -11,7 +11,8 @@ const EMPTY_CELL = cellStats({ ok: [], failures: {} });
 
 /**
  * The statistics as the page reads them: one row per profile and model, each feature's cell
- * computed from the stored numbers, and the profile's current name (names are never stored).
+ * computed from the stored numbers. A live profile shows its current name; a deleted one shows
+ * the last name it had, kept while it has rows, and is marked deleted.
  */
 export class StatisticsService {
   constructor(
@@ -25,7 +26,7 @@ export class StatisticsService {
       const key = JSON.stringify([entry.profileId, entry.model]);
       const row: StatisticsRow = rows.get(key) ?? {
         profileId: entry.profileId,
-        profileName: this.profileName(entry.profileId) ?? REMOVED_PROFILE,
+        ...this.nameOf(entry.profileId),
         model: entry.model,
         local: entry.local,
         check: EMPTY_CELL,
@@ -38,6 +39,14 @@ export class StatisticsService {
       );
     }
     return { rows: [...rows.values()] };
+  }
+
+  /** A live profile's current name; a deleted one's last name, or the fallback label. */
+  private nameOf(profileId: string): { profileName: string; deleted: boolean } {
+    const live = this.profileName(profileId);
+    if (live !== undefined) return { profileName: live, deleted: false };
+    const last = this.recorder.removedName(profileId) ?? REMOVED_PROFILE;
+    return { profileName: last, deleted: true };
   }
 
   /** Forgets every number; answers the (now empty) view. */

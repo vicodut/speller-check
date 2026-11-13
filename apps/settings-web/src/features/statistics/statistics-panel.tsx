@@ -17,7 +17,10 @@ const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
 const Row = ({ row }: { row: StatisticsRow }) => (
   <tr className="border-t border-border">
     <th scope="row" className="px-2 py-2 text-left align-top font-normal">
-      <span className="block">{row.profileName}</span>
+      <span className="block">
+        {row.profileName}
+        {row.deleted && <span className="ml-2 text-xs text-muted-foreground">(deleted)</span>}
+      </span>
       <span className="block font-mono text-xs text-muted-foreground">
         {placeTag(row.local)} · {row.model}
       </span>

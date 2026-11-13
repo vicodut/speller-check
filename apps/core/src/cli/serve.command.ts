@@ -147,6 +147,8 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   );
   if (!server.start().ok) return EXIT_FAILURE;
   service.value.onChange(onModelChange(core, server, runtime, logger));
+  // A deleted profile keeps its last name beside its rows, so the statistics can still label them.
+  service.value.onRemoved(({ id, name }) => statisticsRecorder.markRemoved(id, name));
   // Not awaited: clients can connect while Ollama starts and the model loads; their first check
   // then finds it loaded, or waits for it and retries once after a timeout.
   void runtime.use(models.check, models.rephrase).then(() => core.warmUp());

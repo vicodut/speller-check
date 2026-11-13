@@ -15,6 +15,8 @@ export type StatisticsCell = z.infer<typeof StatisticsCell>;
 export const StatisticsRow = z.strictObject({
   profileId: z.string().min(1),
   profileName: z.string(),
+  /** The profile is no longer saved; its name is the last one it had. */
+  deleted: z.boolean(),
   model: z.string().min(1),
   local: z.boolean(),
   check: StatisticsCell,

@@ -17,9 +17,19 @@ const StatisticsEntry = z.strictObject({
   failures: z.record(Code, z.number().int().nonnegative()),
 });
 
-/** `statistics.json`: numbers and codes only. No profile names, no text. */
+/**
+ * A deleted profile's last name, kept only while it has rows, so its rows can still be labelled.
+ * The one name the file holds: a live profile's name is never stored.
+ */
+const RemovedName = z.strictObject({
+  profileId: z.string().min(1).max(100),
+  name: z.string().min(1).max(60),
+});
+
+/** `statistics.json`: numbers and codes, plus the last name of each deleted profile with rows. */
 export const StatisticsFile = z.strictObject({
   version: z.literal(1),
+  removed: z.array(RemovedName).default([]),
   entries: z.array(StatisticsEntry),
 });
 export type StatisticsFile = z.infer<typeof StatisticsFile>;

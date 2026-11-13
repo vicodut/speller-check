@@ -15,6 +15,7 @@ const cell = { msPerLetter: 4.8, okCount: 6, failureCount: 1, letters: 720 };
 const row = {
   profileId: "p1",
   profileName: "Local",
+  deleted: false,
   model: "qwen3:8b",
   local: true,
   check: cell,

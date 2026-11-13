@@ -13,6 +13,7 @@ afterEach(() => rm(dir, { recursive: true, force: true }));
 
 const file: StatisticsFile = {
   version: 1,
+  removed: [{ profileId: "p0", name: "Old" }],
   entries: [
     {
       feature: "check",

@@ -37,6 +37,8 @@ type Store = Pick<SettingsFileRepository, "load" | "save">;
 export type FeatureModels = Readonly<Record<Feature, ModelConfig>>;
 /** `changed`: the features whose model changed; only their providers are swapped. */
 export type ModelListener = (models: FeatureModels, changed: readonly Feature[]) => void;
+/** Told when a profile is deleted, with the last name it had. */
+export type RemovedListener = (profile: { id: string; name: string }) => void;
 
 /**
  * The model settings the core runs with: the saved profiles (keys in the Keychain), or a locked
@@ -46,6 +48,7 @@ export type ModelListener = (models: FeatureModels, changed: readonly Feature[])
  */
 export class SettingsService {
   private readonly listeners: ModelListener[] = [];
+  private readonly removedListeners: RemovedListener[] = [];
 
   private constructor(
     private file: SettingsFile,
@@ -118,6 +121,10 @@ export class SettingsService {
     this.listeners.push(listener);
   }
 
+  onRemoved(listener: RemovedListener): void {
+    this.removedListeners.push(listener);
+  }
+
   /** The key is stored first: a profile is never saved claiming a key the Keychain refused. */
   async create({ apiKey, ...input }: ProfileSave): Promise<Result<ProfilesView, AppError>> {
     const id = this.newId();
@@ -139,14 +146,14 @@ export class SettingsService {
     return this.commit(next, apiKey === undefined ? null : id);
   }
 
-  /** Deleting a profile deletes its Keychain item too. */
+  /** Deleting a profile deletes its Keychain item too, and tells the removal listeners its name. */
   async remove(id: string): Promise<Result<ProfilesView, AppError>> {
+    const profile = this.file.profiles.find((p) => p.id === id);
     const result = await this.commit(removeProfile(this.file, id), null);
-    if (result.ok && this.keys.has(id)) {
-      await this.keys.apply(id, null);
-      return ok(this.profiles());
-    }
-    return result;
+    if (!result.ok) return result;
+    if (profile) for (const listener of this.removedListeners) listener({ id, name: profile.name });
+    if (this.keys.has(id)) await this.keys.apply(id, null);
+    return ok(this.profiles());
   }
 
   /** Refused while env vars give the model: the page must not claim a profile is in use. */

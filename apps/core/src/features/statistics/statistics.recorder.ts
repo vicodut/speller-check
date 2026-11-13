@@ -20,6 +20,7 @@ const keyOf = (feature: string, profileId: string, model: string): string =>
  */
 export class StatisticsRecorder implements SampleSink {
   private readonly byKey = new Map<string, StatisticsEntry>();
+  private readonly removedNames = new Map<string, string>();
   private writing: Promise<unknown> = Promise.resolve();
 
   constructor(
@@ -37,6 +38,9 @@ export class StatisticsRecorder implements SampleSink {
     for (const entry of loaded.value?.entries ?? []) {
       this.byKey.set(keyOf(entry.feature, entry.profileId, entry.model), entry);
     }
+    for (const { profileId, name } of loaded.value?.removed ?? []) {
+      this.removedNames.set(profileId, name);
+    }
     this.logger.info({ event: "statistics.loaded", len: this.byKey.size });
   }
 
@@ -52,9 +56,26 @@ export class StatisticsRecorder implements SampleSink {
     return structuredClone([...this.byKey.values()]);
   }
 
-  /** Forgets every number and saves the empty file. */
+  /**
+   * A profile was deleted: keeps its last name, beside its rows. A profile with no rows keeps
+   * nothing, so no name is stored for it.
+   */
+  markRemoved(profileId: string, name: string): void {
+    const hasRows = [...this.byKey.values()].some((e) => e.profileId === profileId);
+    if (!hasRows) return;
+    this.removedNames.set(profileId, name);
+    void this.write();
+  }
+
+  /** The last name kept for a deleted profile, if any. */
+  removedName(profileId: string): string | undefined {
+    return this.removedNames.get(profileId);
+  }
+
+  /** Forgets every number and kept name, and saves the empty file. */
   async clear(): Promise<Result<void, AppError>> {
     this.byKey.clear();
+    this.removedNames.clear();
     this.logger.info({ event: "statistics.cleared" });
     return this.write();
   }
@@ -92,7 +113,8 @@ export class StatisticsRecorder implements SampleSink {
   }
 
   private async save(): Promise<Result<void, AppError>> {
-    const file: StatisticsFile = { version: 1, entries: this.entries() };
+    const removed = [...this.removedNames].map(([profileId, name]) => ({ profileId, name }));
+    const file: StatisticsFile = { version: 1, removed, entries: this.entries() };
     const saved = await this.store.save(file);
     if (!saved.ok) {
       this.logger.error({ event: "statistics.write_failed", code: saved.error.code });

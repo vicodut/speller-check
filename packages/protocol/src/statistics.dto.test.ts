@@ -10,6 +10,7 @@ describe("StatisticsView", () => {
         {
           profileId: "p1",
           profileName: "Local",
+          deleted: false,
           model: "qwen3:8b",
           local: true,
           check: { msPerLetter: 4.8, okCount: 6, failureCount: 1, letters: 720 },
@@ -18,6 +19,18 @@ describe("StatisticsView", () => {
       ],
     };
     expect(StatisticsView.safeParse(view).success).toBe(true);
+  });
+
+  test("refuses a row without the deleted flag", () => {
+    const row = {
+      profileId: "p1",
+      profileName: "Local",
+      model: "m",
+      local: true,
+      check: cell,
+      rephrase: cell,
+    };
+    expect(StatisticsView.safeParse({ rows: [row] }).success).toBe(false);
   });
 
   test("refuses a row with any field the page doesn't know about", () => {
