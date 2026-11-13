@@ -44,6 +44,7 @@ export class OpenAiCompatibleProvider implements Provider {
     if (!response.ok && this.jsonMode && isRejectedJsonMode(response.error)) {
       this.jsonMode = false;
       this.logger.info({ event: "provider.json_mode_disabled" });
+      options.onRetry?.();
       response = await this.post(messages, options);
     }
     if (!response.ok) return response;

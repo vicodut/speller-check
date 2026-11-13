@@ -49,6 +49,18 @@ describe("TimeoutRetryProvider", () => {
     expect(logs.join("\n")).not.toContain("has went");
   });
 
+  test("tells the caller when it starts the retry, and only then", async () => {
+    let retries = 0;
+    const onRetry = () => {
+      retries += 1;
+    };
+    const { provider } = fake([ok("{}"), timeout, ok("{}")]);
+    await provider.complete(messages, { onRetry });
+    expect(retries).toBe(0);
+    await provider.complete(messages, { onRetry });
+    expect(retries).toBe(1);
+  });
+
   test("returns the second timeout instead of retrying again", async () => {
     const { provider, calls } = fake([timeout, timeout]);
     expect(await provider.complete(messages)).toEqual(timeout);

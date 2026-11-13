@@ -70,6 +70,18 @@ describe("OpenAiCompatibleProvider.complete", () => {
     expect(calls.map((c) => "response_format" in (c.body ?? {}))).toEqual([true, false, false]);
   });
 
+  test("tells the caller when it resends without response_format, and only then", async () => {
+    let retries = 0;
+    const onRetry = () => {
+      retries += 1;
+    };
+    const { provider } = setup([json({}, 400), completion("{}"), completion("{}")]);
+    await provider.complete(messages, { onRetry });
+    expect(retries).toBe(1);
+    await provider.complete(messages, { onRetry });
+    expect(retries).toBe(1);
+  });
+
   test("maps HTTP errors to provider_http with the status", async () => {
     const { provider } = setup([json({}, 500)]);
     expect(await provider.complete(messages)).toEqual({
