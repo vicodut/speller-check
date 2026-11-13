@@ -3,7 +3,7 @@ import type { Logger } from "../../../shared/logger";
 import { ok, type Result } from "../../../shared/result";
 import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
 import { type Provider, pinProvider } from "../../providers";
-import { lettersSent, type SampleSink, samplesFromAttempts, wordsSent } from "../../statistics";
+import { type SampleSink, samplesForCall } from "../../statistics";
 import type { CheckCache } from "./check-cache.service";
 import { locateIssue } from "./issue-locator.service";
 import { shiftIssue } from "./issue-offsets.service";
@@ -35,21 +35,15 @@ export const checkBatch = async (
   const provider = pinProvider(deps.provider);
   const sentences = targets.map((s) => s.text);
   const context = neighbours(targets, all).map((s) => s.text);
-  const batchText = [...sentences, ...context].join("\n");
+  // Every text the user message carries: the targets and their context, as sent.
+  const sent = [...sentences, ...context];
   const messages = buildPrompt({
     sentences,
     context,
-    dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
+    dictionary: buildDictionaryContext(relevantEntries(entries, sent.join("\n"))),
   });
   const timed = await requestModelIssues(provider, messages, deps.logger);
-  deps.stats.record(
-    samplesFromAttempts(timed.attempts, {
-      feature: "check",
-      identity: provider.identity,
-      letters: lettersSent([...sentences, ...context]),
-      words: wordsSent([...sentences, ...context]),
-    }),
-  );
+  deps.stats.record(samplesForCall(timed.attempts, "check", provider.identity, sent));
   if (!timed.result.ok) return timed.result;
   const modelIssues = timed.result;
 

@@ -1,6 +1,8 @@
 import type { Feature } from "@gc/protocol";
 import type { ErrorCode } from "../../shared/errors";
 import type { ModelIdentity, TimedAttempt } from "../providers";
+import { lettersSent } from "./letters-sent.util";
+import { wordsSent } from "./words-sent.util";
 
 /** One model call's sample for the statistics: a timed success, or a failure with its code. */
 export type CallSample =
@@ -24,6 +26,23 @@ export type StatisticsCode =
   | "timeout"
   | "invalid_json"
   | Exclude<ErrorCode, "provider_timeout" | "model_invalid_json">;
+
+/**
+ * The samples for one model call whose user message carries these texts: the letters and words
+ * counted on exactly those texts (see lettersSent and wordsSent).
+ */
+export const samplesForCall = (
+  attempts: readonly TimedAttempt[],
+  feature: Feature,
+  identity: ModelIdentity | undefined,
+  texts: readonly string[],
+): CallSample[] =>
+  samplesFromAttempts(attempts, {
+    feature,
+    identity,
+    letters: lettersSent(texts),
+    words: wordsSent(texts),
+  });
 
 /** Calls the caller abandoned never complete, so they are not counted either way. */
 const ABANDONED: ReadonlySet<ErrorCode> = new Set(["provider_cancelled", "rephrase_cancelled"]);

@@ -35,9 +35,8 @@ export class StatisticsService {
         check: EMPTY_CELL,
         rephrase: EMPTY_CELL,
       };
-      const cell = cellStats(entry);
-      const updated =
-        entry.feature === "check" ? { ...row, check: cell } : { ...row, rephrase: cell };
+      // A row's cells are named by their feature, so the entry's own feature picks its cell.
+      const updated: StatisticsRow = { ...row, [entry.feature]: cellStats(entry) };
       const cells = [updated.check, updated.rephrase];
       rows.set(key, { ...updated, letters: rowLetters(cells), words: rowWords(cells) });
     }

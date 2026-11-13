@@ -10,11 +10,12 @@ const Code = z.string().regex(/^[a-z_]{1,40}$/);
  * count toward letters, and are left out of the words total and the per-word median. Never store
  * a missing word count as zero.
  */
-const TimedSample = z.tuple([
+export const TimedSample = z.tuple([
   z.number().int().positive(),
   z.number().nonnegative(),
   z.number().int().nonnegative().optional(),
 ]);
+export type TimedSample = Readonly<z.infer<typeof TimedSample>>;
 
 /** One row cell's numbers: one entry per feature, profile and model. */
 const StatisticsEntry = z.strictObject({

@@ -8,6 +8,10 @@ import { TimeoutRetryProvider } from "./timeout-retry.provider";
 
 type Step = { readonly takes: number; readonly reply: Result<string, AppError> };
 
+/** The call's outcome as its result says: "ok", or the error code. */
+const outcomeOf = (timed: { readonly result: Result<unknown, AppError> }) =>
+  timed.result.ok ? "ok" : timed.result.error.code;
+
 /**
  * A fake clock and a provider whose each request advances it by `takes` ms; with
  * `retryOnTimeout` it sits behind the real TimeoutRetryProvider, as in the core.
@@ -54,7 +58,6 @@ describe("timedModelCall", () => {
     expect(await call(provider, now)).toEqual({
       feature: "check",
       result: ok(2),
-      outcome: "ok",
       ms: 40,
       attempts: [{ outcome: "ok", ms: 40 }],
     });
@@ -65,7 +68,7 @@ describe("timedModelCall", () => {
       { takes: 15, reply: err(appError("provider_network")) },
     ]);
     const timed = await call(provider, now);
-    expect(timed.outcome).toBe("provider_network");
+    expect(outcomeOf(timed)).toBe("provider_network");
     expect(timed.result).toEqual(err(appError("provider_network")));
     expect(timed.ms).toBe(15);
     expect(calls).toHaveLength(1);
@@ -80,7 +83,7 @@ describe("timedModelCall", () => {
       true,
     );
     const timed = await call(provider, now);
-    expect(timed.outcome).toBe("ok");
+    expect(outcomeOf(timed)).toBe("ok");
     expect(timed.ms).toBe(900);
   });
 
@@ -93,7 +96,7 @@ describe("timedModelCall", () => {
       true,
     );
     const timed = await call(provider, now);
-    expect(timed.outcome).toBe("provider_timeout");
+    expect(outcomeOf(timed)).toBe("provider_timeout");
     expect(timed.ms).toBe(120_000);
     expect(calls).toHaveLength(2); // both attempts inside the provider, no parse retry
   });
@@ -105,7 +108,7 @@ describe("timedModelCall", () => {
     ]);
     const logs: string[] = [];
     const timed = await call(provider, now, logs);
-    expect(timed).toMatchObject({ result: ok(2), outcome: "ok", ms: 110 });
+    expect(timed).toMatchObject({ result: ok(2), ms: 110 });
     expect(calls[1]).toEqual([...messages, retryMessage]);
     expect(logs.some((l) => l.includes('"parse.retry"'))).toBe(true);
   });
@@ -151,7 +154,7 @@ describe("timedModelCall", () => {
       { takes: 60, reply: ok("still nope") },
     ]);
     const timed = await call(provider, now);
-    expect(timed.outcome).toBe("model_invalid_json");
+    expect(outcomeOf(timed)).toBe("model_invalid_json");
     expect(calls).toHaveLength(2);
   });
 
@@ -169,7 +172,10 @@ describe("timedModelCall", () => {
       signal: controller.signal,
       now,
     });
-    expect(timed).toMatchObject({ feature: "rephrase", outcome: "model_invalid_json" });
+    expect(timed).toMatchObject({
+      feature: "rephrase",
+      result: err(appError("model_invalid_json")),
+    });
     expect(calls).toHaveLength(1);
   });
 });

@@ -30,7 +30,6 @@ export type TimedAttempt = {
 export type TimedModelReply<T> = {
   readonly feature: Feature;
   readonly result: Result<T, AppError>;
-  readonly outcome: ModelCallOutcome;
   /** From sending the request to having the answer parsed. */
   readonly ms: number;
   /** Each attempt in order: one, or two when the first reply didn't parse. */
@@ -62,7 +61,6 @@ export const timedModelCall = async <T>(
   return {
     feature: input.feature,
     result,
-    outcome: result.ok ? "ok" : result.error.code,
     ms: now() - startedAt - discarded,
     attempts,
   };

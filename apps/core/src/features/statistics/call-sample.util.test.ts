@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ModelIdentity } from "../providers";
-import { type CallSample, samplesFromAttempts } from "./call-sample.util";
+import { type CallSample, samplesForCall, samplesFromAttempts } from "./call-sample.util";
 
 const identity: ModelIdentity = { profileId: "p1", model: "qwen3:8b", local: true };
 const call = { feature: "check" as const, identity, letters: 120, words: 20 };
@@ -63,5 +63,28 @@ describe("samplesFromAttempts", () => {
 
   test("an ok call with no letters has no per-letter timing and is not recorded", () => {
     expect(samplesFromAttempts([{ outcome: "ok", ms: 480 }], { ...call, letters: 0 })).toEqual([]);
+  });
+});
+
+describe("samplesForCall", () => {
+  test("counts the letters and words of the texts sent, each attempt a sample", () => {
+    const texts = ["Hello there.", "  second  "];
+    expect(samplesForCall([{ outcome: "ok", ms: 480 }], "check", identity, texts)).toEqual<
+      CallSample[]
+    >([
+      {
+        kind: "ok",
+        feature: "check",
+        identity,
+        letters: 22,
+        words: 3,
+        ms: 480,
+      },
+    ]);
+  });
+
+  test("a whitespace-only text has letters but no words", () => {
+    const [sample] = samplesForCall([{ outcome: "ok", ms: 40 }], "rephrase", identity, ["   "]);
+    expect(sample).toMatchObject({ letters: 3, words: 0 });
   });
 });
