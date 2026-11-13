@@ -2,15 +2,23 @@ import type { StatisticsCell, StatisticsRow, StatisticsView } from "@gc/protocol
 import { Card, CardContent, CardHeader, CardTitle } from "@gc/ui";
 import { errorText } from "../../lib/error-text.util";
 import { useStatistics } from "./statistics.hook";
-import { cellCounts, formatMsPerLetter, placeTag } from "./statistics.util";
+import { cellCounts, formatMsPerLetter, hasSamples, placeTag } from "./statistics.util";
 
 const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
   <td className="px-2 py-2 align-top">
     <span className="sr-only">{label}: </span>
-    <span className={cell.msPerLetter === null ? "text-muted-foreground italic" : "font-medium"}>
-      {formatMsPerLetter(cell.msPerLetter)}
-    </span>
-    <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
+    {hasSamples(cell) ? (
+      <>
+        <span
+          className={cell.msPerLetter === null ? "text-muted-foreground italic" : "font-medium"}
+        >
+          {formatMsPerLetter(cell.msPerLetter)}
+        </span>
+        <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
+      </>
+    ) : (
+      <span className="text-muted-foreground italic">No samples</span>
+    )}
   </td>
 );
 
