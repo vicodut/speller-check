@@ -50,6 +50,7 @@ const Row = ({ row }: { row: StatisticsRow }) => (
       <span className="block font-mono text-xs text-muted-foreground">
         {placeTag(row.local)} · {row.model}
       </span>
+      <span className="block text-xs text-muted-foreground">Total: {row.letters} letters</span>
     </th>
     <Cell label="Corrections" cell={row.check} />
     <Cell label="Rephrase" cell={row.rephrase} />

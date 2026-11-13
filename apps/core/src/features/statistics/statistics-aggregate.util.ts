@@ -39,3 +39,7 @@ export const cellStats = (cell: CellData): CellStats => ({
   failureCount: Object.values(cell.failures).reduce((sum, n) => sum + n, 0),
   letters: cell.ok.reduce((sum, [letters]) => sum + letters, 0),
 });
+
+/** A row's letters: the cells' letters (ok samples only) added across both features. */
+export const rowLetters = (cells: readonly CellStats[]): number =>
+  cells.reduce((sum, cell) => sum + cell.letters, 0);

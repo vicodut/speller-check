@@ -18,6 +18,7 @@ const row = {
   deleted: false,
   model: "qwen3:8b",
   local: true,
+  letters: 720,
   check: cell,
   rephrase: { msPerLetter: null, okCount: 0, failureCount: 0, letters: 0 },
 };

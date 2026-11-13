@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { cellStats, median, msPerLetter } from "./statistics-aggregate.util";
+import { cellStats, median, msPerLetter, rowLetters } from "./statistics-aggregate.util";
 
 const samples = (pairs: [number, number][]) => pairs.map(([letters, ms]) => [letters, ms] as const);
 
@@ -96,5 +96,25 @@ describe("cellStats", () => {
       failureCount: 0,
       letters: 0,
     });
+  });
+});
+
+describe("rowLetters", () => {
+  test("the letters of both features' ok samples added together", () => {
+    const check = cellStats({
+      ok: samples([
+        [10, 50],
+        [5, 20],
+      ]),
+      failures: { timeout: 4 },
+    });
+    const rephrase = cellStats({ ok: samples([[7, 30]]), failures: { invalid_json: 1 } });
+    expect(rowLetters([check, rephrase])).toBe(22);
+  });
+
+  test("a feature never run adds nothing, and failures add no letters", () => {
+    const check = cellStats({ ok: [], failures: { timeout: 3 } });
+    const rephrase = cellStats({ ok: samples([[12, 40]]), failures: {} });
+    expect(rowLetters([check, rephrase])).toBe(12);
   });
 });

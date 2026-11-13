@@ -13,6 +13,7 @@ describe("StatisticsView", () => {
           deleted: false,
           model: "qwen3:8b",
           local: true,
+          letters: 720,
           check: { msPerLetter: 4.8, okCount: 6, failureCount: 1, letters: 720 },
           rephrase: cell,
         },
@@ -27,6 +28,20 @@ describe("StatisticsView", () => {
       profileName: "Local",
       model: "m",
       local: true,
+      letters: 0,
+      check: cell,
+      rephrase: cell,
+    };
+    expect(StatisticsView.safeParse({ rows: [row] }).success).toBe(false);
+  });
+
+  test("refuses a row without the total letters", () => {
+    const row = {
+      profileId: "p1",
+      profileName: "Local",
+      deleted: false,
+      model: "m",
+      local: true,
       check: cell,
       rephrase: cell,
     };
@@ -37,8 +52,10 @@ describe("StatisticsView", () => {
     const row = {
       profileId: "p1",
       profileName: "Local",
+      deleted: false,
       model: "m",
       local: true,
+      letters: 0,
       check: cell,
       rephrase: cell,
       apiKey: "x",

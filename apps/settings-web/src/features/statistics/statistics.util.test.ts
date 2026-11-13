@@ -59,6 +59,7 @@ describe("empty statistics", () => {
       deleted: false,
       model: "m",
       local: true,
+      letters: 10,
       check: cell,
       rephrase: cell,
     };

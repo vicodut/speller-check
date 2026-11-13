@@ -2,7 +2,8 @@ import type { StatisticsRow, StatisticsView } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import type { Result } from "../../shared/result";
 import type { StatisticsRecorder } from "./statistics.recorder";
-import { cellStats } from "./statistics-aggregate.util";
+import { cellStats, rowLetters } from "./statistics-aggregate.util";
+import { statisticsKey } from "./statistics-key.util";
 
 /** The label for a row whose profile is no longer saved (a profile removed after its calls). */
 const REMOVED_PROFILE = "Removed profile";
@@ -23,20 +24,20 @@ export class StatisticsService {
   view(): StatisticsView {
     const rows = new Map<string, StatisticsRow>();
     for (const entry of this.recorder.entries()) {
-      const key = JSON.stringify([entry.profileId, entry.model]);
+      const key = statisticsKey(entry.profileId, entry.model);
       const row: StatisticsRow = rows.get(key) ?? {
         profileId: entry.profileId,
         ...this.nameOf(entry.profileId),
         model: entry.model,
         local: entry.local,
+        letters: 0,
         check: EMPTY_CELL,
         rephrase: EMPTY_CELL,
       };
       const cell = cellStats(entry);
-      rows.set(
-        key,
-        entry.feature === "check" ? { ...row, check: cell } : { ...row, rephrase: cell },
-      );
+      const updated =
+        entry.feature === "check" ? { ...row, check: cell } : { ...row, rephrase: cell };
+      rows.set(key, { ...updated, letters: rowLetters([updated.check, updated.rephrase]) });
     }
     return { rows: [...rows.values()] };
   }

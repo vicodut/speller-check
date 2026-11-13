@@ -52,15 +52,31 @@ describe("StatisticsService.view", () => {
       deleted: false,
       model: "qwen3:8b",
       local: true,
+      letters: 20,
       check: { msPerLetter: null, okCount: 1, failureCount: 0, letters: 10 },
       rephrase: { msPerLetter: null, okCount: 1, failureCount: 0, letters: 10 },
     });
     expect(rows[1]).toMatchObject({
       profileName: "Cloud",
       local: false,
+      letters: 10,
       check: { okCount: 1 },
       rephrase: { okCount: 0, failureCount: 0, letters: 0 },
     });
+  });
+
+  test("a row's letters total counts ok samples of both features only", async () => {
+    const service = await build([
+      answered("check", "p1", "qwen3:8b", 50, 30),
+      answered("rephrase", "p1", "qwen3:8b", 90, 12),
+      {
+        kind: "failure",
+        feature: "rephrase",
+        identity: { profileId: "p1", model: "qwen3:8b", local: true },
+        code: "timeout",
+      },
+    ]);
+    expect(service.view().rows[0]?.letters).toBe(42);
   });
 
   test("a profile that is no longer saved is shown without a name", async () => {

@@ -19,6 +19,8 @@ export const StatisticsRow = z.strictObject({
   deleted: z.boolean(),
   model: z.string().min(1),
   local: z.boolean(),
+  /** Letters over the ok samples of both features. */
+  letters: z.number().int().nonnegative(),
   check: StatisticsCell,
   rephrase: StatisticsCell,
 });
