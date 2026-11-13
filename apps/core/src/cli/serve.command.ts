@@ -1,4 +1,5 @@
 import { homedir, totalmem } from "node:os";
+import { dirname, join } from "node:path";
 import type { Feature } from "@gc/protocol";
 import {
   CURATED_MANIFEST,
@@ -9,6 +10,7 @@ import {
 import { OllamaClient, OllamaProcessLauncher, OllamaRuntime } from "../features/runtime";
 import {
   defaultModelsDir,
+  ENVIRONMENT_PROFILE_ID,
   type FeatureModels,
   loadServeSettings,
   SecurityKeychain,
@@ -17,6 +19,11 @@ import {
   settingSources,
   toFeatureModel,
 } from "../features/settings";
+import {
+  StatisticsFileRepository,
+  StatisticsRecorder,
+  StatisticsService,
+} from "../features/statistics";
 import {
   InstallTokenRepository,
   InstallTokenWatcher,
@@ -57,6 +64,23 @@ const onModelChange = (
   };
 };
 
+/** A profile's current name for the statistics page; the env var model is shown as Environment. */
+const profileName = (settings: SettingsService, id: string): string | undefined =>
+  id === ENVIRONMENT_PROFILE_ID
+    ? "Environment"
+    : settings.profiles().profiles.find((p) => p.id === id)?.name;
+
+/** The statistics, saved beside the settings file (numbers and codes only), read in before serving. */
+const openStatistics = async (
+  settingsPath: string,
+  logger: Logger,
+): Promise<StatisticsRecorder> => {
+  const file = join(dirname(settingsPath), "statistics.json");
+  const recorder = new StatisticsRecorder(new StatisticsFileRepository(file), logger);
+  await recorder.load();
+  return recorder;
+};
+
 const untilSignal = (): Promise<void> =>
   new Promise((resolve) => {
     process.once("SIGINT", () => resolve());
@@ -92,7 +116,8 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
   }
   logger.info({ event: "settings.loaded", sources: settingSources(service.value.view().check) });
   const models = await service.value.current();
-  const core = createCore(settings.value, models, logger);
+  const statisticsRecorder = await openStatistics(settings.value.settingsPath, logger);
+  const core = createCore(settings.value, models, logger, statisticsRecorder);
   const watcher = new InstallTokenWatcher(tokenPath, token.value);
   const runtime = new OllamaRuntime(new OllamaClient(), new OllamaProcessLauncher(), logger);
   const modelFiles = new ModelFiles(defaultModelsDir(homedir()));
@@ -116,6 +141,7 @@ export const runServe = async (logger: Logger): Promise<ExitCode> => {
       runtime,
       localModels,
       settingsPageDir: SETTINGS_PAGE_DIR,
+      statistics: new StatisticsService(statisticsRecorder, (id) => profileName(service.value, id)),
     },
     logger,
   );

@@ -4,6 +4,7 @@ import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { type DictionaryEntry, filterDictionaryTerms } from "../dictionary";
 import type { Provider } from "../providers";
+import { NO_STATISTICS, type SampleSink } from "../statistics";
 import { BATCH_MAX_CHARS, BATCH_MAX_SENTENCES } from "./check-limits.constants";
 import { checkBatch, type Hashed } from "./services/batch-checker.service";
 import type { CheckCache } from "./services/check-cache.service";
@@ -48,6 +49,7 @@ export class CheckService {
     private readonly cache: CheckCache,
     private readonly dictionary: DictionarySource,
     private readonly logger: Logger,
+    private readonly stats: SampleSink = NO_STATISTICS,
   ) {}
 
   async check(input: CheckInput): Promise<Result<CheckOutput, AppError>> {
@@ -82,7 +84,12 @@ export class CheckService {
     this.logger.info({ event: "cache.miss", len: misses.length });
     const batches = splitBatches(misses, BATCH_LIMITS);
     if (batches.length > 1) this.logger.info({ event: "check.batches", len: batches.length });
-    const deps = { provider: this.provider, cache: this.cache, logger: this.logger };
+    const deps = {
+      provider: this.provider,
+      cache: this.cache,
+      logger: this.logger,
+      stats: this.stats,
+    };
     for (const [index, batch] of batches.entries()) {
       const startedAt = performance.now();
       const checked = await checkBatch(deps, batch, run.sentences, run.entries);

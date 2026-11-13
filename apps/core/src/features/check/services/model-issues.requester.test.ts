@@ -24,20 +24,26 @@ const logger = new Logger(() => {});
 describe("requestModelIssues", () => {
   test("returns parsed issues on the first valid reply", async () => {
     const { provider, calls } = fakeProvider([ok('{"issues":[]}')]);
-    expect(await requestModelIssues(provider, messages, logger)).toEqual({ ok: true, value: [] });
+    expect((await requestModelIssues(provider, messages, logger)).result).toEqual({
+      ok: true,
+      value: [],
+    });
     expect(calls).toHaveLength(1);
   });
 
   test("retries once with a reminder after invalid JSON", async () => {
     const { provider, calls } = fakeProvider([ok("nope"), ok('{"issues":[]}')]);
-    expect(await requestModelIssues(provider, messages, logger)).toEqual({ ok: true, value: [] });
+    expect((await requestModelIssues(provider, messages, logger)).result).toEqual({
+      ok: true,
+      value: [],
+    });
     expect(calls).toHaveLength(2);
     expect(calls[1]).toHaveLength(2);
   });
 
   test("gives up after the second invalid reply", async () => {
     const { provider, calls } = fakeProvider([ok("nope"), ok("still nope"), ok("{}")]);
-    expect(await requestModelIssues(provider, messages, logger)).toEqual({
+    expect((await requestModelIssues(provider, messages, logger)).result).toEqual({
       ok: false,
       error: { code: "model_invalid_json" },
     });
@@ -46,7 +52,7 @@ describe("requestModelIssues", () => {
 
   test("does not retry provider errors", async () => {
     const { provider, calls } = fakeProvider([err(appError("provider_timeout"))]);
-    expect(await requestModelIssues(provider, messages, logger)).toEqual({
+    expect((await requestModelIssues(provider, messages, logger)).result).toEqual({
       ok: false,
       error: { code: "provider_timeout" },
     });

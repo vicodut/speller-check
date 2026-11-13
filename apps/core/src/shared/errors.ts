@@ -30,6 +30,8 @@ export type ErrorCode =
   | "settings_locked"
   | "settings_read_failed"
   | "settings_write_failed"
+  | "statistics_read_failed"
+  | "statistics_write_failed"
   | "keychain_failed"
   | "ollama_unreachable"
   | "ollama_model_not_found"

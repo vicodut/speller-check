@@ -1,5 +1,6 @@
 export { toFeatureModel } from "./feature-model.util";
 export { type KeyStore, SecurityKeychain } from "./keychain.repository";
+export { ENVIRONMENT_PROFILE_ID } from "./profile-config.util";
 export { isLocalUrl } from "./profiles.util";
 export {
   defaultDictionaryPath,

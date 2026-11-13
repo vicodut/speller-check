@@ -25,6 +25,8 @@ export const ModelConfig = z.object({
   model: z.string().min(1),
   apiKey: z.string().min(1).optional(),
   reasoningEffort: ReasoningEffort.optional(),
+  /** The saved profile this model comes from; absent for the env var model. Keys the statistics. */
+  profileId: z.string().min(1).optional(),
 });
 export type ModelConfig = z.infer<typeof ModelConfig>;
 

@@ -3,6 +3,7 @@ import type { Logger } from "../../../shared/logger";
 import { ok, type Result } from "../../../shared/result";
 import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
 import { type Provider, pinProvider } from "../../providers";
+import { type SampleSink, samplesFromAttempts } from "../../statistics";
 import type { CheckCache } from "./check-cache.service";
 import { locateIssue } from "./issue-locator.service";
 import { shiftIssue } from "./issue-offsets.service";
@@ -16,6 +17,7 @@ export type BatchCheckDeps = {
   readonly provider: Provider;
   readonly cache: CheckCache;
   readonly logger: Logger;
+  readonly stats: SampleSink;
 };
 
 /**
@@ -38,8 +40,16 @@ export const checkBatch = async (
     context,
     dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
   });
-  const modelIssues = await requestModelIssues(provider, messages, deps.logger);
-  if (!modelIssues.ok) return modelIssues;
+  const timed = await requestModelIssues(provider, messages, deps.logger);
+  deps.stats.record(
+    samplesFromAttempts(timed.attempts, {
+      feature: "check",
+      identity: provider.identity,
+      letters: targets.reduce((sum, s) => sum + s.text.length, 0),
+    }),
+  );
+  if (!timed.result.ok) return timed.result;
+  const modelIssues = timed.result;
 
   const located = modelIssues.value.flatMap((issue) => {
     const result = locateIssue(issue, targets);

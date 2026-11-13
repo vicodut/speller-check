@@ -2,8 +2,14 @@ import { FieldSessions } from "../features/check";
 import { ProfileProbeProvider } from "../features/providers";
 import { RephraseJobs } from "../features/rephrase";
 import { type SettingsService, toFeatureModel } from "../features/settings";
-import type { LocalModelsPort, RuntimePort, TokenSource } from "../features/transport";
-import { SettingsPageFiles, WebSocketServer } from "../features/transport";
+import {
+  type LocalModelsPort,
+  type RuntimePort,
+  SettingsPageFiles,
+  type StatisticsPort,
+  type TokenSource,
+  WebSocketServer,
+} from "../features/transport";
 import type { AppError } from "../shared/errors";
 import type { Logger } from "../shared/logger";
 import type { Result } from "../shared/result";
@@ -24,6 +30,7 @@ export const createServer = (
     readonly localModels: LocalModelsPort;
     /** Folder of the built settings page (`apps/settings-web/dist`). */
     readonly settingsPageDir: string;
+    readonly statistics: StatisticsPort;
   },
   logger: Logger,
 ): WebSocketServer => {
@@ -53,6 +60,7 @@ export const createServer = (
       },
       addDictionaryTerm: (term: string) => core.dictionary.add(term),
       createRephraser: (publish) => new RephraseJobs(core.rephraseService, publish),
+      statistics: options.statistics,
     },
     logger,
   );

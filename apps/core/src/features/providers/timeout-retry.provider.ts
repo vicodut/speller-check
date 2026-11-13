@@ -1,7 +1,7 @@
 import type { AppError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import type { Result } from "../../shared/result";
-import type { ChatMessage, CompleteOptions, Provider } from "./provider";
+import type { ChatMessage, CompleteOptions, ModelIdentity, Provider } from "./provider";
 
 /**
  * Retries a timed-out call once with a longer timeout. A local server that has to load (or
@@ -10,13 +10,16 @@ import type { ChatMessage, CompleteOptions, Provider } from "./provider";
  */
 export class TimeoutRetryProvider implements Provider {
   readonly model: string;
+  readonly identity: ModelIdentity | undefined;
 
   constructor(
     private readonly inner: Provider,
     private readonly retryTimeoutMs: number,
     private readonly logger: Logger,
+    identity?: ModelIdentity,
   ) {
     this.model = inner.model;
+    this.identity = identity;
   }
 
   async complete(

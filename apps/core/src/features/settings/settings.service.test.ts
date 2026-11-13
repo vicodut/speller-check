@@ -11,6 +11,7 @@ describe("SettingsService", () => {
     expect((await service.current()).check).toEqual({
       baseUrl: "http://127.0.0.1:11434/v1",
       model: "qwen3:8b",
+      profileId: "p1",
       reasoningEffort: "none",
     });
     expect(service.view().check.model).toEqual({ value: "qwen3:8b", source: "saved" });
@@ -50,7 +51,7 @@ describe("SettingsService", () => {
     await service.create(cloud);
     await service.activate("p2");
     expect(changes).toEqual([
-      { baseUrl: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash" },
+      { baseUrl: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash", profileId: "p2" },
     ]);
     expect(service.view().check.model.value).toBe("qwen/qwen3.8-flash");
   });

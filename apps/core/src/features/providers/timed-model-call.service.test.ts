@@ -56,6 +56,7 @@ describe("timedModelCall", () => {
       result: ok(2),
       outcome: "ok",
       ms: 40,
+      attempts: [{ outcome: "ok", ms: 40 }],
     });
   });
 
@@ -119,6 +120,29 @@ describe("timedModelCall", () => {
       true,
     );
     expect((await call(provider, now)).ms).toBe(110);
+  });
+
+  test("each parse attempt is listed with its own outcome and timing", async () => {
+    const { provider, now } = scripted([
+      { takes: 50, reply: ok("nope") },
+      { takes: 60, reply: ok("{}") },
+    ]);
+    const timed = await call(provider, now);
+    expect(timed.attempts).toEqual([
+      { outcome: "model_invalid_json", ms: 50 },
+      { outcome: "ok", ms: 60 },
+    ]);
+  });
+
+  test("a timeout retried inside the provider is timed from the attempt that answered", async () => {
+    const { provider, now } = scripted(
+      [
+        { takes: 30_000, reply: err(appError("provider_timeout")) },
+        { takes: 900, reply: ok("{}") },
+      ],
+      true,
+    );
+    expect((await call(provider, now)).attempts).toEqual([{ outcome: "ok", ms: 900 }]);
   });
 
   test("a second unparsable reply fails with the parse error", async () => {

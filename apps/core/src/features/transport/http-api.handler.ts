@@ -9,6 +9,7 @@ import { type ProbePort, routeProbe } from "./probe-routes.handler";
 import { type ProfilesPort, routeProfiles } from "./profile-routes.handler";
 import { type RuntimePort, routeRuntime } from "./runtime-routes.handler";
 import type { SettingsPageFiles } from "./settings-page-files.repository";
+import { routeStatistics, type StatisticsPort } from "./statistics-routes.handler";
 
 /** The install token, as `core serve` keeps it: rotating also ends every authenticated connection. */
 export type TokenPort = {
@@ -31,6 +32,8 @@ export type HttpDeps = {
   readonly tokens?: TokenPort | undefined;
   /** The built settings page; absent in tests that only use the API. */
   readonly settingsPage?: SettingsPageFiles | undefined;
+  /** The model-call statistics; absent in tests that don't use them. */
+  readonly statistics?: StatisticsPort | undefined;
 };
 
 const API_PREFIX = "/api/";
@@ -99,7 +102,8 @@ export class HttpApi {
       (this.deps.runtime && routeRuntime(request, pathname, this.deps.runtime)) ||
       (this.deps.localModels && routeLocalModels(request, pathname, this.deps.localModels)) ||
       (this.deps.probe && routeProbe(request, pathname, this.deps.probe)) ||
-      (this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles));
+      (this.deps.profiles && routeProfiles(request, pathname, this.deps.profiles)) ||
+      (this.deps.statistics && routeStatistics(request, pathname, this.deps.statistics));
     if (!routed) return this.reject("not_found", 404);
     const result = await routed;
     if (result.ok) return json(result.value);
