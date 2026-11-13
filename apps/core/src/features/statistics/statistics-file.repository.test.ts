@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StatisticsFileRepository } from "./statistics-file.repository";
@@ -39,6 +39,16 @@ describe("StatisticsFileRepository", () => {
     expect((await repo.save(file)).ok).toBe(true);
     expect(await repo.load()).toEqual({ ok: true, value: file });
     expect(await readdir(join(dir, "nested"))).toEqual(["statistics.json"]);
+  });
+
+  test("a leftover temp file with a looser mode does not make the saved file looser", async () => {
+    const path = join(dir, "statistics.json");
+    const temp = `${path}.${process.pid}.tmp`;
+    await writeFile(temp, "stale", { mode: 0o644 });
+    await chmod(temp, 0o644);
+    expect((await new StatisticsFileRepository(path).save(file)).ok).toBe(true);
+    expect((await stat(path)).mode & 0o777).toBe(0o600);
+    expect(await readdir(dir)).toEqual(["statistics.json"]);
   });
 
   test("a file that isn't valid JSON, or doesn't match the schema, fails to load", async () => {
