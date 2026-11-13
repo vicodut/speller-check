@@ -56,6 +56,7 @@ describe("empty statistics", () => {
     const row = {
       profileId: "p1",
       profileName: "Local",
+      deleted: false,
       model: "m",
       local: true,
       check: cell,
