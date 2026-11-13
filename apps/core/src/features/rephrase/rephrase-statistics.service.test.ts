@@ -48,6 +48,21 @@ describe("RephraseService statistics", () => {
     ]);
   });
 
+  test("an invalid first answer is an invalid_json failure, and the timed retry is an ok sample", async () => {
+    const t = recordingSetup(["not json", reply(keepAll(3))]);
+    await t.run(TEXT, caret, undefined, ["professional"]);
+    expect(t.samples).toEqual([
+      { kind: "failure", feature: "rephrase", identity, code: "invalid_json" },
+      {
+        kind: "ok",
+        feature: "rephrase",
+        identity,
+        letters: expect.any(Number),
+        ms: expect.any(Number),
+      },
+    ]);
+  });
+
   test("an invalid answer twice is two invalid_json failures", async () => {
     const t = recordingSetup(["not json", "not json"]);
     await t.run(TEXT, caret, undefined, ["professional"]);

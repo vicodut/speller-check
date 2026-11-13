@@ -4,6 +4,7 @@ import {
   EMPTY_STATISTICS_TEXT,
   formatMsPerLetter,
   hasNoTimedCalls,
+  hasSamples,
   placeTag,
 } from "./statistics.util";
 
@@ -30,6 +31,17 @@ describe("placeTag", () => {
   test("Local when the endpoint runs on this Mac, Cloud otherwise", () => {
     expect(placeTag(true)).toBe("Local");
     expect(placeTag(false)).toBe("Cloud");
+  });
+});
+
+describe("hasSamples", () => {
+  test("false for a feature the profile never ran, so the page says No samples", () => {
+    expect(hasSamples({ msPerLetter: null, okCount: 0, failureCount: 0, letters: 0 })).toBe(false);
+  });
+
+  test("true when there is at least one ok or failed call", () => {
+    expect(hasSamples({ msPerLetter: null, okCount: 0, failureCount: 1, letters: 0 })).toBe(true);
+    expect(hasSamples({ msPerLetter: null, okCount: 2, failureCount: 0, letters: 90 })).toBe(true);
   });
 });
 

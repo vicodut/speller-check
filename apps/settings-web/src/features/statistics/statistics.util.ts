@@ -15,5 +15,9 @@ export const formatMsPerLetter = (value: number | null): string =>
 export const cellCounts = (cell: StatisticsCell): string =>
   `${cell.okCount} ok · ${cell.failureCount} failed · ${cell.letters} letters`;
 
+/** False when the profile never ran this feature: the page says "No samples" instead of a zero figure. */
+export const hasSamples = (cell: StatisticsCell): boolean =>
+  cell.okCount > 0 || cell.failureCount > 0;
+
 /** Whether the profile's endpoint runs on this Mac (text stays here) or not. */
 export const placeTag = (local: boolean): string => (local ? "Local" : "Cloud");

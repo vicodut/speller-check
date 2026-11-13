@@ -18,16 +18,25 @@ import {
   EMPTY_STATISTICS_TEXT,
   formatMsPerLetter,
   hasNoTimedCalls,
+  hasSamples,
   placeTag,
 } from "./statistics.util";
 
 const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
   <td className="px-2 py-2 align-top">
     <span className="sr-only">{label}: </span>
-    <span className={cell.msPerLetter === null ? "text-muted-foreground italic" : "font-medium"}>
-      {formatMsPerLetter(cell.msPerLetter)}
-    </span>
-    <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
+    {hasSamples(cell) ? (
+      <>
+        <span
+          className={cell.msPerLetter === null ? "text-muted-foreground italic" : "font-medium"}
+        >
+          {formatMsPerLetter(cell.msPerLetter)}
+        </span>
+        <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
+      </>
+    ) : (
+      <span className="text-muted-foreground italic">No samples</span>
+    )}
   </td>
 );
 
