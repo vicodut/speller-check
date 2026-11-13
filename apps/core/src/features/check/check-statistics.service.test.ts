@@ -48,6 +48,20 @@ describe("CheckService statistics", () => {
     ]);
   });
 
+  test("the letters are the target and the context sentences sent, not the target alone", async () => {
+    const { service, samples } = setup([NO_ISSUES]);
+    await service.check({ text: "Alpha ok." });
+    await service.check({ text: "Alpha ok. Beta is bad now." });
+    // "Alpha ok." (9) is cached, so it goes as context; "Beta is bad now." (16) is the target.
+    expect(samples.at(-1)).toEqual({
+      kind: "ok",
+      feature: "check",
+      identity,
+      letters: 9 + 16,
+      ms: expect.any(Number),
+    });
+  });
+
   test("a cache hit calls no model and records nothing", async () => {
     const { service, samples } = setup([NO_ISSUES]);
     await service.check({ text: SENTENCE });

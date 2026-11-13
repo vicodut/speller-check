@@ -3,7 +3,7 @@ import type { Logger } from "../../../shared/logger";
 import { ok, type Result } from "../../../shared/result";
 import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
 import { type Provider, pinProvider } from "../../providers";
-import { type SampleSink, samplesFromAttempts } from "../../statistics";
+import { lettersSent, type SampleSink, samplesFromAttempts } from "../../statistics";
 import type { CheckCache } from "./check-cache.service";
 import { locateIssue } from "./issue-locator.service";
 import { shiftIssue } from "./issue-offsets.service";
@@ -33,10 +33,11 @@ export const checkBatch = async (
   if (targets.length === 0) return ok(null);
   // One model for the whole batch (retry included) and its cache key, even if settings change.
   const provider = pinProvider(deps.provider);
+  const sentences = targets.map((s) => s.text);
   const context = neighbours(targets, all).map((s) => s.text);
-  const batchText = [...targets.map((s) => s.text), ...context].join("\n");
+  const batchText = [...sentences, ...context].join("\n");
   const messages = buildPrompt({
-    sentences: targets.map((s) => s.text),
+    sentences,
     context,
     dictionary: buildDictionaryContext(relevantEntries(entries, batchText)),
   });
@@ -45,7 +46,7 @@ export const checkBatch = async (
     samplesFromAttempts(timed.attempts, {
       feature: "check",
       identity: provider.identity,
-      letters: targets.reduce((sum, s) => sum + s.text.length, 0),
+      letters: lettersSent([...sentences, ...context]),
     }),
   );
   if (!timed.result.ok) return timed.result;

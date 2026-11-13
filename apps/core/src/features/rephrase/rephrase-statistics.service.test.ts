@@ -27,6 +27,14 @@ describe("RephraseService statistics", () => {
     ]);
   });
 
+  test("the letters are the passage text sent, every character of it", async () => {
+    const t = recordingSetup([reply(keepAll(1))]);
+    await t.run("Hello there.", 0, undefined, ["professional"]);
+    expect(t.samples).toEqual([
+      { kind: "ok", feature: "rephrase", identity, letters: 12, ms: expect.any(Number) },
+    ]);
+  });
+
   test("each tone is its own sample", async () => {
     const t = recordingSetup([reply(keepAll(3))]);
     await t.run(TEXT, caret, undefined, ["professional", "casual"]);

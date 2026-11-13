@@ -3,7 +3,7 @@ import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { type Provider, pinProvider, timedModelCall } from "../providers";
-import { NO_STATISTICS, type SampleSink, samplesFromAttempts } from "../statistics";
+import { lettersSent, NO_STATISTICS, type SampleSink, samplesFromAttempts } from "../statistics";
 import { type Passage, selectPassage } from "./services/passage-selector.service";
 import { hashPassage, type RephraseCache, type ToneReply } from "./services/rephrase-cache.service";
 import {
@@ -97,13 +97,11 @@ export class RephraseService {
     tone: RephraseTone,
     signal: AbortSignal | undefined,
   ): Promise<Result<ToneReply, AppError>> {
+    const sentences = passage.sentences.map((s) => s.text);
     const timed = await timedModelCall({
       feature: "rephrase",
       provider,
-      messages: buildRephrasePrompt(
-        passage.sentences.map((s) => s.text),
-        tone,
-      ),
+      messages: buildRephrasePrompt(sentences, tone),
       parse: parseRephraseResponse,
       retryMessage: REPHRASE_RETRY_MESSAGE,
       logger: this.logger,
@@ -113,7 +111,7 @@ export class RephraseService {
       samplesFromAttempts(timed.attempts, {
         feature: "rephrase",
         identity: provider.identity,
-        letters: passage.end - passage.start,
+        letters: lettersSent(sentences),
       }),
     );
     const { result: reply, ms } = timed;
