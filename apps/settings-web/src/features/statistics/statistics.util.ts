@@ -1,4 +1,11 @@
-import type { StatisticsCell } from "@gc/protocol";
+import type { StatisticsCell, StatisticsView } from "@gc/protocol";
+
+/** Shown in place of the table until a model call has been timed. */
+export const EMPTY_STATISTICS_TEXT =
+  "Nothing has been timed yet. Checks and rephrases appear here once they run.";
+
+/** Whether the page has no rows at all, so it shows the empty state instead of the table. */
+export const hasNoTimedCalls = (view: StatisticsView): boolean => view.rows.length === 0;
 
 /** The median as the page shows it: ms per letter to one decimal, or a note until there are enough samples. */
 export const formatMsPerLetter = (value: number | null): string =>

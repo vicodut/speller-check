@@ -70,6 +70,12 @@ describe("StatisticsService.view", () => {
     expect(service.view().rows[0]?.profileName).toBe("Removed profile");
   });
 
+  test("four ok samples still show no median; the count does", async () => {
+    const samples = [50, 100, 150, 200].map((ms) => answered("check", "p1", "m", ms));
+    const { rows } = (await build(samples)).view();
+    expect(rows[0]?.check).toEqual({ msPerLetter: null, okCount: 4, failureCount: 0, letters: 40 });
+  });
+
   test("the median per letter appears from five ok samples", async () => {
     const samples = [50, 100, 150, 200, 250].map((ms) => answered("check", "p1", "m", ms));
     const { rows } = (await build(samples)).view();

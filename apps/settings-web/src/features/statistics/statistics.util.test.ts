@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { cellCounts, formatMsPerLetter, placeTag } from "./statistics.util";
+import {
+  cellCounts,
+  EMPTY_STATISTICS_TEXT,
+  formatMsPerLetter,
+  hasNoTimedCalls,
+  placeTag,
+} from "./statistics.util";
 
 describe("formatMsPerLetter", () => {
   test("shows the median to one decimal place", () => {
@@ -24,5 +30,25 @@ describe("placeTag", () => {
   test("Local when the endpoint runs on this Mac, Cloud otherwise", () => {
     expect(placeTag(true)).toBe("Local");
     expect(placeTag(false)).toBe("Cloud");
+  });
+});
+
+describe("empty statistics", () => {
+  test("no rows at all is the empty state, and it says nothing has been timed yet", () => {
+    expect(hasNoTimedCalls({ rows: [] })).toBe(true);
+    expect(EMPTY_STATISTICS_TEXT).toMatch(/^Nothing has been timed yet\./);
+  });
+
+  test("any row means there is something to show", () => {
+    const cell = { msPerLetter: null, okCount: 1, failureCount: 0, letters: 10 };
+    const row = {
+      profileId: "p1",
+      profileName: "Local",
+      model: "m",
+      local: true,
+      check: cell,
+      rephrase: cell,
+    };
+    expect(hasNoTimedCalls({ rows: [row] })).toBe(false);
   });
 });

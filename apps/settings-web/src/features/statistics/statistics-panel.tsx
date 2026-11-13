@@ -2,7 +2,13 @@ import type { StatisticsCell, StatisticsRow, StatisticsView } from "@gc/protocol
 import { Card, CardContent, CardHeader, CardTitle } from "@gc/ui";
 import { errorText } from "../../lib/error-text.util";
 import { useStatistics } from "./statistics.hook";
-import { cellCounts, formatMsPerLetter, placeTag } from "./statistics.util";
+import {
+  cellCounts,
+  EMPTY_STATISTICS_TEXT,
+  formatMsPerLetter,
+  hasNoTimedCalls,
+  placeTag,
+} from "./statistics.util";
 
 const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
   <td className="px-2 py-2 align-top">
@@ -28,10 +34,8 @@ const Row = ({ row }: { row: StatisticsRow }) => (
 );
 
 const Body = ({ view }: { view: StatisticsView }) =>
-  view.rows.length === 0 ? (
-    <p className="m-0 text-muted-foreground">
-      No model calls yet. Checks and rephrases show up here once they run.
-    </p>
+  hasNoTimedCalls(view) ? (
+    <p className="m-0 text-muted-foreground">{EMPTY_STATISTICS_TEXT}</p>
   ) : (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse text-left">
