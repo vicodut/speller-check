@@ -7,6 +7,7 @@ import {
   ProfilesView,
   RuntimeView,
   SettingsView,
+  StatisticsView,
   type TestProbe,
   TestResult,
   TokenView,
@@ -55,6 +56,10 @@ export const call = async <T>(schema: z.ZodType<T>, c: Call): Promise<ApiResult<
 /** Reads the settings in effect. */
 export const fetchSettings = (token: string, base = "", fetchFn: typeof fetch = fetch) =>
   call(SettingsView, { token, path: "/api/settings", base, fetchFn });
+
+/** The model-call statistics: one row per profile and model. */
+export const fetchStatistics = (token: string, base = "") =>
+  call(StatisticsView, { token, path: "/api/statistics", base });
 
 export const fetchProfiles = (token: string, base = "") =>
   call(ProfilesView, { token, path: "/api/profiles", base });
