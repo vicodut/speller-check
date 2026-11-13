@@ -135,8 +135,8 @@ export const StatisticsPanel = ({ token }: { token: string }) => {
       <CardHeader>
         <CardTitle className="m-0 text-base">Statistics</CardTitle>
         <p className="m-0 text-muted-foreground">
-          Median time per letter of each model call, with its ok and failed counts. Numbers only; no
-          text is kept.
+          Median time per letter of each model call, with its ok and failed counts. Numbers only; a
+          deleted profile keeps its last name.
         </p>
       </CardHeader>
       <CardContent>
