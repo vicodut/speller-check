@@ -28,6 +28,7 @@ export class TimeoutRetryProvider implements Provider {
       return first;
     }
     this.logger.info({ event: "provider.retry_after_timeout" });
+    options.onRetry?.();
     return this.inner.complete(messages, { ...options, timeoutMs: this.retryTimeoutMs });
   }
 

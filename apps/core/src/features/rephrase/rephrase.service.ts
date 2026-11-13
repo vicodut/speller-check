@@ -1,8 +1,8 @@
-import type { ModelRephraseResponse, RephraseTone, RephraseToneResult } from "@gc/protocol";
+import type { RephraseTone, RephraseToneResult } from "@gc/protocol";
 import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
-import { type ChatMessage, type Provider, pinProvider } from "../providers";
+import { type Provider, pinProvider, timedModelCall } from "../providers";
 import { type Passage, selectPassage } from "./services/passage-selector.service";
 import { hashPassage, type RephraseCache, type ToneReply } from "./services/rephrase-cache.service";
 import {
@@ -95,13 +95,18 @@ export class RephraseService {
     tone: RephraseTone,
     signal: AbortSignal | undefined,
   ): Promise<Result<ToneReply, AppError>> {
-    const startedAt = performance.now();
-    const messages = buildRephrasePrompt(
-      passage.sentences.map((s) => s.text),
-      tone,
-    );
-    const reply = await this.request(provider, messages, signal);
-    const ms = performance.now() - startedAt;
+    const { result: reply, ms } = await timedModelCall({
+      feature: "rephrase",
+      provider,
+      messages: buildRephrasePrompt(
+        passage.sentences.map((s) => s.text),
+        tone,
+      ),
+      parse: parseRephraseResponse,
+      retryMessage: REPHRASE_RETRY_MESSAGE,
+      logger: this.logger,
+      signal,
+    });
     if (!reply.ok) {
       this.logger.error({ event: "rephrase.tone_failed", ms, code: reply.error.code });
       return reply;
@@ -113,22 +118,6 @@ export class RephraseService {
     }
     this.logger.info({ event: "rephrase.tone_done", ms, len: segments.length });
     return ok({ language: reply.value.language, segments });
-  }
-
-  /** Calls the model, retrying once if the reply isn't valid JSON in the expected envelope. */
-  private async request(
-    provider: Provider,
-    messages: readonly ChatMessage[],
-    signal: AbortSignal | undefined,
-  ): Promise<Result<ModelRephraseResponse, AppError>> {
-    const first = await provider.complete(messages, { signal });
-    if (!first.ok) return first;
-    const parsed = parseRephraseResponse(first.value);
-    if (parsed.ok || signal?.aborted) return parsed;
-
-    this.logger.info({ event: "parse.retry", code: parsed.error.code });
-    const second = await provider.complete([...messages, REPHRASE_RETRY_MESSAGE], { signal });
-    return second.ok ? parseRephraseResponse(second.value) : second;
   }
 
   private fail(error: AppError): Result<never, AppError> {
