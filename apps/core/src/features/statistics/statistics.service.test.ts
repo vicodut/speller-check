@@ -71,6 +71,12 @@ describe("StatisticsService.view", () => {
     expect(service.view().rows[0]?.profileName).toBe("Removed profile");
   });
 
+  test("four ok samples still show no median; the count does", async () => {
+    const samples = [50, 100, 150, 200].map((ms) => answered("check", "p1", "m", ms));
+    const { rows } = (await build(samples)).view();
+    expect(rows[0]?.check).toEqual({ msPerLetter: null, okCount: 4, failureCount: 0, letters: 40 });
+  });
+
   test("the median per letter appears from five ok samples", async () => {
     const samples = [50, 100, 150, 200, 250].map((ms) => answered("check", "p1", "m", ms));
     const { rows } = (await build(samples)).view();
@@ -81,6 +87,28 @@ describe("StatisticsService.view", () => {
     const service = await build([answered("check", "p1", "m", 50)]);
     expect(await service.clear()).toEqual({ ok: true, value: { rows: [] } });
     expect(service.view()).toEqual({ rows: [] });
+  });
+
+  test("clear also forgets the rows of deleted profiles", async () => {
+    const service = await build([
+      answered("check", "p1", "m", 50),
+      answered("rephrase", "gone", "m", 80),
+    ]);
+    expect(service.view().rows.map((r) => r.profileName)).toContain("Removed profile");
+    expect(await service.clear()).toEqual({ ok: true, value: { rows: [] } });
+    expect(service.view()).toEqual({ rows: [] });
+  });
+
+  test("after clear, new calls start the statistics again from zero", async () => {
+    const recorder = new StatisticsRecorder(memoryStore(), new Logger(() => {}));
+    await recorder.load();
+    recorder.record([answered("check", "p1", "m", 50, 10)]);
+    const service = new StatisticsService(recorder, (id) => names[id]);
+    await service.clear();
+    recorder.record([answered("check", "p1", "m", 90, 10)]);
+    const [row] = service.view().rows;
+    expect(row?.check.okCount).toBe(1);
+    expect(row?.check.letters).toBe(10);
   });
 });
 

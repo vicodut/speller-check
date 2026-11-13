@@ -102,6 +102,32 @@ describe("DELETE /api/statistics", () => {
     expect(deleted).toBe(before + 1);
   });
 
+  test("needs the install token and forgets nothing without it", async () => {
+    const before = deleted;
+    const response = await fetch(`${base}/api/statistics`, { method: "DELETE" });
+    expect(response.status).toBe(401);
+    expect(await response.json()).toEqual({ error: "auth_failed" });
+    expect(deleted).toBe(before);
+  });
+
+  test("refuses a foreign origin or host and forgets nothing", async () => {
+    const before = deleted;
+    const foreignOrigin = await fetch(`${base}/api/statistics`, {
+      method: "DELETE",
+      headers: { ...auth, origin: "https://example.com" },
+    });
+    expect(foreignOrigin.status).toBe(403);
+    expect(await foreignOrigin.json()).toEqual({ error: "origin_forbidden" });
+
+    const foreignHost = await fetch(`${base}/api/statistics`, {
+      method: "DELETE",
+      headers: { ...auth, host: "example.com" },
+    });
+    expect(foreignHost.status).toBe(403);
+    expect(await foreignHost.json()).toEqual({ error: "host_forbidden" });
+    expect(deleted).toBe(before);
+  });
+
   test("other methods are refused", async () => {
     const response = await fetch(`${base}/api/statistics`, { method: "POST", headers: auth });
     expect(response.status).toBe(405);
