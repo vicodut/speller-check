@@ -18,15 +18,23 @@ export type TimedModelCallInput<T> = {
   readonly now?: () => number;
 };
 
-export type TimedModelReply<T> = {
-  readonly feature: Feature;
-  readonly result: Result<T, AppError>;
+/**
+ * One request and its parsing. `ms` covers only the attempt that answered: time spent in
+ * provider retries it gave up on (a timeout) is left out.
+ */
+export type TimedAttempt = {
   readonly outcome: ModelCallOutcome;
-  /** From sending the request to having the answer parsed. */
   readonly ms: number;
 };
 
-type Request = (messages: readonly ChatMessage[]) => Promise<Result<string, AppError>>;
+export type TimedModelReply<T> = {
+  readonly feature: Feature;
+  readonly result: Result<T, AppError>;
+  /** From sending the request to having the answer parsed. */
+  readonly ms: number;
+  /** Each attempt in order: one, or two when the first reply didn't parse. */
+  readonly attempts: readonly TimedAttempt[];
+};
 
 /** One model call for a feature, timed: the call, parsing, and one retry on a bad reply. */
 export const timedModelCall = async <T>(
@@ -35,40 +43,45 @@ export const timedModelCall = async <T>(
   const now = input.now ?? (() => performance.now());
   const startedAt = now();
   // Time spent in attempts the provider gave up on (a timeout, a rejected JSON mode) doesn't count.
-  let attemptStart = startedAt;
   let discarded = 0;
-  const onRetry = () => {
-    const at = now();
-    discarded += at - attemptStart;
-    attemptStart = at;
+  const attempts: TimedAttempt[] = [];
+  const attempt = async (messages: readonly ChatMessage[]) => {
+    let attemptStart = now();
+    const onRetry = () => {
+      const at = now();
+      discarded += at - attemptStart;
+      attemptStart = at;
+    };
+    const reply = await input.provider.complete(messages, { signal: input.signal, onRetry });
+    const result = reply.ok ? input.parse(reply.value) : reply;
+    attempts.push({ outcome: result.ok ? "ok" : result.error.code, ms: now() - attemptStart });
+    return { result, parseFailed: reply.ok && !result.ok };
   };
-  const request: Request = (messages) => {
-    attemptStart = now();
-    return input.provider.complete(messages, { signal: input.signal, onRetry });
-  };
-  const result = await completeAndParse(input, request);
+  const result = await completeAndParse(input, attempt);
   return {
     feature: input.feature,
     result,
-    outcome: result.ok ? "ok" : result.error.code,
     ms: now() - startedAt - discarded,
+    attempts,
   };
 };
+
+type Attempt<T> = (messages: readonly ChatMessage[]) => Promise<{
+  readonly result: Result<T, AppError>;
+  readonly parseFailed: boolean;
+}>;
 
 /** Calls the model and parses its reply, retrying once (unless cancelled) if it doesn't parse. */
 const completeAndParse = async <T>(
   input: TimedModelCallInput<T>,
-  request: Request,
+  attempt: Attempt<T>,
 ): Promise<Result<T, AppError>> => {
-  const first = await request(input.messages);
-  if (!first.ok) return first;
-  const parsed = input.parse(first.value);
-  if (parsed.ok || input.signal?.aborted) return parsed;
+  const first = await attempt(input.messages);
+  if (first.result.ok || !first.parseFailed || input.signal?.aborted) return first.result;
 
-  input.logger.info({ event: "parse.retry", code: parsed.error.code });
-  const second = await request([...input.messages, input.retryMessage]);
-  if (!second.ok) return second;
-  const reparsed = input.parse(second.value);
-  if (!reparsed.ok) input.logger.error({ event: "parse.failed", code: reparsed.error.code });
-  return reparsed;
+  input.logger.info({ event: "parse.retry", code: first.result.error.code });
+  const second = await attempt([...input.messages, input.retryMessage]);
+  if (!second.result.ok)
+    input.logger.error({ event: "parse.failed", code: second.result.error.code });
+  return second.result;
 };

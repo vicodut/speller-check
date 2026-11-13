@@ -2,12 +2,14 @@ import type { Feature } from "@gc/protocol";
 import { CheckCache, CheckService } from "../features/check";
 import { JsonDictionaryRepository } from "../features/dictionary";
 import {
+  type ModelIdentity,
   OpenAiCompatibleProvider,
   SwitchableProvider,
   TimeoutRetryProvider,
 } from "../features/providers";
 import { RephraseCache, RephraseService } from "../features/rephrase";
-import type { ModelConfig } from "../features/settings";
+import { ENVIRONMENT_PROFILE_ID, isLocalUrl, type ModelConfig } from "../features/settings";
+import { NO_STATISTICS, type SampleSink } from "../features/statistics";
 import type { Logger } from "../shared/logger";
 
 /** Per tone call: qwen3:8b on a CPU-only Mac takes ~10 s warm for one tone (2026-11-02). */
@@ -15,6 +17,13 @@ const REPHRASE_TIMEOUT_MS = 60_000;
 
 /** A call that times out is retried once with this timeout: a cold or idle-unloaded local model (qwen3:8b on CPU) takes ~70 s before it answers (#23). */
 const RETRY_TIMEOUT_MS = 150_000;
+
+/** Which profile and model a stack is, for the statistics: numbers only, no name. */
+const identityOf = (model: ModelConfig): ModelIdentity => ({
+  profileId: model.profileId ?? ENVIRONMENT_PROFILE_ID,
+  model: model.model,
+  local: isLocalUrl(model.baseUrl),
+});
 
 /** One feature's provider stack for a model. "OpenAI-compatible" is the HTTP format (/v1/chat/completions), not the OpenAI cloud: local servers (Ollama, LM Studio, llama.cpp) speak it too, so this one adapter covers every model. */
 const providerFor = (model: ModelConfig, logger: Logger, timeoutMs?: number) =>
@@ -31,6 +40,7 @@ const providerFor = (model: ModelConfig, logger: Logger, timeoutMs?: number) =>
     ),
     RETRY_TIMEOUT_MS,
     logger,
+    identityOf(model),
   );
 
 /** Composition root: the only place that wires concrete classes together. */
@@ -38,16 +48,17 @@ export const createCore = (
   files: { readonly dictionaryPath: string },
   models: Readonly<Record<Feature, ModelConfig>>,
   logger: Logger,
+  statistics: SampleSink = NO_STATISTICS,
 ): Core => {
   const check = new SwitchableProvider(providerFor(models.check, logger));
   const cache = new CheckCache();
   const dictionary = new JsonDictionaryRepository(files.dictionaryPath);
-  const checkService = new CheckService(check, cache, dictionary, logger);
+  const checkService = new CheckService(check, cache, dictionary, logger, statistics);
   // A tone's reply is longer than a check's, hence its own timeout.
   const rephrase = new SwitchableProvider(
     providerFor(models.rephrase, logger, REPHRASE_TIMEOUT_MS),
   );
-  const rephraseService = new RephraseService(rephrase, logger, new RephraseCache());
+  const rephraseService = new RephraseService(rephrase, logger, new RephraseCache(), statistics);
   // At launch, one warm-up per distinct model: the same model loads once for both features.
   const sameModel = JSON.stringify(models.check) === JSON.stringify(models.rephrase);
   const warmUp = async (): Promise<void> => {

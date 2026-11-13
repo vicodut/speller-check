@@ -14,7 +14,7 @@ import {
   setFeatureProfiles,
 } from "./feature-profiles.util";
 import type { KeyStore } from "./keychain.repository";
-import { toConfig } from "./profile-config.util";
+import { modelInUse, toConfig } from "./profile-config.util";
 import { ProfileKeys } from "./profile-keys.service";
 import {
   activateProfile,
@@ -26,6 +26,7 @@ import {
   sameOrigin,
   updateProfile,
 } from "./profiles.util";
+import { RemovalListeners, type RemovedListener } from "./removal-listeners.service";
 import type { Env } from "./settings.loader";
 import type { ModelConfig } from "./settings.schema";
 import type { SettingsFileRepository } from "./settings-file.repository";
@@ -46,6 +47,7 @@ export type ModelListener = (models: FeatureModels, changed: readonly Feature[])
  */
 export class SettingsService {
   private readonly listeners: ModelListener[] = [];
+  private readonly removed = new RemovalListeners();
 
   private constructor(
     private file: SettingsFile,
@@ -118,6 +120,10 @@ export class SettingsService {
     this.listeners.push(listener);
   }
 
+  onRemoved(listener: RemovedListener): void {
+    this.removed.add(listener);
+  }
+
   /** The key is stored first: a profile is never saved claiming a key the Keychain refused. */
   async create({ apiKey, ...input }: ProfileSave): Promise<Result<ProfilesView, AppError>> {
     const id = this.newId();
@@ -139,14 +145,14 @@ export class SettingsService {
     return this.commit(next, apiKey === undefined ? null : id);
   }
 
-  /** Deleting a profile deletes its Keychain item too. */
+  /** Deleting a profile deletes its Keychain item too, and tells the removal listeners its name. */
   async remove(id: string): Promise<Result<ProfilesView, AppError>> {
+    const profile = this.file.profiles.find((p) => p.id === id);
     const result = await this.commit(removeProfile(this.file, id), null);
-    if (result.ok && this.keys.has(id)) {
-      await this.keys.apply(id, null);
-      return ok(this.profiles());
-    }
-    return result;
+    if (!result.ok) return result;
+    if (profile) this.removed.notify({ id, name: profile.name });
+    if (this.keys.has(id)) await this.keys.apply(id, null);
+    return ok(this.profiles());
   }
 
   /** Refused while env vars give the model: the page must not claim a profile is in use. */
@@ -167,13 +173,13 @@ export class SettingsService {
     keyChanged: string | null,
   ): Promise<Result<ProfilesView, AppError>> {
     if (!next.ok) return next;
-    const before = FEATURES.map((f) => JSON.stringify(this.inUse(f)));
+    const before = FEATURES.map((f) => JSON.stringify(modelInUse(this.file, this.envModel, f)));
     const saved = await this.store.save(next.value);
     if (!saved.ok) return saved;
     this.file = next.value;
     const changed = FEATURES.filter(
       (f, i) =>
-        JSON.stringify(this.inUse(f)) !== before[i] ||
+        JSON.stringify(modelInUse(this.file, this.envModel, f)) !== before[i] ||
         (!this.envModel && featureProfile(this.file, f).id === keyChanged),
     );
     if (changed.length > 0) {
@@ -188,10 +194,5 @@ export class SettingsService {
     const profile = featureProfile(this.file, feature);
     const apiKey = await this.keys.read(profile.id);
     return { ...toConfig(profile), ...(apiKey ? { apiKey } : {}) };
-  }
-
-  /** A feature's model without its key, to tell whether a change touched it. */
-  private inUse(feature: Feature): ModelConfig {
-    return this.envModel ?? toConfig(featureProfile(this.file, feature));
   }
 }

@@ -2,7 +2,8 @@ import type { RephraseTone, RephraseToneResult } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
-import type { ChatMessage, CompleteOptions, Provider } from "../providers";
+import type { ChatMessage, CompleteOptions, ModelIdentity, Provider } from "../providers";
+import { NO_STATISTICS, type SampleSink } from "../statistics";
 import { RephraseService } from "./rephrase.service";
 import { RephraseCache } from "./services/rephrase-cache.service";
 
@@ -13,11 +14,13 @@ export const fakeProvider = (
   replies: Reply[],
   onCall?: (call: number) => void,
   model = "test-model",
+  identity?: ModelIdentity,
 ) => {
   const prompts: string[] = [];
   let call = 0;
   const provider: Provider = {
     model,
+    identity,
     healthcheck: async () => true,
     complete: async (
       messages: readonly ChatMessage[],
@@ -37,13 +40,29 @@ export const keepAll = (n: number) =>
 export const reply = (segments: unknown[], language = "en") =>
   JSON.stringify({ language, segments });
 
-export type Options = { onCall?: (call: number) => void; cache?: RephraseCache; model?: string };
+export type Options = {
+  onCall?: (call: number) => void;
+  cache?: RephraseCache;
+  model?: string;
+  identity?: ModelIdentity;
+  stats?: SampleSink;
+};
 
 export const setup = (replies: Reply[], options: Options = {}) => {
-  const { provider, prompts } = fakeProvider(replies, options.onCall, options.model);
+  const { provider, prompts } = fakeProvider(
+    replies,
+    options.onCall,
+    options.model,
+    options.identity,
+  );
   const logs: string[] = [];
   const logger = new Logger((line) => logs.push(line));
-  const service = new RephraseService(provider, logger, options.cache ?? new RephraseCache());
+  const service = new RephraseService(
+    provider,
+    logger,
+    options.cache ?? new RephraseCache(),
+    options.stats ?? NO_STATISTICS,
+  );
   const tones: RephraseToneResult[] = [];
   const run = (text: string, caret: number, signal?: AbortSignal, only?: RephraseTone[]) =>
     service.rephrase({ text, caret, tones: only }, { signal, onTone: (t) => tones.push(t) });

@@ -11,6 +11,7 @@ describe("SettingsService", () => {
     expect((await service.current()).check).toEqual({
       baseUrl: "http://127.0.0.1:11434/v1",
       model: "qwen3:8b",
+      profileId: "p1",
       reasoningEffort: "none",
     });
     expect(service.view().check.model).toEqual({ value: "qwen3:8b", source: "saved" });
@@ -50,7 +51,7 @@ describe("SettingsService", () => {
     await service.create(cloud);
     await service.activate("p2");
     expect(changes).toEqual([
-      { baseUrl: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash" },
+      { baseUrl: "https://openrouter.ai/api/v1", model: "qwen/qwen3.8-flash", profileId: "p2" },
     ]);
     expect(service.view().check.model.value).toBe("qwen/qwen3.8-flash");
   });
@@ -79,6 +80,24 @@ describe("SettingsService", () => {
     await service.activate("p2");
     expect(await service.remove("p2")).toEqual(err(appError("profile_active")));
     expect(await service.remove("p1")).toEqual(err(appError("profile_builtin")));
+  });
+
+  test("a removed profile tells the removal listeners its id and last name", async () => {
+    const { service } = await open();
+    await service.create(cloud);
+    const removed: { id: string; name: string }[] = [];
+    service.onRemoved((profile) => removed.push(profile));
+    await service.update("p2", { ...cloud, name: "Renamed" });
+    expect(await service.remove("p2")).toMatchObject({ ok: true });
+    expect(removed).toEqual([{ id: "p2", name: "Renamed" }]);
+  });
+
+  test("a refused removal tells no one", async () => {
+    const { service } = await open();
+    const removed: unknown[] = [];
+    service.onRemoved((profile) => removed.push(profile));
+    await service.remove("p1");
+    expect(removed).toEqual([]);
   });
 
   test("env vars lock the model: shown as env, no active profile, activation refused", async () => {

@@ -1,6 +1,6 @@
 import type { AppError } from "../../shared/errors";
 import { ok, type Result } from "../../shared/result";
-import type { ChatMessage, CompleteOptions, Provider } from "./provider";
+import type { ChatMessage, CompleteOptions, ModelIdentity, Provider } from "./provider";
 
 /**
  * One feature's provider, replaceable while the core runs (a settings change). Each call goes
@@ -13,6 +13,10 @@ export class SwitchableProvider implements Provider {
 
   get model(): string {
     return this.current.model;
+  }
+
+  get identity(): ModelIdentity | undefined {
+    return this.current.identity;
   }
 
   swap(next: Provider): void {

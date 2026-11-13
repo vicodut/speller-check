@@ -19,11 +19,23 @@ export type CompleteOptions = {
 };
 
 /**
+ * Which saved profile a model belongs to, for the statistics (numbers only, no names): the
+ * profile id, the model id and whether its endpoint runs on this Mac.
+ */
+export type ModelIdentity = {
+  readonly profileId: string;
+  readonly model: string;
+  readonly local: boolean;
+};
+
+/**
  * Network-only transport to a model. Returns the raw message content;
  * parsing and validation belong to the check feature.
  */
 export interface Provider {
   readonly model: string;
+  /** Set on the stack the core builds for a profile; absent for a bare provider (tests, the CLI). */
+  readonly identity?: ModelIdentity | undefined;
   complete(
     messages: readonly ChatMessage[],
     options?: CompleteOptions,

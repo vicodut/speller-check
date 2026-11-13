@@ -1,6 +1,12 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import type { FeatureSettingsView } from "@gc/protocol";
-import { activateProfile, fetchSettings, rotateToken, saveProfile } from "./settings-api.client";
+import {
+  activateProfile,
+  clearStatistics,
+  fetchSettings,
+  rotateToken,
+  saveProfile,
+} from "./settings-api.client";
 
 const feature: FeatureSettingsView = {
   baseUrl: { value: "http://127.0.0.1:11434/v1", source: "env", envVar: "GC_BASE_URL" },
@@ -35,6 +41,12 @@ const server = Bun.serve({
       if (path === "/api/profiles/ghost/activate")
         return Response.json({ error: "profile_not_found" }, { status: 404 });
       return Response.json(profiles);
+    }
+    if (path === "/api/statistics" && request.method === "DELETE") {
+      if (request.headers.get("authorization") !== "Bearer good")
+        return Response.json({ error: "auth_failed" }, { status: 401 });
+      seen.push("DELETE /api/statistics");
+      return Response.json({ rows: [] });
     }
     if (request.headers.get("authorization") !== "Bearer good")
       return Response.json({ error: "auth_failed" }, { status: 401 });
@@ -96,5 +108,19 @@ describe("profile calls", () => {
 describe("rotateToken", () => {
   test("posts to the rotate route and returns the new token", async () => {
     expect(await rotateToken("good", base)).toEqual({ ok: true, value: { token: NEW_TOKEN } });
+  });
+});
+
+describe("clearStatistics", () => {
+  test("sends DELETE with the token and answers the cleared view", async () => {
+    const before = seen.length;
+    expect(await clearStatistics("good", base)).toEqual({ ok: true, value: { rows: [] } });
+    expect(seen.slice(before)).toEqual(["DELETE /api/statistics"]);
+  });
+
+  test("returns the core's error code and clears nothing without the token", async () => {
+    const before = seen.length;
+    expect(await clearStatistics("bad", base)).toEqual({ ok: false, error: "auth_failed" });
+    expect(seen.length).toBe(before);
   });
 });

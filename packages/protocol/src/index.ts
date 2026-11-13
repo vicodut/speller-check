@@ -79,4 +79,9 @@ export {
   SettingsView,
   TokenView,
 } from "./settings.dto";
+export {
+  StatisticsCell,
+  StatisticsRow,
+  StatisticsView,
+} from "./statistics.dto";
 export { isTextTooLong, MAX_TEXT_LENGTH } from "./text-limits";

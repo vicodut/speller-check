@@ -2,6 +2,7 @@ import type { FeatureProfiles, ProfileSave, ProfilesView, SettingsView } from "@
 import { Alert, AlertDescription, Button } from "@gc/ui";
 import { CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useReducer, useState } from "react";
+import { errorText } from "../../../lib/error-text.util";
 import {
   type ApiResult,
   activateProfile,
@@ -25,7 +26,7 @@ import {
   profileUses,
   useProfileProbe,
 } from "../../profiles";
-import { errorText } from "../error-text.util";
+import { StatisticsPanel } from "../../statistics";
 import { initialState, settingsPageReducer } from "../settings-page.reducer";
 import { ExtensionToken } from "./extension-token";
 import { FeatureSettings } from "./feature-settings";
@@ -175,6 +176,7 @@ export const SettingsPage = ({ token: initialToken }: Props) => {
           )}
           <FeatureSettings title="Check" view={state.view.check} />
           <FeatureSettings title="Rephrase" view={state.view.rephrase} />
+          {token && <StatisticsPanel token={token} />}
           {token && <ExtensionToken token={token} busy={state.busy} onRotate={onRotateToken} />}
         </>
       )}
