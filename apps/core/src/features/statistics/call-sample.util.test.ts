@@ -3,12 +3,12 @@ import type { ModelIdentity } from "../providers";
 import { type CallSample, samplesFromAttempts } from "./call-sample.util";
 
 const identity: ModelIdentity = { profileId: "p1", model: "qwen3:8b", local: true };
-const call = { feature: "check" as const, identity, letters: 120 };
+const call = { feature: "check" as const, identity, letters: 120, words: 20 };
 
 describe("samplesFromAttempts", () => {
   test("a call that answers is one ok sample with its letters and its timing", () => {
     expect(samplesFromAttempts([{ outcome: "ok", ms: 480 }], call)).toEqual<CallSample[]>([
-      { kind: "ok", feature: "check", identity, letters: 120, ms: 480 },
+      { kind: "ok", feature: "check", identity, letters: 120, words: 20, ms: 480 },
     ]);
   });
 
@@ -31,7 +31,7 @@ describe("samplesFromAttempts", () => {
     ];
     expect(samplesFromAttempts(attempts, call)).toEqual<CallSample[]>([
       { kind: "failure", feature: "check", identity, code: "invalid_json" },
-      { kind: "ok", feature: "check", identity, letters: 120, ms: 60 },
+      { kind: "ok", feature: "check", identity, letters: 120, words: 20, ms: 60 },
     ]);
   });
 

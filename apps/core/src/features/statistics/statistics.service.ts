@@ -2,7 +2,7 @@ import type { StatisticsRow, StatisticsView } from "@gc/protocol";
 import type { AppError } from "../../shared/errors";
 import type { Result } from "../../shared/result";
 import type { StatisticsRecorder } from "./statistics.recorder";
-import { cellStats, rowLetters } from "./statistics-aggregate.util";
+import { cellStats, rowLetters, rowWords } from "./statistics-aggregate.util";
 import { statisticsKey } from "./statistics-key.util";
 
 /** The label for a row whose profile is no longer saved (a profile removed after its calls). */
@@ -31,13 +31,15 @@ export class StatisticsService {
         model: entry.model,
         local: entry.local,
         letters: 0,
+        words: null,
         check: EMPTY_CELL,
         rephrase: EMPTY_CELL,
       };
       const cell = cellStats(entry);
       const updated =
         entry.feature === "check" ? { ...row, check: cell } : { ...row, rephrase: cell };
-      rows.set(key, { ...updated, letters: rowLetters([updated.check, updated.rephrase]) });
+      const cells = [updated.check, updated.rephrase];
+      rows.set(key, { ...updated, letters: rowLetters(cells), words: rowWords(cells) });
     }
     return { rows: [...rows.values()] };
   }

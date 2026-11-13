@@ -23,11 +23,12 @@ const memoryStore = (initial: Result<StatisticsFile | null, AppError> = ok(null)
 };
 
 const identity = { profileId: "p1", model: "qwen3:8b", local: true };
-const answered = (ms: number, letters = 100): CallSample => ({
+const answered = (ms: number, letters = 100, words = 20): CallSample => ({
   kind: "ok",
   feature: "check",
   identity,
   letters,
+  words,
   ms,
 });
 const failed = (code: "timeout" | "invalid_json"): CallSample => ({
@@ -55,7 +56,7 @@ describe("StatisticsRecorder", () => {
           profileId: "p1",
           model: "qwen3:8b",
           local: true,
-          ok: [[100, 480]],
+          ok: [[100, 480, 20]],
           failures: { timeout: 1 },
         },
       ],

@@ -3,7 +3,13 @@ import { type AppError, appError } from "../../shared/errors";
 import type { Logger } from "../../shared/logger";
 import { err, ok, type Result } from "../../shared/result";
 import { type Provider, pinProvider, timedModelCall } from "../providers";
-import { lettersSent, NO_STATISTICS, type SampleSink, samplesFromAttempts } from "../statistics";
+import {
+  lettersSent,
+  NO_STATISTICS,
+  type SampleSink,
+  samplesFromAttempts,
+  wordsSent,
+} from "../statistics";
 import { type Passage, selectPassage } from "./services/passage-selector.service";
 import { hashPassage, type RephraseCache, type ToneReply } from "./services/rephrase-cache.service";
 import {
@@ -112,6 +118,7 @@ export class RephraseService {
         feature: "rephrase",
         identity: provider.identity,
         letters: lettersSent(sentences),
+        words: wordsSent(sentences),
       }),
     );
     const { result: reply, ms } = timed;

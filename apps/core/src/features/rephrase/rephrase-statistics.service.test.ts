@@ -22,6 +22,7 @@ describe("RephraseService statistics", () => {
         feature: "rephrase",
         identity,
         letters: expect.any(Number),
+        words: expect.any(Number),
         ms: expect.any(Number),
       },
     ]);
@@ -31,7 +32,7 @@ describe("RephraseService statistics", () => {
     const t = recordingSetup([reply(keepAll(1))]);
     await t.run("Hello there.", 0, undefined, ["professional"]);
     expect(t.samples).toEqual([
-      { kind: "ok", feature: "rephrase", identity, letters: 12, ms: expect.any(Number) },
+      { kind: "ok", feature: "rephrase", identity, letters: 12, words: 2, ms: expect.any(Number) },
     ]);
   });
 
@@ -66,6 +67,7 @@ describe("RephraseService statistics", () => {
         feature: "rephrase",
         identity,
         letters: expect.any(Number),
+        words: expect.any(Number),
         ms: expect.any(Number),
       },
     ]);

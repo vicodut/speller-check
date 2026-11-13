@@ -105,7 +105,7 @@ export class StatisticsRecorder implements SampleSink {
     };
     entry.local = identity.local;
     if (sample.kind === "ok") {
-      entry.ok.push([sample.letters, sample.ms]);
+      entry.ok.push([sample.letters, sample.ms, sample.words]);
     } else {
       entry.failures[sample.code] = (entry.failures[sample.code] ?? 0) + 1;
     }

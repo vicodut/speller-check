@@ -4,10 +4,14 @@ import { z } from "zod";
 export const StatisticsCell = z.strictObject({
   /** Median ms per letter to one decimal place; null until there are enough ok samples. */
   msPerLetter: z.number().nonnegative().nullable(),
+  /** Median ms per word to one decimal place over the samples with a word count; null until there are enough of them. */
+  msPerWord: z.number().nonnegative().nullable(),
   okCount: z.number().int().nonnegative(),
   failureCount: z.number().int().nonnegative(),
   /** Letters over the ok samples only. */
   letters: z.number().int().nonnegative(),
+  /** Words over the ok samples that have a word count; null when none has one. */
+  words: z.number().int().nonnegative().nullable(),
 });
 export type StatisticsCell = z.infer<typeof StatisticsCell>;
 
@@ -21,6 +25,8 @@ export const StatisticsRow = z.strictObject({
   local: z.boolean(),
   /** Letters over the ok samples of both features. */
   letters: z.number().int().nonnegative(),
+  /** Words over the ok samples of both features that have a word count; null when neither has one. */
+  words: z.number().int().nonnegative().nullable(),
   check: StatisticsCell,
   rephrase: StatisticsCell,
 });

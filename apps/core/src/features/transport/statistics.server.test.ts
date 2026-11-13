@@ -11,7 +11,14 @@ const feature: FeatureSettingsView = {
   reasoningEffort: { value: null, source: "unset" },
   apiKey: { set: false, source: "unset" },
 };
-const cell = { msPerLetter: 4.8, okCount: 6, failureCount: 1, letters: 720 };
+const cell = {
+  msPerLetter: 4.8,
+  msPerWord: 24,
+  okCount: 6,
+  failureCount: 1,
+  letters: 720,
+  words: 140,
+};
 const row = {
   profileId: "p1",
   profileName: "Local",
@@ -19,8 +26,16 @@ const row = {
   model: "qwen3:8b",
   local: true,
   letters: 720,
+  words: 140,
   check: cell,
-  rephrase: { msPerLetter: null, okCount: 0, failureCount: 0, letters: 0 },
+  rephrase: {
+    msPerLetter: null,
+    msPerWord: null,
+    okCount: 0,
+    failureCount: 0,
+    letters: 0,
+    words: null,
+  },
 };
 const cleared = { rows: [] };
 

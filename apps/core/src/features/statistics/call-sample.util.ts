@@ -9,6 +9,7 @@ export type CallSample =
       readonly feature: Feature;
       readonly identity: ModelIdentity;
       readonly letters: number;
+      readonly words: number;
       readonly ms: number;
     }
   | {
@@ -44,13 +45,14 @@ export const samplesFromAttempts = (
     readonly feature: Feature;
     readonly identity: ModelIdentity | undefined;
     readonly letters: number;
+    readonly words: number;
   },
 ): CallSample[] => {
-  const { identity, feature, letters } = call;
+  const { identity, feature, letters, words } = call;
   if (!identity) return [];
   return attempts.flatMap((attempt): CallSample[] => {
     if (attempt.outcome === "ok") {
-      return letters > 0 ? [{ kind: "ok", feature, identity, letters, ms: attempt.ms }] : [];
+      return letters > 0 ? [{ kind: "ok", feature, identity, letters, words, ms: attempt.ms }] : [];
     }
     // Past the "ok" check, the outcome is narrowed to the error codes (ModelCallOutcome minus "ok").
     const outcome = attempt.outcome;

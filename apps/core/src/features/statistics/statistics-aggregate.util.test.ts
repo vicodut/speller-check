@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { cellStats, median, msPerLetter, rowLetters } from "./statistics-aggregate.util";
+import {
+  cellStats,
+  median,
+  msPerLetter,
+  msPerWord,
+  rowLetters,
+  rowWords,
+} from "./statistics-aggregate.util";
 
 const samples = (pairs: [number, number][]) => pairs.map(([letters, ms]) => [letters, ms] as const);
 
@@ -76,7 +83,96 @@ describe("msPerLetter", () => {
   });
 });
 
+describe("msPerWord", () => {
+  test("is null with fewer than five ok samples that have a word count", () => {
+    expect(
+      msPerWord([
+        [10, 50, 5],
+        [10, 60, 5],
+        [10, 70, 5],
+        [10, 80, 5],
+      ]),
+    ).toBeNull();
+  });
+
+  test("is the median of ms per word from five samples with words, to one decimal place", () => {
+    // ms per word 5, 10, 15, 20, 25 -> median 15
+    expect(
+      msPerWord([
+        [10, 50, 10],
+        [10, 100, 10],
+        [10, 150, 10],
+        [10, 200, 10],
+        [10, 250, 10],
+      ]),
+    ).toBe(15);
+    // ms per word 1, 2, 3.33, 4, 5 -> median 3.33, shown as 3.3
+    expect(
+      msPerWord([
+        [1, 1, 1],
+        [1, 2, 1],
+        [3, 10, 3],
+        [1, 4, 1],
+        [1, 5, 1],
+      ]),
+    ).toBe(3.3);
+  });
+
+  test("an old sample with no word count is left out of the median and of the count", () => {
+    // four samples with words: not enough, even with the old one beside them
+    expect(
+      msPerWord([
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 9000],
+      ]),
+    ).toBeNull();
+    // five with words: the median is theirs alone (all 5), the old 9000 ms sample is ignored
+    expect(
+      msPerWord([
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 9000],
+      ]),
+    ).toBe(5);
+  });
+
+  test("a sample with zero words has no ms per word and is left out", () => {
+    expect(
+      msPerWord([
+        [10, 50, 0],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+        [10, 50, 10],
+      ]),
+    ).toBe(5);
+  });
+});
+
 describe("cellStats", () => {
+  test("words total counts only the ok samples with a word count; an old sample adds letters but no words", () => {
+    const cell = cellStats({
+      ok: [
+        [10, 50, 4],
+        [20, 100],
+      ],
+      failures: {},
+    });
+    expect(cell.letters).toBe(30);
+    expect(cell.words).toBe(4);
+    expect(cell.msPerWord).toBeNull();
+  });
+
+  test("an old-only cell has letters, no word count at all (null, not zero)", () => {
+    expect(cellStats({ ok: [[10, 50]], failures: {} }).words).toBeNull();
+  });
   test("letters total counts ok samples only; failures are counted by code", () => {
     expect(
       cellStats({
@@ -86,16 +182,38 @@ describe("cellStats", () => {
         ]),
         failures: { timeout: 1, invalid_json: 2 },
       }),
-    ).toEqual({ msPerLetter: null, okCount: 2, failureCount: 3, letters: 30 });
+    ).toEqual({
+      msPerLetter: null,
+      msPerWord: null,
+      okCount: 2,
+      failureCount: 3,
+      letters: 30,
+      words: null,
+    });
   });
 
   test("no samples at all is an empty cell", () => {
     expect(cellStats({ ok: [], failures: {} })).toEqual({
       msPerLetter: null,
+      msPerWord: null,
       okCount: 0,
       failureCount: 0,
       letters: 0,
+      words: null,
     });
+  });
+});
+
+describe("rowWords", () => {
+  test("the words of both features added together, skipping a cell with no word count", () => {
+    const check = cellStats({ ok: [[10, 50, 3]], failures: {} });
+    const rephrase = cellStats({ ok: [[7, 30]], failures: {} });
+    expect(rowWords([check, rephrase])).toBe(3);
+  });
+
+  test("null when no cell has a word count, so an old-only row shows no words figure", () => {
+    const check = cellStats({ ok: [[10, 50]], failures: {} });
+    expect(rowWords([check, check])).toBeNull();
   });
 });
 

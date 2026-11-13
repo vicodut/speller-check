@@ -4,8 +4,17 @@ import { z } from "zod";
 /** A failure's code as stored: lower-case letters and underscores only, so no text can hide in it. */
 const Code = z.string().regex(/^[a-z_]{1,40}$/);
 
-/** One ok sample: the letters it checked (at least one) and the ms it took. */
-const TimedSample = z.tuple([z.number().int().positive(), z.number().nonnegative()]);
+/**
+ * One ok sample: the letters it checked (at least one), the ms it took, then the words it checked.
+ * The words are optional: samples saved before word counts have only letters and ms. Those still
+ * count toward letters, and are left out of the words total and the per-word median. Never store
+ * a missing word count as zero.
+ */
+const TimedSample = z.tuple([
+  z.number().int().positive(),
+  z.number().nonnegative(),
+  z.number().int().nonnegative().optional(),
+]);
 
 /** One row cell's numbers: one entry per feature, profile and model. */
 const StatisticsEntry = z.strictObject({

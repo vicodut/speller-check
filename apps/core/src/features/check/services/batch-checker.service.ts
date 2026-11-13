@@ -3,7 +3,7 @@ import type { Logger } from "../../../shared/logger";
 import { ok, type Result } from "../../../shared/result";
 import { buildDictionaryContext, type DictionaryEntry, relevantEntries } from "../../dictionary";
 import { type Provider, pinProvider } from "../../providers";
-import { lettersSent, type SampleSink, samplesFromAttempts } from "../../statistics";
+import { lettersSent, type SampleSink, samplesFromAttempts, wordsSent } from "../../statistics";
 import type { CheckCache } from "./check-cache.service";
 import { locateIssue } from "./issue-locator.service";
 import { shiftIssue } from "./issue-offsets.service";
@@ -47,6 +47,7 @@ export const checkBatch = async (
       feature: "check",
       identity: provider.identity,
       letters: lettersSent([...sentences, ...context]),
+      words: wordsSent([...sentences, ...context]),
     }),
   );
   if (!timed.result.ok) return timed.result;

@@ -50,6 +50,27 @@ describe("StatisticsFileRepository", () => {
     expect(await repo.load()).toEqual({ ok: false, error: { code: "statistics_read_failed" } });
   });
 
+  test("a saved file from before word counts (letters and ms only) still loads", async () => {
+    const path = join(dir, "statistics.json");
+    await writeFile(path, JSON.stringify(file));
+    expect(await new StatisticsFileRepository(path).load()).toEqual({ ok: true, value: file });
+  });
+
+  test("a sample with its word count saved beside letters and ms loads back", async () => {
+    const path = join(dir, "statistics.json");
+    const entry: StatisticsFile["entries"][number] = {
+      feature: "check",
+      profileId: "p1",
+      model: "qwen3:8b",
+      local: true,
+      ok: [[120, 480, 20]],
+      failures: { timeout: 1 },
+    };
+    const withWords: StatisticsFile = { ...file, entries: [entry] };
+    await writeFile(path, JSON.stringify(withWords));
+    expect(await new StatisticsFileRepository(path).load()).toEqual({ ok: true, value: withWords });
+  });
+
   test("a file holding anything but numbers and codes is refused", async () => {
     const path = join(dir, "statistics.json");
     const withText = { ...file, entries: [{ ...file.entries[0], failures: { "a note": 1 } }] };

@@ -43,6 +43,7 @@ describe("CheckService statistics", () => {
         feature: "check",
         identity,
         letters: SENTENCE.length,
+        words: 6,
         ms: expect.any(Number),
       },
     ]);
@@ -58,6 +59,7 @@ describe("CheckService statistics", () => {
       feature: "check",
       identity,
       letters: 9 + 16,
+      words: 2 + 4,
       ms: expect.any(Number),
     });
   });
