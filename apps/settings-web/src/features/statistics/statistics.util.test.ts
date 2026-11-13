@@ -2,22 +2,24 @@ import { describe, expect, test } from "bun:test";
 import {
   cellCounts,
   EMPTY_STATISTICS_TEXT,
-  formatMsPerLetter,
-  formatMsPerWord,
+  formatMsPer,
   hasNoTimedCalls,
   hasSamples,
   placeTag,
   rowTotals,
 } from "./statistics.util";
 
-describe("formatMsPerLetter", () => {
-  test("shows the median to one decimal place", () => {
-    expect(formatMsPerLetter(4.8)).toBe("4.8 ms per letter");
-    expect(formatMsPerLetter(15)).toBe("15.0 ms per letter");
+describe("formatMsPer", () => {
+  test("shows the median to one decimal place, in the unit it is per", () => {
+    expect(formatMsPer(4.8, "letter")).toBe("4.8 ms per letter");
+    expect(formatMsPer(15, "letter")).toBe("15.0 ms per letter");
+    expect(formatMsPer(24, "word")).toBe("24.0 ms per word");
+    expect(formatMsPer(3.3, "word")).toBe("3.3 ms per word");
   });
 
-  test("says so when there are not enough samples for a median", () => {
-    expect(formatMsPerLetter(null)).toBe("Not enough data");
+  test("says so when there are not enough samples for a median, whichever the unit", () => {
+    expect(formatMsPer(null, "letter")).toBe("Not enough data");
+    expect(formatMsPer(null, "word")).toBe("Not enough data");
   });
 });
 
@@ -29,17 +31,6 @@ const emptyCell = {
   letters: 0,
   words: null,
 };
-
-describe("formatMsPerWord", () => {
-  test("shows the median to one decimal place", () => {
-    expect(formatMsPerWord(24)).toBe("24.0 ms per word");
-    expect(formatMsPerWord(3.3)).toBe("3.3 ms per word");
-  });
-
-  test("says so when there are not enough samples with a word count", () => {
-    expect(formatMsPerWord(null)).toBe("Not enough data");
-  });
-});
 
 describe("rowTotals", () => {
   test("letters and words side by side", () => {

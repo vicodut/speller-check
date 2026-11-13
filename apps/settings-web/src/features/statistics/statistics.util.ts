@@ -7,13 +7,9 @@ export const EMPTY_STATISTICS_TEXT =
 /** Whether the page has no rows at all, so it shows the empty state instead of the table. */
 export const hasNoTimedCalls = (view: StatisticsView): boolean => view.rows.length === 0;
 
-/** The median as the page shows it: ms per letter to one decimal, or a note until there are enough samples. */
-export const formatMsPerLetter = (value: number | null): string =>
-  value === null ? "Not enough data" : `${value.toFixed(1)} ms per letter`;
-
-/** The per-word median as the page shows it: ms per word to one decimal, or the same note until there are enough samples. */
-export const formatMsPerWord = (value: number | null): string =>
-  value === null ? "Not enough data" : `${value.toFixed(1)} ms per word`;
+/** A median as the page shows it: ms per letter or per word to one decimal, or a note until there are enough samples. */
+export const formatMsPer = (value: number | null, unit: "letter" | "word"): string =>
+  value === null ? "Not enough data" : `${value.toFixed(1)} ms per ${unit}`;
 
 /** A row's totals side by side: letters and words; words say so until a sample carries a word count. */
 export const rowTotals = (row: Pick<StatisticsRow, "letters" | "words">): string =>

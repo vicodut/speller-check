@@ -16,13 +16,13 @@ import { useStatistics } from "./statistics.hook";
 import {
   cellCounts,
   EMPTY_STATISTICS_TEXT,
-  formatMsPerLetter,
-  formatMsPerWord,
+  formatMsPer,
   hasNoTimedCalls,
   hasSamples,
   placeTag,
   rowTotals,
 } from "./statistics.util";
+import { IDLE_RESET, type ResetEvent, type ResetState, resetStep } from "./statistics-reset.util";
 
 /** One median line: muted and italic while there are not enough samples for it. */
 const Median = ({ text, value }: { text: string; value: number | null }) => (
@@ -36,8 +36,8 @@ const Cell = ({ label, cell }: { label: string; cell: StatisticsCell }) => (
     <span className="sr-only">{label}: </span>
     {hasSamples(cell) ? (
       <>
-        <Median text={formatMsPerLetter(cell.msPerLetter)} value={cell.msPerLetter} />
-        <Median text={formatMsPerWord(cell.msPerWord)} value={cell.msPerWord} />
+        <Median text={formatMsPer(cell.msPerLetter, "letter")} value={cell.msPerLetter} />
+        <Median text={formatMsPer(cell.msPerWord, "word")} value={cell.msPerWord} />
         <span className="block text-xs text-muted-foreground">{cellCounts(cell)}</span>
       </>
     ) : (
@@ -123,17 +123,16 @@ const ConfirmReset = ({
 /** Statistics: how fast each profile's model checks text per letter, and how often it fails. */
 export const StatisticsPanel = ({ token }: { token: string }) => {
   const { result, clear } = useStatistics(token);
-  const [confirming, setConfirming] = useState(false);
-  const [clearing, setClearing] = useState(false);
-  const [clearError, setClearError] = useState<string | null>(null);
+  const [flow, setFlow] = useState<ResetState>(IDLE_RESET);
+  const send = (event: ResetEvent) => setFlow((state) => resetStep(state, event).state);
 
+  /** Clear all is the only step that asks the core to clear; the answer ends the confirmation. */
   const confirmClear = async () => {
-    setClearing(true);
-    setClearError(null);
+    const step = resetStep(flow, { type: "confirm" });
+    setFlow(step.state);
+    if (!step.request) return;
     const next = await clear();
-    setClearing(false);
-    setConfirming(false);
-    if (!next.ok) setClearError(next.error);
+    send({ type: "cleared", error: next.ok ? null : next.error });
   };
 
   return (
@@ -149,24 +148,21 @@ export const StatisticsPanel = ({ token }: { token: string }) => {
         {result === null && <p className="m-0 text-muted-foreground">Loading…</p>}
         {result?.ok && <Body view={result.value} />}
         {result && !result.ok && <p className="m-0 text-destructive">{errorText(result.error)}</p>}
-        {clearError !== null && <p className="m-0 text-destructive">{errorText(clearError)}</p>}
+        {flow.error !== null && <p className="m-0 text-destructive">{errorText(flow.error)}</p>}
       </CardContent>
       <CardFooter className="flex flex-wrap gap-2">
-        {confirming ? (
+        {flow.phase !== "idle" ? (
           <ConfirmReset
-            busy={clearing}
+            busy={flow.phase === "clearing"}
             onYes={() => void confirmClear()}
-            onNo={() => setConfirming(false)}
+            onNo={() => send({ type: "cancel" })}
           />
         ) : (
           <Button
             variant="outline"
             size="sm"
-            disabled={result === null || clearing}
-            onClick={() => {
-              setClearError(null);
-              setConfirming(true);
-            }}
+            disabled={result === null}
+            onClick={() => send({ type: "reset" })}
           >
             Reset statistics
           </Button>
